@@ -10,3 +10,6 @@ details.
 # VEHICLE SIGNAL INTERFACE
 This repository will contain the library required to distribute vehicle signals
 between components inside the IVI.
+
+At this time, only a stub of the API is available to solicit feedback, but once
+the core has arrived it will also belong to this repository.
