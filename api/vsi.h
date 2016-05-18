@@ -14,7 +14,6 @@
  *  @author Matthew Vick &lt;mvick@jaguarlandrover.com&gt;
  */
 
-#pragma once
 #ifndef _VSI_H_
 #define _VSI_H_
 
