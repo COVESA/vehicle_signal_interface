@@ -7,6 +7,8 @@
 #ifndef _VSI_TYPES_H_
 #define _VSI_TYPES_H_
 
+#include <semaphore.h>
+
 /**
  * Signal identifier abstraction designed for dealing with different domains of
  * signals.
