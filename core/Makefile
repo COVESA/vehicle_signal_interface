@@ -1,4 +1,14 @@
-# default: all
+#
+#   Copyright (C) 2016, Jaguar Land Rover. All Rights Reserved.
+#
+#   This Source Code Form is subject to the terms of the Mozilla Public
+#   License, v. 2.0. If a copy of the MPL was not distributed with this file,
+#   You can obtain one at http://mozilla.org/MPL/2.0/.
+#
+
+#
+#	Vehicle Signal Interface Core library build rules.
+#
 
 CFLAGS+=     \
   -std=gnu11 \
@@ -6,24 +16,24 @@ CFLAGS+=     \
   -Wall      \
   -fpic      \
 
-LDFLAGS+=   \
-  -L. \
-  -lsharedMemory \
-  -lpthread \
-  -lc		\
+LDFLAGS+=    \
+  -L.        \
+  -lvsi-core \
+  -lpthread  \
+  -lc		 \
 
 INCLUDES=        \
   sharedMemory.h \
   semaphore.h    \
   utils.h        \
 
-TARGETS=  \
-  libsharedMemory.so \
-  dump    \
-  insert  \
-  fetch   \
-  writeRecord \
-  readRecord  \
+TARGETS=         \
+  libvsi-core.so \
+  dump           \
+  insert         \
+  fetch          \
+  writeRecord    \
+  readRecord     \
 
 EXTRA_FILES=  \
   Makefile    \
@@ -34,7 +44,7 @@ EXTRA_FILES=  \
 #
 .SILENT:
 
-default: rebuild
+default: all
 
 all:  $(TARGETS)
 
@@ -42,27 +52,27 @@ rebuild:
 	make -s distclean; \
 	make all
 
-insert : insert.o libsharedMemory.so $(INCLUDES)
+insert : insert.o libvsi-core.so $(INCLUDES)
 	echo "Rebuilding the $@ executable..."; \
 	gcc $(CFLAGS) -o $@ $@.o $(LDFLAGS)
 
-fetch : fetch.o libsharedMemory.so $(INCLUDES)
+fetch : fetch.o libvsi-core.so $(INCLUDES)
 	echo "Rebuilding the $@ executable..."; \
 	gcc $(CFLAGS) -o $@ $@.o $(LDFLAGS)
 
-dump : dump.o libsharedMemory.so $(INCLUDES)
+dump : dump.o libvsi-core.so $(INCLUDES)
 	echo "Rebuilding the $@ executable..."; \
 	gcc $(CFLAGS) -o $@ $@.o $(LDFLAGS)
 
-writeRecord : writeRecord.o libsharedMemory.so $(INCLUDES)
+writeRecord : writeRecord.o libvsi-core.so $(INCLUDES)
 	echo "Rebuilding the $@ executable..."; \
 	gcc $(CFLAGS) -o $@ $@.o $(LDFLAGS)
 
-readRecord : readRecord.o libsharedMemory.so $(INCLUDES)
+readRecord : readRecord.o libvsi-core.so $(INCLUDES)
 	echo "Rebuilding the $@ executable..."; \
 	gcc $(CFLAGS) -o $@ $@.o $(LDFLAGS)
 
-libsharedMemory.so: sharedMemory.o semaphore.o utils.o
+libvsi-core.so: sharedMemory.o semaphore.o utils.o
 	echo "Linking the $@ shared library..."; \
 	gcc $(CFLAGS) -shared -o $@ sharedMemory.o semaphore.o utils.o
 
