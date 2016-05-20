@@ -14,7 +14,7 @@ int main()
     struct vsi_data my_data, *my_group_data[2];
     unsigned int domain_id, signal_id;
     unsigned long group_id;
-    vsi_handle *handle;
+    vsi_handle handle;
     void *my_buffer, *foo;
     int err;
     
@@ -190,7 +190,7 @@ int main()
     printf("Released ownership of signal \"foo\".\n");
 
     // Finally, we free the memory we allocated.
-    vsi_destroy(handle);
+    vsi_destroy(&handle);
     if (handle)
         return -1;
     printf("Freed the VSI memory.\n");

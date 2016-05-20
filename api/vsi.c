@@ -64,8 +64,8 @@ vsi_handle vsi_initialize()
 
 int vsi_destroy(vsi_handle *handle)
 {
-    free(handle);
-    handle = NULL;
+    free(*handle);
+    *handle = NULL;
 
     return 0;
 }
