@@ -6,10 +6,10 @@
 
 #include <errno.h>
 #include <stdbool.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include "vsi.h"
+#include "vsi_list.h"
 #include "vsi_types.h"
 
 // ******************
@@ -33,8 +33,6 @@ union vsi_signal_id vsi_name_string_to_id_internal(char *name);
         if (!(name))                               \
             return -EINVAL;                        \
         id = vsi_name_string_to_id_internal(name); \
-        if ((int)id.parts.signal_id)               \
-            return (int)id.parts.signal_id;        \
     } while (0)
 
 //
@@ -58,12 +56,35 @@ vsi_handle vsi_initialize()
     struct vsi_context *context;
 
     context = malloc(sizeof(struct vsi_context));
+    if (!context)
+        return NULL;
+
+    context->signal_head = NULL;
 
     return (vsi_handle)context;
 }
 
 int vsi_destroy(vsi_handle *handle)
 {
+    struct vsi_context *context = (struct vsi_context *)(*handle);
+
+    // Clean up the list of signals.
+    if (context)
+    {
+        struct vsi_signal_list_entry *curr, *prev;
+
+        curr = context->signal_head;
+
+        // Iterate through the list, freeing entries along the way.
+        while (curr)
+        {
+            prev = curr;
+            curr = curr->next;
+            free(prev);
+        }
+    }
+
+    // Finally, free the handle.
     free(*handle);
     *handle = NULL;
 
@@ -163,7 +184,7 @@ int vsi_subscribe_to_signal(vsi_handle handle, unsigned int domain_id,
 
     context = (struct vsi_context *)handle;
 
-    return 0;
+    return vsi_list_insert(context, domain_id, signal_id);
 }
 
 int vsi_unsubscribe_from_signal_by_name(vsi_handle handle, char *name)
@@ -185,7 +206,7 @@ int vsi_unsubscribe_from_signal(vsi_handle handle, unsigned int domain_id,
 
     context = (struct vsi_context *)handle;
 
-    return 0;
+    return vsi_list_remove(handle, domain_id, signal_id);
 }
 
 int vsi_create_signal_group(vsi_handle handle, unsigned long group_id)
@@ -440,7 +461,20 @@ union vsi_signal_id vsi_name_string_to_id_internal(char *name)
 {
     union vsi_signal_id id;
 
-    id.full_id = 1;
+    //
+    // TODO: Perform the signal ID lookup from VSS. These values are only good
+    //       for the sample application.
+    //
+    if (!strcmp(name, "foo"))
+        id.parts.signal_id = 1;
+    else if (!strcmp(name, "bar"))
+        id.parts.signal_id = 2;
+    else if (!strcmp(name, "baz"))
+        id.parts.signal_id = 3;
+    else if (!strcmp(name, "gen"))
+        id.parts.signal_id = 4;
+    else if (!strcmp(name, "ivi"))
+        id.parts.signal_id = 5;
 
     return id;
 }

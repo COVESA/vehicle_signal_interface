@@ -16,9 +16,9 @@ TARGETS=api sample
 all: $(TARGETS)
 
 # Target for building the API library.
-api: vsi.c $(INCLUDES)
+api: vsi.c vsi_list.c $(INCLUDES)
 	echo "Rebuilding the VSI library..."; \
-	gcc $(CFLAGS) -shared -o libvsi.so -c vsi.c $(LDFLAGS) -fPIC
+	gcc $(CFLAGS) -shared -o libvsi.so vsi.c vsi_list.c $(LDFLAGS) -fPIC
 
 # Sample application that uses the API.
 sample: sample.c $(INCLUDES)
