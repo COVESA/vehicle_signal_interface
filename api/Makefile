@@ -8,8 +8,9 @@
 
 default: all
 
-CFLAGS+=-std=gnu11 -O4
-LDFLAGS+=-lpthread -lc
+CFLAGS+=-std=gnu11 -O4 -I../core
+LDFLAGS+=-L. -L../core -lc
+LIBRARIES=-lvsi -lvsi-core -lpthread
 
 TARGETS=api sample
 
@@ -23,7 +24,7 @@ api: vsi.c vsi_list.c $(INCLUDES)
 # Sample application that uses the API.
 sample: sample.c $(INCLUDES)
 	echo "Rebuilding the sample executable..."; \
-	gcc $(CFLAGS) -o sample sample.c $(LDFLAGS) -Wl,-rpath ./ -L./ -lvsi
+	gcc $(CFLAGS) -o sample sample.c $(LDFLAGS) -Wl,-rpath ./ $(LIBRARIES)
 
 # Build the user-facing documentation.
 docs: Doxyfile $(INCLUDES)
@@ -32,4 +33,4 @@ docs: Doxyfile $(INCLUDES)
 
 clean distclean:
 	echo "Deleting all derived files..."; \
-	rm -rf *.o *~ *.so html latex sample
+	rm -rf *.o *~ libvsi.so html latex sample

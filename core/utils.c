@@ -28,7 +28,7 @@
 
 #include "utils.h"
 
-// #define LOG(...) printf ( __VAR_ARGS__ )
+// #define LOG(...) printf ( __VA_ARGS__ )
 #define LOG(...)
 
 sharedMemory_t* sharedMemory;		// TEMP - Used by the dump code
@@ -530,14 +530,21 @@ unsigned long getIntervalTime ( void )
 	unsigned long currentTime;
 	struct timespec timeSpec;
 
-	clock_gettime ( CLOCK_REALTIME, &timeSpec );
-	currentTime = timeSpec.tv_sec * NS_PER_SEC + timeSpec.tv_nsec;
+    if ( sharedMemory != 0 )
+    {
+        clock_gettime ( CLOCK_REALTIME, &timeSpec );
+        currentTime = timeSpec.tv_sec * NS_PER_SEC + timeSpec.tv_nsec;
 
-	if ( sharedMemory->globalTime == 0 )
-	{
-		sharedMemory->globalTime = currentTime;
-	}
-	return ( currentTime - sharedMemory->globalTime ) / NS_PER_US;
+        if ( sharedMemory->globalTime == 0 )
+        {
+            sharedMemory->globalTime = currentTime;
+        }
+        return ( currentTime - sharedMemory->globalTime ) / NS_PER_US;
+    }
+    else
+    {
+        return 0;
+    }
 }
 
 

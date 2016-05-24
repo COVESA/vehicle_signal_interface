@@ -9,6 +9,8 @@
 
 #include <semaphore.h>
 
+#include "vsi_core_api.h"
+
 /**
  * Signal identifier abstraction designed for dealing with different domains of
  * signals.
@@ -63,6 +65,11 @@ struct vsi_context {
     struct vsi_group_list_entry *group_head;
     /** List of current signals. */
     struct vsi_signal_list_entry *signal_head;
+
+    //
+    //  Define the handle to the VSI core internal structures.
+    //
+    vsi_core_handle coreHandle;
 };
 
 #endif // _VSI_TYPES_H_

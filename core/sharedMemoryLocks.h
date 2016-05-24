@@ -8,19 +8,17 @@
 
 /*!----------------------------------------------------------------------------
 
-	@file      semaphore.h
+	@file sharedMemoryLocks.h
 
 	This file contains the declarations of the semaphore objects and member
 	functions.
 
 -----------------------------------------------------------------------------*/
 
-#ifndef SEMAPHORE_H
-#define SEMAPHORE_H
+#ifndef SHARED_MEMORY_LOCKS_H
+#define SHARED_MEMORY_LOCKS_H
 
 #include <pthread.h>
-
-#include "semaphore.h"
 
 
 /*! @{ */
@@ -45,7 +43,7 @@ void semaphorePost ( semaphore_t* semaphore );
 void semaphoreWait ( semaphore_t* semaphore );
 
 
-#endif		// End of #ifndef SEMAPHORE_H
+#endif		// End of #ifndef SHARED_MEMORY_LOCKS_H
 
 /*! @} */
 

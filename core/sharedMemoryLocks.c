@@ -25,10 +25,10 @@
 #include <sys/types.h>
 #include <string.h>
 
-#include "semaphore.h"
+#include "sharedMemoryLocks.h"
 #include "utils.h"
 
-// #define LOG(...) printf ( __VAR_ARGS__ )
+// #define LOG(...) printf ( __VA_ARGS__ )
 #define LOG(...)
 
 /*! @{ */

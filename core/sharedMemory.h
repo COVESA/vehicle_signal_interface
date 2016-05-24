@@ -44,9 +44,8 @@
 #ifndef SHARED_MEMORY_H
 #define SHARED_MEMORY_H
 
-#include <pthread.h>
+#include "sharedMemoryLocks.h"
 
-#include "semaphore.h"
 
 /*! @{ */
 
@@ -259,13 +258,6 @@ inline static offset_t hb_getTail ( hashBucket_t* hashBucket )
 }
 
 
-//
-//	Declare the mutex lock/unlock functions.
-//
-void hb_lock   ( hashBucket_t* hashBucket );
-void hb_unlock ( hashBucket_t* hashBucket );
-
-
 /*!-----------------------------------------------------------------------
 
 	s h a r e d M e m o r y _ t
@@ -282,7 +274,7 @@ typedef struct sharedMemory_t
 	//
 	hashBucket_t hashBuckets[HASH_BUCKET_COUNT];
 
-	unsigned long globalTime;
+	unsigned long globalTime;       // Debugging Only (for delta times)
 
 }	sharedMemory_t;
 
@@ -294,11 +286,11 @@ typedef struct sharedMemory_t
 #define SHARED_MEMORY_SEGMENT_NAME "/var/run/shm/vsiSharedMemorySegment"
 
 
-//
-//	Define the shared memory "member" functions.
-//
+/*!-----------------------------------------------------------------------
 
+    S h a r e d   M e m o r y   F u n c t i o n s
 
+------------------------------------------------------------------------*/
 //
 //	Return the hash bucket that corresponds to the specified key value.
 //
@@ -323,51 +315,14 @@ inline static hashBucket_t* sm_getBucketAddress ( sharedMemory_t* sharedMemory,
 
 
 //
-//	Open the VSI shared memory segment.  If the shared memory segment does not
-//	exist yet, it will be created by this call.
-//
-sharedMemory_t* sharedMemoryOpen ( void );
-
-
-//
-//	Close the shared memory segment.
-//
-//	Note that this call will unmap the memory from the virtual address space
-//	and force all of the "dirty" data to be written to the pseudo disk file.
-//
-void sharedMemoryClose ( sharedMemory_t* sharedMemory,
-                         unsigned int sharedMemorySegmentSize );
-
-//
 //	Initialize the shared memory segment.
 //
 //  This function will take a newly created shared memory segment file
 //  descriptor and size, map the file into memory, and initialize all of the
 //  fields and variables in the structure.
 //
-sharedMemory_t* sharedMemoryInitialize ( int fd,
-										 size_t sharedMemorySegmentSize );
+sharedMemory_t* sm_initialize ( int fd, size_t sharedMemorySegmentSize );
 
-//
-//	Insert a message into the message list of the hash table.
-//
-//	This function will insert a new message into the hash tables at the proper
-//	location for the specified key and domain values.
-//
-int sharedMemoryInsert ( sharedMemory_t* sharedMemory, offset_t key,
-						 enum domains domain, unsigned long newMessageSize,
-						 void* body );
-
-//
-//	Fetch and remove a message from the hash table.
-//
-//	This function will find the message with the specified domain and key
-//	values in the hash tables, return the message data to the caller and
-//	delete the message from the hash table message list.
-//
-int sharedMemoryFetch ( sharedMemory_t* sharedMemory, offset_t key,
-						enum domains domain, unsigned long newMessageSize,
-						void* body );
 
 #endif	// End of #ifndef SHARED_MEMORY_H
 

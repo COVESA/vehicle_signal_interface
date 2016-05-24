@@ -35,10 +35,12 @@ The library file (libsharedMemory.so) is made up of the following:
 ```C
     sharedMemory.h
     sharedMemory.c
-    semaphore.h
-    semaphore.c
+    sharedMemoryLocks.h
+    sharedMemoryLocks.c
     utils.h
     utils.c
+    vsi-core-api.h
+    vsi-core-api.c
 ```
 
 There are some testing functions defined in:
@@ -80,10 +82,10 @@ All key values in this implementation are required to be unique.  If a
 duplicate key is specified in the insert function, an error will be returned
 and the record will not be inserted.
 
-#### sharedMemoryOpen
+#### vsi_core_open
 
 ```C
-    sharedMemory_t* sharedMemory sharedMemoryOpen ( void );
+    vsi_core_handle vsi_core_open ( void );
 ```
 
 This call is mandatory before any other function can be executed on the data
@@ -91,23 +93,23 @@ in the shared memory segment.  The code will open an existing instance of the
 shared memory segment or if none exists or one exists but contains no data, a
 new shared memory segment will be automatically created and initialized.
 
-The return value is a pointer to the beginning of the shared memory segment
-and will be needed for subsequent calls to the API functions.
+The return value is a handle to the shared memory segment and will be needed
+for subsequent calls to the API functions.
 
-#### sharedMemoryInsert
+#### vsi_core_insert
 
 This function will insert a new message into the shared memory segment at the proper
 location with the specified key and domain, and body values.
 
 ```C
-    int sharedMemoryInsert ( sharedMemory_t* sharedMemory,
-                             unsigned long   key,
-                             enum domains    domain,
-                             unsigned long   bodySize,
-                             void*           body );
+    int vsi_core_insert ( vsi_core_handle handle,
+                          offset_t        key,
+                          enum domains    domain,
+                          unsigned long   newMessageSize,
+                          void*           body );
 ```
 
-The sharedMemory parameter is a pointer to the shared memory segment that was
+The handle parameter is a pointer to the shared memory segment that was
 returned from the sharedMemoryOpen call.
 
 The key is an unsigned 8 byte value which will be used to retrieve this data
@@ -127,21 +129,21 @@ memory segment.
 The body is a pointer to the memory location containing the body data that is
 to be store in the shared memory segment.
 
-#### sharedMemoryFetch
+#### vsi_core_fetch
 
 This function will find the record with the specified domain and key values in
 the shared memory segment, return the message data to the caller and delete
 the message from the shared memory segment.
 
 ```C
-    int sharedMemoryFetch ( sharedMemory_t* sharedMemory,
-                            unsigned long   key,
-                            enum domains    domain,
-                            unsigned long   bodySize,
-                            void*           body );
+    int vsi_core_fetch ( vsi_core_handle handle,
+                         unsigned long   key,
+                         enum domains    domain,
+                         unsigned long   bodySize,
+                         void*           body );
 ```
 
-The sharedMemory parameter is a pointer to the shared memory segment that was
+The handle parameter is a pointer to the shared memory segment that was
 returned from the sharedMemoryOpen call.
 
 The key is an unsigned 8 byte value which will identify the data record in the
@@ -164,17 +166,14 @@ automatically have a null appended to it if it is actually ASCII data.  It is
 the caller's resonsibility to ensure that if the data being retrieved is ASCII
 data, that those strings are properly null terminated.
 
-#### sharedMemoryClose
+#### vsi_core_close
 
 ```C
-    void sharedMemoryClose ( sharedMemory_t* sharedMemory,
-                             unsigned int sharedMemorySegmentSize );
+    void vsi_core_close ( vsi_core_handle handle );
 ```
 
-The sharedMemory parameter is a pointer to the shared memory segment that was
+The handle parameter is a pointer to the shared memory segment that was
 returned from the sharedMemoryOpen call.
-
-The shared memory segment size is the total size of the shared memory segment.
 
 This call will unmap the current shared memory segment from the user's virtual
 address space and ensure that the data has been saved in the disk file

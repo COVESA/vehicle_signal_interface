@@ -11,6 +11,7 @@
 #include "vsi.h"
 #include "vsi_list.h"
 #include "vsi_types.h"
+#include "vsi_core_api.h"
 
 // ******************
 // INTERNAL FUNCTIONS
@@ -61,6 +62,17 @@ vsi_handle vsi_initialize()
 
     context->signal_head = NULL;
 
+    //
+    //  Go initialize the core shared memory system.
+    //
+    vsi_core_handle handle = vsi_core_open();
+    if ( handle == 0 )
+    {
+        printf ( "ERROR: Unable to initialize the VSI core data store!\n" );
+        exit ( 255 );
+    }
+    context->coreHandle = handle;
+
     return (vsi_handle)context;
 }
 
@@ -83,6 +95,7 @@ int vsi_destroy(vsi_handle *handle)
             free(prev);
         }
     }
+    vsi_core_close ( context->coreHandle );
 
     // Finally, free the handle.
     free(*handle);
@@ -152,11 +165,13 @@ int vsi_fire_signal_by_name(vsi_handle handle, char *name, void *data,
 int vsi_fire_signal(vsi_handle handle, unsigned int domain_id,
                     unsigned int signal_id, void *data, unsigned int data_len)
 {
-    struct vsi_context *context;
+    struct vsi_context* context;
 
-    CHECK_AND_RETURN_IF_ERROR(handle && data && data_len);
+    CHECK_AND_RETURN_IF_ERROR ( handle && data && data_len );
 
-    context = (struct vsi_context *)handle;
+    context = (struct vsi_context*)handle;
+
+    vsi_core_insert ( context->coreHandle, signal_id, domain_id, data_len, data );
 
     return 0;
 }

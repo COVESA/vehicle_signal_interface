@@ -420,7 +420,7 @@ int vsi_get_newest_group(vsi_handle handle, unsigned long group_id,
      /     \
    SIG0   SIG1
    @endverbatim
- * 
+ *
  * VSI allows for a cache of multiple messages, but for the sake of an example
  * assume it can only hold two messages and the events happen as follows:
  *
@@ -432,7 +432,7 @@ int vsi_get_newest_group(vsi_handle handle, unsigned long group_id,
    E: Signal 1 fires. The information is saved in **result.
    F: The group causes a wake event.
    @endverbatim
- * 
+ *
  * Internal to the VSI cache, the information at B is lost. The listening
  * application receives the results of the signal events at B and E. Applications
  * more interested in the events of D and E should call vsi_get_newest_group()

@@ -18,7 +18,7 @@
 #define UTILS_H
 
 #include "sharedMemory.h"
-#include "semaphore.h"
+#include "sharedMemoryLocks.h"
 
 /*! @{ */
 

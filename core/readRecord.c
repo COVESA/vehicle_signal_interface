@@ -23,9 +23,8 @@
 #include <stdbool.h>
 #include <errno.h>
 
-#include "sharedMemory.h"
+#include "vsi_core_api.h"
 
-extern sharedMemory_t* sharedMemory;		// TEMP - Used by the dump code
 
 /*! @{ */
 
@@ -133,10 +132,10 @@ int main ( int argc, char* const argv[] )
 	//	Note that if the shared memory segment does not already exist, this
 	//	call will create it.
 	//
-	sharedMemory = sharedMemoryOpen();
-	if ( sharedMemory == 0 )
+	vsi_core_handle handle = vsi_core_open();
+	if ( handle == 0 )
 	{
-		printf ( "Unable to open the shared memory segment - Aborting\n" );
+		printf ( "Unable to open the VSI core data store - Aborting\n" );
 		exit ( 255 );
 	}
 	//
@@ -144,8 +143,7 @@ int main ( int argc, char* const argv[] )
 	//
 	printf ( "  domain: %'u\n  key...: %'lu\n", domainValue, keyValue );
 
-	status = sharedMemoryFetch ( sharedMemory, keyValue, domainValue,
-								 8, asciiData );
+	status = vsi_core_fetch_wait ( handle, keyValue, domainValue, 8, asciiData );
 
 	numericData = atol ( asciiData );
 
@@ -160,7 +158,7 @@ int main ( int argc, char* const argv[] )
 	//
 	//	Close our shared memory segment and exit.
 	//
-	sharedMemoryClose ( sharedMemory, TOTAL_SHARED_MEMORY_SIZE );
+	vsi_core_close ( handle );
 
 	//
 	//	Return a good completion code to the caller.

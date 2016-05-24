@@ -27,10 +27,9 @@
 #include <string.h>
 #include <locale.h>
 
-#include "utils.h"
+#include "vsi_core_api.h"
 #include "sharedMemory.h"
 
-extern sharedMemory_t* sharedMemory;		// TEMP - Used by the dump code
 
 /*! @{ */
 
@@ -160,17 +159,19 @@ int main ( int argc, char* const argv[] )
 	//	Note that if the shared memory segment does not already exist, this
 	//	call will create it.
 	//
-	sharedMemory = sharedMemoryOpen();
-	if ( sharedMemory == 0 )
+	vsi_core_handle handle = vsi_core_open();
+	if ( handle == 0 )
 	{
-		printf ( "Unable to open the shared memory segment - Aborting\n" );
+		printf ( "Unable to open the VSI core data store - Aborting\n" );
 		exit (255);
 	}
 	//
 	//	For each of the messages we were asked to dump...
 	//
-	printf ( "Beginning dump of shared memory segment[%s]...\n",
+	printf ( "Beginning dump of VSI core data store[%s]...\n",
 	         SHARED_MEMORY_SEGMENT_NAME );
+
+    sharedMemory_t* sharedMemory = (sharedMemory_t*)handle;
 
 	for ( unsigned int i = 0; i < bucketsToDump; i++ )
 	{
@@ -182,7 +183,7 @@ int main ( int argc, char* const argv[] )
 	//
 	//	Close our shared memory segment and exit.
 	//
-	sharedMemoryClose ( sharedMemory, TOTAL_SHARED_MEMORY_SIZE );
+	vsi_core_close ( handle );
 
 	//
 	//	Return a good completion code to the caller.

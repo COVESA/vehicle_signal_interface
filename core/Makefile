@@ -14,7 +14,7 @@ CFLAGS+=     \
   -std=gnu11 \
   -g         \
   -Wall      \
-  -fpic      \
+  -fPIC      \
 
 LDFLAGS+=    \
   -L.        \
@@ -22,10 +22,11 @@ LDFLAGS+=    \
   -lpthread  \
   -lc		 \
 
-INCLUDES=        \
-  sharedMemory.h \
-  semaphore.h    \
-  utils.h        \
+INCLUDES=             \
+  sharedMemory.h      \
+  sharedMemoryLocks.h \
+  vsi_core_api.h      \
+  utils.h             \
 
 TARGETS=         \
   libvsi-core.so \
@@ -52,29 +53,29 @@ rebuild:
 	make -s distclean; \
 	make all
 
-insert : insert.o libvsi-core.so $(INCLUDES)
+insert : insert.o libvsi_core.so $(INCLUDES)
 	echo "Rebuilding the $@ executable..."; \
 	gcc $(CFLAGS) -o $@ $@.o $(LDFLAGS)
 
-fetch : fetch.o libvsi-core.so $(INCLUDES)
+fetch : fetch.o libvsi_core.so $(INCLUDES)
 	echo "Rebuilding the $@ executable..."; \
 	gcc $(CFLAGS) -o $@ $@.o $(LDFLAGS)
 
-dump : dump.o libvsi-core.so $(INCLUDES)
+dump : dump.o libvsi_core.so $(INCLUDES)
 	echo "Rebuilding the $@ executable..."; \
 	gcc $(CFLAGS) -o $@ $@.o $(LDFLAGS)
 
-writeRecord : writeRecord.o libvsi-core.so $(INCLUDES)
+writeRecord : writeRecord.o libvsi_core.so $(INCLUDES)
 	echo "Rebuilding the $@ executable..."; \
 	gcc $(CFLAGS) -o $@ $@.o $(LDFLAGS)
 
-readRecord : readRecord.o libvsi-core.so $(INCLUDES)
+readRecord : readRecord.o libvsi_core.so $(INCLUDES)
 	echo "Rebuilding the $@ executable..."; \
 	gcc $(CFLAGS) -o $@ $@.o $(LDFLAGS)
 
-libvsi-core.so: sharedMemory.o semaphore.o utils.o
+libvsi-core.so: vsi_core_api.o sharedMemory.o sharedMemoryLocks.o utils.o
 	echo "Linking the $@ shared library..."; \
-	gcc $(CFLAGS) -shared -o $@ sharedMemory.o semaphore.o utils.o
+	gcc $(CFLAGS) -shared -o $@ vsi_core_api.o sharedMemory.o sharedMemoryLocks.o utils.o
 
 tar:
 	echo "Creating the development tar package..."; \
