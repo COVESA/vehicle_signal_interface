@@ -21,7 +21,9 @@
 #include "sharedMemory.h"
 #include "utils.h"
 
+
 /*! @{ */
+
 
 /*!-----------------------------------------------------------------------
 
@@ -37,53 +39,125 @@
 typedef void* vsi_core_handle;
 
 
-//
-//  Open the VSI VSI core environment.
-//
-//  If the VSI core environment does not exist yet, it will be created by this call.
-//
+/*!-----------------------------------------------------------------------
+
+    v s i _ c o r e _ o p e n
+
+    @brief Open the VSI VSI core environment.
+
+    If the VSI core environment does not exist yet, it will be created by this
+    call.
+
+	@param  None
+
+	@return The handle to the VSI core data store.
+            NULL indicates an error.
+
+------------------------------------------------------------------------*/
 vsi_core_handle vsi_core_open ( void );
 
 
-//
-//  Close the VSI core environment.
-//
-//  Note that this call will undo everything that was set up by the "open"
-//  call.  However, it will not destroy the persistent data created while the
-//  core was in use.  Only the data allocated in the context of the virtual
-//  address space of the current process will be destroyed.
-//
-//  After calling this function, any access to an item located in the core
-//  data store will result in a SEGV signal being generated.
-//
-void vsi_core_close ( vsi_core_handle vsiCore );
+/*!-----------------------------------------------------------------------
+
+    v s i _ c o r e _ c l o s e
+
+	@brief Close the VSI core environment.
+
+    Note that this call will undo everything that was set up by the "open"
+    call.  However, it will not destroy the persistent data created while the
+    core was in use.  Only the data allocated in the context of the virtual
+    address space of the current process will be destroyed.
+
+    After calling this function, any access to an item located in the core
+    data store will result in a SEGV signal being generated.
+
+	@param[in] handle - The VSI data store handle.
+
+	@return None
+
+------------------------------------------------------------------------*/
+void vsi_core_close ( vsi_core_handle handle );
 
 
-//
-//  Insert a message into the VSI core data store.
-//
-//  This function will insert a new message into the VSI core data store with
-//  the given domain and key values.  If there is no space left in the data
-//  sore for this domain and key, the oldest record(s) in the data store for
-//  that domain and key will be overwritten with this new data.  In this way,
-//  the newest data items will always be in the data store.
-//
-void vsi_core_insert ( vsi_core_handle vsiCore, offset_t key,
-                       enum domains domain, unsigned long newMessageSize,
+/*!-----------------------------------------------------------------------
+
+    v s i _ c o r e _ i n s e r t
+
+	@brief Insert a message into the VSI core data store.
+
+    This function will insert a new message into the VSI core data store with
+    the given domain and key values.  If there is no space left in the data
+    sore for this domain and key, the oldest record(s) in the data store for
+    that domain and key will be overwritten with this new data.  In this way,
+    the newest data items will always be in the data store.
+
+    @param[in] handle - The handle to the VSI core data store.
+    @param[in] domain - The domain associated with this message.
+    @param[in] key - The key value associated with this message.
+    @param[in] newMessageSize - The size of the new message in bytes.
+    @param[in] body - The address of the body of the new message.
+
+	@return None
+
+------------------------------------------------------------------------*/
+void vsi_core_insert ( vsi_core_handle handle, enum domains domain,
+                       offset_t key, unsigned long newMessageSize,
                        void* body );
-//
-//  Fetch and remove a message from the VSI data store.
-//
-//  This function will find the message with the specified domain and key
-//  values in the VSI data store, return the message data to the caller and
-//  delete the message from the VSI data store.
-//
-int vsi_core_fetch ( vsi_core_handle vsiCore, offset_t key,
-                     enum domains domain, unsigned long newMessageSize,
+
+/*!-----------------------------------------------------------------------
+
+	v s i _ c o r e _ f e t c h
+
+	@brief Fetch and remove a message from the VSI data store.
+
+    This function will find the message with the specified domain and key
+    values in the VSI data store, return the message data to the caller and
+    delete the message from the VSI data store.  If the data requested is not
+    available in the data store, this function will return immediately with an
+    error code.
+
+    @param[in] handle - The handle to the VSI core data store.
+    @param[in] domain - The domain associated with this message.
+    @param[in] key - The key value associated with this message.
+    @param[in/out] bodySize - The address of the body buffer size.
+    @param[out] body - The address of the user's message buffer.
+
+	@return 0      - Success
+            ENOMSG - The requested domain/key does not exist.
+                   - Anything else is an error code.
+
+------------------------------------------------------------------------*/
+int vsi_core_fetch ( vsi_core_handle vsiCore, enum domains domain,
+                     offset_t key, unsigned long* bodySize,
                      void* body );
 
-int vsi_core_fetch_wait ( vsi_core_handle vsiCore, offset_t key,
-                          enum domains domain, unsigned long newMessageSize,
+/*!-----------------------------------------------------------------------
+
+    v s i _ c o r e _ f e t c h _ w a i t
+
+	@brief Fetch and remove a message from the VSI data store with wait.
+
+    This function will find the message with the specified domain and key
+    values in the VSI data store, return the message data to the caller and
+    delete the message from the VSI data store.  If the data requested is not
+    available in the data store, this function will wait indefinitely and only
+    return when the data requested is available.
+
+    This function is identical to the vsi_core_fetch function except for the
+    wait behavior.
+
+    @param[in] handle - The handle to the VSI core data store.
+    @param[in] domain - The domain associated with this message.
+    @param[in] key - The key value associated with this message.
+    @param[in/out] bodySize - The address of the body buffer size.
+    @param[out] body - The address of the user's message buffer.
+
+	@return 0 - Success
+              - Anything else is an error code.
+
+------------------------------------------------------------------------*/
+int vsi_core_fetch_wait ( vsi_core_handle vsiCore, enum domains domain,
+                          offset_t key, unsigned long* bodySize,
                           void* body );
 
 

@@ -224,8 +224,9 @@ int main ( int argc, char* const argv[] )
 			//	Note that for these tests, all of the messsages in the message
             //  pool will be retrieved from the "CAN" domain.
 			//
-            status = vsi_core_fetch ( handle, messageKey, CAN,
-                                      sizeof(message), &message );
+            unsigned long messageSize = sizeof(message);
+            status = vsi_core_fetch_wait ( handle, CAN, messageKey,
+                                           &messageSize, &message );
 			if ( status != 0 )
 			{
 				printf ( "====> ERROR: Fetching message[%lu] - Error %d\n",

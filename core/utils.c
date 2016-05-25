@@ -31,7 +31,7 @@
 // #define LOG(...) printf ( __VA_ARGS__ )
 #define LOG(...)
 
-sharedMemory_t* sharedMemory;		// TEMP - Used by the dump code
+sharedMemory_p sharedMemory;		// TEMP - Used by the dump code
 
 /*! @{ */
 
@@ -70,7 +70,7 @@ sharedMemory_t* sharedMemory;		// TEMP - Used by the dump code
 
 ------------------------------------------------------------------------*/
 void dumpHashBucket ( const char* leader, unsigned int bucketNumber,
-					  hashBucket_t* hashBucket, int maxMessages )
+					  hashBucket_p hashBucket, int maxMessages )
 {
 	//
 	//	If there are some messages in this hash bucket...
@@ -187,7 +187,7 @@ void dumpHashBucket ( const char* leader, unsigned int bucketNumber,
 	@return None
 
 ------------------------------------------------------------------------*/
-void dumpMessageList ( const char* leader, hashBucket_t* hashBucket,
+void dumpMessageList ( const char* leader, hashBucket_p hashBucket,
 					   int maxMessages )
 {
 	int i = 0;
@@ -202,7 +202,7 @@ void dumpMessageList ( const char* leader, hashBucket_t* hashBucket,
 	//	Get an actual pointer to the first message in this bucket.  This is
 	//	the message that is pointed to by the "head" offset.
 	//
-	sharedMessage_t* message = hb_getAddress ( hashBucket,
+	sharedMessage_p message = hb_getAddress ( hashBucket,
 											   hb_getHead ( hashBucket ) );
 	//
 	//	Repeat until we reach the end of the message list in this bucket.
@@ -218,14 +218,14 @@ void dumpMessageList ( const char* leader, hashBucket_t* hashBucket,
 		printf ( "%sMessage number %'d[%p-%'lu]:\n", leader, ++i, message,
 				 (void*)message - baseAddress );
 		//
-		//	Display the key value that was associated with this message.
-		//
-		printf ( "%s   Key.................: %'lu\n", leader, message->key );
-
-		//
 		//	Display the domain associated with this message.
 		//
 		printf ( "%s   Domain..............: %'u\n",  leader, message->domain );
+
+		//
+		//	Display the key value that was associated with this message.
+		//
+		printf ( "%s   Key.................: %'lu\n", leader, message->key );
 
 		//
 		//	Display the size of this message in bytes.
@@ -283,7 +283,7 @@ void dumpMessageList ( const char* leader, hashBucket_t* hashBucket,
 	@param[in] semaphore - The address of the semaphore to be dumped.
 
 ------------------------------------------------------------------------*/
-void dumpSemaphore ( const char* leader, semaphore_t* semaphore )
+void dumpSemaphore ( const char* leader, semaphore_p semaphore )
 {
 	//
 	//	Display the message count value.

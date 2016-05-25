@@ -171,7 +171,7 @@ int main ( int argc, char* const argv[] )
 	printf ( "Beginning dump of VSI core data store[%s]...\n",
 	         SHARED_MEMORY_SEGMENT_NAME );
 
-    sharedMemory_t* sharedMemory = (sharedMemory_t*)handle;
+    sharedMemory_p sharedMemory = (sharedMemory_p)handle;
 
 	for ( unsigned int i = 0; i < bucketsToDump; i++ )
 	{

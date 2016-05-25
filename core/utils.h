@@ -26,12 +26,12 @@
 //  Declare the dump utility functions.
 //
 void dumpHashBucket ( const char* leader, unsigned int bucketNumber,
-					  hashBucket_t* hashBucket, int maxMessages );
+					  hashBucket_p hashBucket, int maxMessages );
 
-void dumpMessageList ( const char* leader, hashBucket_t* hashBucket,
+void dumpMessageList ( const char* leader, hashBucket_p hashBucket,
 					   int maxMessages );
 
-void dumpSemaphore ( const char* leader, semaphore_t* semaphore );
+void dumpSemaphore ( const char* leader, semaphore_p semaphore );
 
 //
 //  Define some macros to make it easier to call the HexDump function with

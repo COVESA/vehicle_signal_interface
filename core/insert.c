@@ -222,7 +222,7 @@ int main ( int argc, char* const argv[] )
 			//	Note that for these tests, all of the messsages in the message
 			//	pool will be inserted in the "CAN" domain.
 			//
-			vsi_core_insert ( handle, messageKey, CAN, sizeof(message), &i );
+			vsi_core_insert ( handle, CAN, messageKey, sizeof(message), &i );
 		}
 		clock_gettime(CLOCK_REALTIME, &stopTime);
 

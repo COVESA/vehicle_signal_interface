@@ -33,14 +33,14 @@ typedef struct semaphore_t
 	int             messageCount;
 	int             waiterCount;
 
-}   semaphore_t;
+}   semaphore_t, *semaphore_p;
 
 
 //
 //	Define the semaphore member functions.
 //
-void semaphorePost ( semaphore_t* semaphore );
-void semaphoreWait ( semaphore_t* semaphore );
+void semaphorePost ( semaphore_p semaphore );
+void semaphoreWait ( semaphore_p semaphore );
 
 
 #endif		// End of #ifndef SHARED_MEMORY_LOCKS_H

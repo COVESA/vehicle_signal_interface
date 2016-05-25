@@ -56,7 +56,7 @@
 	@param[in] semaphore - The address of the semaphore object to operate on.
 
 ------------------------------------------------------------------------*/
-void semaphorePost ( semaphore_t* semaphore )
+void semaphorePost ( semaphore_p semaphore )
 {
 	int status;
 
@@ -92,7 +92,7 @@ void semaphorePost ( semaphore_t* semaphore )
 }
 
 
-void semaphoreWait ( semaphore_t* semaphore )
+void semaphoreWait ( semaphore_p semaphore )
 {
 	int status;
 

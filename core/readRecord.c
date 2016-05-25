@@ -143,7 +143,9 @@ int main ( int argc, char* const argv[] )
 	//
 	printf ( "  domain: %'u\n  key...: %'lu\n", domainValue, keyValue );
 
-	status = vsi_core_fetch_wait ( handle, keyValue, domainValue, 8, asciiData );
+    unsigned long dataSize = sizeof(asciiData) - 1;
+	status = vsi_core_fetch_wait ( handle, domainValue, keyValue, &dataSize,
+                                   asciiData );
 
 	numericData = atol ( asciiData );
 

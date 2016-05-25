@@ -53,23 +53,23 @@ rebuild:
 	make -s distclean; \
 	make all
 
-insert : insert.o libvsi_core.so $(INCLUDES)
+insert : insert.o libvsi-core.so $(INCLUDES)
 	echo "Rebuilding the $@ executable..."; \
 	gcc $(CFLAGS) -o $@ $@.o $(LDFLAGS)
 
-fetch : fetch.o libvsi_core.so $(INCLUDES)
+fetch : fetch.o libvsi-core.so $(INCLUDES)
 	echo "Rebuilding the $@ executable..."; \
 	gcc $(CFLAGS) -o $@ $@.o $(LDFLAGS)
 
-dump : dump.o libvsi_core.so $(INCLUDES)
+dump : dump.o libvsi-core.so $(INCLUDES)
 	echo "Rebuilding the $@ executable..."; \
 	gcc $(CFLAGS) -o $@ $@.o $(LDFLAGS)
 
-writeRecord : writeRecord.o libvsi_core.so $(INCLUDES)
+writeRecord : writeRecord.o libvsi-core.so $(INCLUDES)
 	echo "Rebuilding the $@ executable..."; \
 	gcc $(CFLAGS) -o $@ $@.o $(LDFLAGS)
 
-readRecord : readRecord.o libvsi_core.so $(INCLUDES)
+readRecord : readRecord.o libvsi-core.so $(INCLUDES)
 	echo "Rebuilding the $@ executable..."; \
 	gcc $(CFLAGS) -o $@ $@.o $(LDFLAGS)
 
@@ -89,7 +89,7 @@ clean:
 
 cleanshm:
 	echo "Deleting the shared memory segment file.."; \
-	rm -f /var/run/shm/vsiSharedMemorySegment
+	rm -f /var/run/shm/vsiCoreDataStore
 
 distclean:
 	make -s clean; \

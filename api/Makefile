@@ -8,7 +8,7 @@
 
 default: all
 
-CFLAGS+=-std=gnu11 -O4 -I../core
+CFLAGS+=-std=gnu11 -g -I../core
 LDFLAGS+=-L. -L../core -lc
 LIBRARIES=-lvsi -lvsi-core -lpthread
 

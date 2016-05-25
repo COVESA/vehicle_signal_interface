@@ -6,6 +6,7 @@
 
 #include <errno.h>
 #include <stdbool.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include "vsi.h"
@@ -17,7 +18,7 @@
 // INTERNAL FUNCTIONS
 // ******************
 
-union vsi_signal_id vsi_name_string_to_id_internal(char *name);
+void vsi_name_string_to_id_internal ( char* name, union vsi_signal_id* id );
 
 //
 // Helper macro to get a signal ID from a specified name. If the signal could
@@ -28,13 +29,14 @@ union vsi_signal_id vsi_name_string_to_id_internal(char *name);
 // vsi_name_string_to_id. An error is detected by checking if the result of the
 // call is non-zero.
 //
-#define VSI_GET_VALID_ID(name)                     \
-    do                                             \
-    {                                              \
-        if (!(name))                               \
-            return -EINVAL;                        \
-        id = vsi_name_string_to_id_internal(name); \
-    } while (0)
+#define VSI_GET_VALID_ID( name, id )              \
+{                                                 \
+    if ( !(name) )                                \
+    {                                             \
+        return -EINVAL;                           \
+    }                                             \
+    vsi_name_string_to_id_internal ( name, &id ); \
+}
 
 //
 // Helper macro strictly for checking if input arguments are valid. This should
@@ -65,13 +67,13 @@ vsi_handle vsi_initialize()
     //
     //  Go initialize the core shared memory system.
     //
-    vsi_core_handle handle = vsi_core_open();
-    if ( handle == 0 )
+    vsi_core_handle coreHandle = vsi_core_open();
+    if ( coreHandle == 0 )
     {
         printf ( "ERROR: Unable to initialize the VSI core data store!\n" );
         exit ( 255 );
     }
-    context->coreHandle = handle;
+    context->coreHandle = coreHandle;
 
     return (vsi_handle)context;
 }
@@ -95,6 +97,9 @@ int vsi_destroy(vsi_handle *handle)
             free(prev);
         }
     }
+    //
+    //  Close the VSI core data store.
+    //
     vsi_core_close ( context->coreHandle );
 
     // Finally, free the handle.
@@ -112,7 +117,7 @@ int vsi_register_signal_by_name(vsi_handle handle, char *name)
 {
     union vsi_signal_id id;
 
-    VSI_GET_VALID_ID(name);
+    VSI_GET_VALID_ID ( name, id );
 
     return vsi_register_signal(handle, id.parts.domain_id, id.parts.signal_id);
 }
@@ -133,7 +138,7 @@ int vsi_unregister_signal_by_name(vsi_handle handle, char *name)
 {
     union vsi_signal_id id;
 
-    VSI_GET_VALID_ID(name);
+    VSI_GET_VALID_ID ( name, id );
 
     return vsi_unregister_signal(handle, id.parts.domain_id,
                                  id.parts.signal_id);
@@ -156,7 +161,7 @@ int vsi_fire_signal_by_name(vsi_handle handle, char *name, void *data,
 {
     union vsi_signal_id id;
 
-    VSI_GET_VALID_ID(name);
+    VSI_GET_VALID_ID ( name, id );
 
     return vsi_fire_signal(handle, id.parts.domain_id, id.parts.signal_id, data,
                            data_len);
@@ -171,7 +176,7 @@ int vsi_fire_signal(vsi_handle handle, unsigned int domain_id,
 
     context = (struct vsi_context*)handle;
 
-    vsi_core_insert ( context->coreHandle, signal_id, domain_id, data_len, data );
+    vsi_core_insert ( context->coreHandle, domain_id, signal_id, data_len, data );
 
     return 0;
 }
@@ -184,7 +189,7 @@ int vsi_subscribe_to_signal_by_name(vsi_handle handle, char *name)
 {
     union vsi_signal_id id;
 
-    VSI_GET_VALID_ID(name);
+    VSI_GET_VALID_ID ( name, id );
 
     return vsi_subscribe_to_signal(handle, id.parts.domain_id,
                                    id.parts.signal_id);
@@ -206,7 +211,7 @@ int vsi_unsubscribe_from_signal_by_name(vsi_handle handle, char *name)
 {
     union vsi_signal_id id;
 
-    VSI_GET_VALID_ID(name);
+    VSI_GET_VALID_ID ( name, id );
 
     return vsi_unsubscribe_from_signal(handle, id.parts.domain_id,
                                        id.parts.signal_id);
@@ -251,7 +256,7 @@ int vsi_add_signal_to_group_by_name(vsi_handle handle, char *name,
 {
     union vsi_signal_id id;
 
-    VSI_GET_VALID_ID(name);
+    VSI_GET_VALID_ID ( name, id );
 
     return vsi_add_signal_to_group(handle, id.parts.domain_id,
                                    id.parts.signal_id, group_id);
@@ -274,7 +279,7 @@ int vsi_remove_signal_from_group_by_name(vsi_handle handle, char *name,
 {
     union vsi_signal_id id;
 
-    VSI_GET_VALID_ID(name);
+    VSI_GET_VALID_ID ( name, id );
 
     return vsi_remove_signal_from_group(handle, id.parts.domain_id,
                                         id.parts.signal_id, group_id);
@@ -301,7 +306,7 @@ int vsi_get_newest_signal_by_name(vsi_handle handle, char *name,
 {
     union vsi_signal_id id;
 
-    VSI_GET_VALID_ID(name);
+    VSI_GET_VALID_ID ( name, id );
 
     return vsi_get_newest_signal(handle, id.parts.domain_id, id.parts.signal_id,
                                  result);
@@ -326,7 +331,7 @@ int vsi_get_oldest_signal_by_name(vsi_handle handle, char *name,
 {
     union vsi_signal_id id;
 
-    VSI_GET_VALID_ID(name);
+    VSI_GET_VALID_ID ( name, id );
 
     return vsi_get_oldest_signal(handle, id.parts.domain_id, id.parts.signal_id,
                                  result);
@@ -335,23 +340,22 @@ int vsi_get_oldest_signal_by_name(vsi_handle handle, char *name,
 int vsi_get_oldest_signal(vsi_handle handle, unsigned int domain_id,
                           unsigned int signal_id, struct vsi_data *result)
 {
-    struct vsi_context *context;
+    struct vsi_context *context = handle;
 
     CHECK_AND_RETURN_IF_ERROR(handle && result && result->data);
 
-    *(unsigned char *)result->data = (unsigned char)100;
     result->len = 1;
-    result->status = 0;
 
-    // Pretend this was the only message in the buffer.
-    return -ENODATA;
+    result->status = vsi_core_fetch ( context->coreHandle, domain_id, signal_id,
+                                      &result->len, &result->data );
+    return result->status;
 }
 
 int vsi_flush_signal_by_name(vsi_handle handle, char *name)
 {
     union vsi_signal_id id;
 
-    VSI_GET_VALID_ID(name);
+    VSI_GET_VALID_ID ( name, id );
 
     return vsi_flush_signal(handle, id.parts.domain_id, id.parts.signal_id);
 }
@@ -472,24 +476,21 @@ int vsi_name_id_to_string(vsi_handle handle, unsigned int domain_id,
 // INTERNAL FUNCTIONS
 // ******************
 
-union vsi_signal_id vsi_name_string_to_id_internal(char *name)
+void vsi_name_string_to_id_internal ( char* name,
+                                      union vsi_signal_id* id )
 {
-    union vsi_signal_id id;
-
     //
     // TODO: Perform the signal ID lookup from VSS. These values are only good
     //       for the sample application.
     //
     if (!strcmp(name, "foo"))
-        id.parts.signal_id = 1;
+        id->parts.signal_id = 1;
     else if (!strcmp(name, "bar"))
-        id.parts.signal_id = 2;
+        id->parts.signal_id = 2;
     else if (!strcmp(name, "baz"))
-        id.parts.signal_id = 3;
+        id->parts.signal_id = 3;
     else if (!strcmp(name, "gen"))
-        id.parts.signal_id = 4;
+        id->parts.signal_id = 4;
     else if (!strcmp(name, "ivi"))
-        id.parts.signal_id = 5;
-
-    return id;
+        id->parts.signal_id = 5;
 }

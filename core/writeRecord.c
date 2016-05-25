@@ -169,7 +169,7 @@ int main ( int argc, char* const argv[] )
 	//
 	if ( strlen ( asciiData ) != 0 )
 	{
-		vsi_core_insert ( handle, keyValue, domainValue, 8, &asciiData );
+		vsi_core_insert ( handle, domainValue, keyValue, 8, &asciiData );
 	}
 	else
 	{
@@ -177,7 +177,7 @@ int main ( int argc, char* const argv[] )
 		{
 			numericData = keyValue;
 		}
-		vsi_core_insert ( handle, keyValue, domainValue, 8, &numericData );
+		vsi_core_insert ( handle, domainValue, keyValue, 8, &numericData );
 	}
 	//
 	//	Close our shared memory segment and exit.

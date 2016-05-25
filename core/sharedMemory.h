@@ -44,6 +44,8 @@
 #ifndef SHARED_MEMORY_H
 #define SHARED_MEMORY_H
 
+#include <stdbool.h>
+
 #include "sharedMemoryLocks.h"
 
 
@@ -141,7 +143,7 @@ typedef struct sharedMessage_t
 	enum domains domain;
 	char         data[0];
 
-}   sharedMessage_t;
+}   sharedMessage_t, *sharedMessage_p;
 
 //
 //	Define the size of the shared message header structure.  This value needs
@@ -215,7 +217,7 @@ typedef struct hashBucket_t
 	//
 	unsigned char data[HASH_BUCKET_DATA_SIZE];
 
-}	hashBucket_t;
+}	hashBucket_t, *hashBucket_p;
 
 
 /*!-----------------------------------------------------------------------
@@ -231,10 +233,10 @@ typedef struct hashBucket_t
 //	specified hash bucket.  These pointers are necessary when we want to
 //	actually read and write data into the messages being stored.
 //
-inline static sharedMessage_t* hb_getAddress ( hashBucket_t* hashBucket,
+inline static sharedMessage_p hb_getAddress ( hashBucket_p hashBucket,
 											   offset_t offset )
 {
-	return (sharedMessage_t*) ( &hashBucket->data[offset] );
+	return (sharedMessage_p)( &hashBucket->data[offset] );
 }
 
 
@@ -242,7 +244,7 @@ inline static sharedMessage_t* hb_getAddress ( hashBucket_t* hashBucket,
 //	Return the offset of the first message in the message list of this hash
 //	bucket.
 //
-inline static offset_t hb_getHead ( hashBucket_t* hashBucket )
+inline static offset_t hb_getHead ( hashBucket_p hashBucket )
 {
 	return hashBucket->head;
 }
@@ -252,7 +254,7 @@ inline static offset_t hb_getHead ( hashBucket_t* hashBucket )
 //	Return the offset of the last message in the message list of this hash
 //	bucket.
 //
-inline static offset_t hb_getTail ( hashBucket_t* hashBucket )
+inline static offset_t hb_getTail ( hashBucket_p hashBucket )
 {
 	return hashBucket->tail;
 }
@@ -276,14 +278,14 @@ typedef struct sharedMemory_t
 
 	unsigned long globalTime;       // Debugging Only (for delta times)
 
-}	sharedMemory_t;
+}	sharedMemory_t, *sharedMemory_p;
 
 
 //
 //	Define the global constants and variables.
 //
 #define TOTAL_SHARED_MEMORY_SIZE ( sizeof(sharedMemory_t) )
-#define SHARED_MEMORY_SEGMENT_NAME "/var/run/shm/vsiSharedMemorySegment"
+#define SHARED_MEMORY_SEGMENT_NAME "/var/run/shm/vsiCoreDataStore"
 
 
 /*!-----------------------------------------------------------------------
@@ -307,10 +309,10 @@ inline static unsigned long sm_getHash ( unsigned long key )
 //	Return the address of a hash bucket from the specified shared memory
 //	segment at the specified index.
 //
-inline static hashBucket_t* sm_getBucketAddress ( sharedMemory_t* sharedMemory,
+inline static hashBucket_p sm_getBucketAddress ( sharedMemory_p sharedMemory,
 											      unsigned int index )
 {
-	return (hashBucket_t*)( &sharedMemory->hashBuckets[index] );
+	return (hashBucket_p)( &sharedMemory->hashBuckets[index] );
 }
 
 
@@ -321,7 +323,34 @@ inline static hashBucket_t* sm_getBucketAddress ( sharedMemory_t* sharedMemory,
 //  descriptor and size, map the file into memory, and initialize all of the
 //  fields and variables in the structure.
 //
-sharedMemory_t* sm_initialize ( int fd, size_t sharedMemorySegmentSize );
+sharedMemory_p sm_initialize ( int fd, size_t sharedMemorySegmentSize );
+
+
+//
+//  Insert a record into the core data store.
+//
+//  This function will find the appropriate hash bucket for the given key and
+//  domain and insert the caller's data into the message list of that hash
+//  bucket.
+//
+void sm_insert ( sharedMemory_p handle, enum domains domain, offset_t key,
+                 unsigned long newMessageSize, void* body );
+
+//
+//	Remove the "current" message from the message list.
+//
+//	This function will remove the message at the specified offset from the
+//	message list for the specified hash bucket.
+//
+//	WARNING: This function assumes that the hash bucket mutex has been
+//	acquired before this function is called.
+//
+int sm_removeMessage ( hashBucket_p hashBucket, offset_t currentMessage,
+                       offset_t previousMessage );
+
+
+int sm_fetch ( sharedMemory_p handle, enum domains domain, offset_t key,
+               unsigned long* messageSize, void* body, bool dontWait );
 
 
 #endif	// End of #ifndef SHARED_MEMORY_H
