@@ -29,7 +29,7 @@ int vsi_list_insert(struct vsi_context *context, unsigned int domain_id,
         return -ENOMEM;
 
     // TODO: Deal with semaphore ID conflicts.
-    err = sem_init(&new_entry->signal.__sem, 1, signal_id);
+    err = sem_init(&new_entry->signal.__sem, 1, 0);
     if (err) {
         free(new_entry);
         return err;

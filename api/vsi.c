@@ -62,7 +62,9 @@ vsi_handle vsi_initialize()
     if (!context)
         return NULL;
 
+    // Set the lists for signals and groups to NULL.
     context->signal_head = NULL;
+    context->group_head = NULL;
 
     //
     //  Go initialize the core shared memory system.
@@ -170,7 +172,7 @@ int vsi_fire_signal_by_name(vsi_handle handle, char *name, void *data,
 int vsi_fire_signal(vsi_handle handle, unsigned int domain_id,
                     unsigned int signal_id, void *data, unsigned int data_len)
 {
-    struct vsi_context* context;
+    struct vsi_context *context;
 
     CHECK_AND_RETURN_IF_ERROR ( handle && data && data_len );
 
@@ -430,14 +432,69 @@ int vsi_listen(vsi_handle handle, unsigned int *domain_id,
                unsigned int timeout)
 {
     struct vsi_context *context;
+    struct vsi_signal_list_entry *curr;
 
     CHECK_AND_RETURN_IF_ERROR(handle && domain_id && signal_id && group_id);
 
     context = (struct vsi_context *)handle;
 
-    // Pretend signal 1 fired.
+    // TODO: Add group support.
+
+    // We must have at least one signal to listen for.
+    if (!context->signal_head && !context->group_head)
+    {
+        //
+        // Because we know only signals are supported, put dummy values in if
+        // there is no signal list, since it must be for groups.
+        //
+        // TODO: Remove this once group support has been added.
+        //
+        if (!context->signal_head)
+        {
+            *domain_id = 0;
+            *signal_id = 1;
+            *group_id = 0;
+            return 0;
+        }
+
+        return -EINVAL;
+    }
+
+    //
+    // TODO: The code below will trigger the listening state of the application.
+    //       It should not be enabled until the VSI core API has been updated to
+    //       account for the needs of this API.
+    //
+#if 0
+    //
+    // Hand the list of signals down to the VSI core API.
+    //
+    // TODO: Define how to do this for groups.
+    //
+    vsi_core_fetch_signals(context->coreHandle, context->signal_head);
+
+    //
+    // Wait for a signal or group to fire.
+    //
+    // TODO: Change this to be threaded instead of a busy loop.
+    //
+    curr = context->signal_head;
+    while (true)
+    {
+        if (!sem_trywait(&curr->signal.__sem))
+            break;
+
+        curr = curr->next ? curr->next : context->signal_head;
+    }
+
+    // Return to the user which signal fired.
+    *domain_id = curr->signal.signal_id.parts.domain_id;
+    *signal_id = curr->signal.signal_id.parts.signal_id;
+#else
+    // Return dummy values for now.
     *domain_id = 0;
     *signal_id = 1;
+#endif
 
     return 0;
 }
@@ -453,8 +510,18 @@ int vsi_name_string_to_id(vsi_handle handle, char *name,
 
     CHECK_AND_RETURN_IF_ERROR(handle && name && domain_id && signal_id);
 
-    *domain_id = 1;
-    *signal_id = 2;
+    // Give some dummy signal values in a crazy inefficient manner for now.
+    *domain_id = 0;
+    if (!strcmp(name, "foo"))
+        *signal_id = 1;
+    else if (!strcmp(name, "bar"))
+        *signal_id = 2;
+    else if (!strcmp(name, "baz"))
+        *signal_id = 3;
+    else if (!strcmp(name, "gen"))
+        *signal_id = 4;
+    else if (!strcmp(name, "ivi"))
+        *signal_id = 5;
 
     return 0;
 }
@@ -467,7 +534,27 @@ int vsi_name_id_to_string(vsi_handle handle, unsigned int domain_id,
     CHECK_AND_RETURN_IF_ERROR(handle && name);
 
     // Give some dummy signal name for now.
-    strcpy(name, "org.genivi.sensor\0");
+    switch (signal_id)
+    {
+        case 1:
+            strcpy(name, "foo");
+            break;
+        case 2:
+            strcpy(name, "bar");
+            break;
+        case 3:
+            strcpy(name, "baz");
+            break;
+        case 4:
+            strcpy(name, "gen");
+            break;
+        case 5:
+            strcpy(name, "ivi");
+            break;
+        default:
+            strcpy(name, "error");
+            break;
+    }
 
     return 0;
 }
