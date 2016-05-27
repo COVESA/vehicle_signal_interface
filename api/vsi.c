@@ -14,11 +14,22 @@
 #include "vsi_types.h"
 #include "vsi_core_api.h"
 
-// ******************
-// INTERNAL FUNCTIONS
-// ******************
+// **********************
+// INTERNAL FUNCTIONALITY
+// **********************
+
+struct vsi_signal_wait_data {
+    sem_t *parent_sem;
+    sem_t *wake_ctl;
+    struct vsi_signal *wake_signal;
+    struct vsi_signal *curr_signal;
+};
 
 void vsi_name_string_to_id_internal ( char* name, union vsi_signal_id* id );
+int vsi_wait_for_all_signals(struct vsi_context *context,
+                             unsigned int *domain_id, unsigned int *signal_id,
+                             unsigned long *group_id, unsigned int timeout);
+void *vsi_wait_for_signal(void *signal_ptr);
 
 //
 // Helper macro to get a signal ID from a specified name. If the signal could
@@ -432,7 +443,6 @@ int vsi_listen(vsi_handle handle, unsigned int *domain_id,
                unsigned int timeout)
 {
     struct vsi_context *context;
-    struct vsi_signal_list_entry *curr;
 
     CHECK_AND_RETURN_IF_ERROR(handle && domain_id && signal_id && group_id);
 
@@ -473,23 +483,8 @@ int vsi_listen(vsi_handle handle, unsigned int *domain_id,
     //
     vsi_core_fetch_signals(context->coreHandle, context->signal_head);
 
-    //
     // Wait for a signal or group to fire.
-    //
-    // TODO: Change this to be threaded instead of a busy loop.
-    //
-    curr = context->signal_head;
-    while (true)
-    {
-        if (!sem_trywait(&curr->signal.__sem))
-            break;
-
-        curr = curr->next ? curr->next : context->signal_head;
-    }
-
-    // Return to the user which signal fired.
-    *domain_id = curr->signal.signal_id.parts.domain_id;
-    *signal_id = curr->signal.signal_id.parts.signal_id;
+    vsi_wait_for_all_signals(context, domain_id, signal_id, group_id, timeout);
 #else
     // Return dummy values for now.
     *domain_id = 0;
@@ -533,6 +528,10 @@ int vsi_name_id_to_string(vsi_handle handle, unsigned int domain_id,
 
     CHECK_AND_RETURN_IF_ERROR(handle && name);
 
+    // Only support domain 0 for dummy data.
+    if (!domain_id)
+        return -EINVAL;
+
     // Give some dummy signal name for now.
     switch (signal_id)
     {
@@ -570,6 +569,7 @@ void vsi_name_string_to_id_internal ( char* name,
     // TODO: Perform the signal ID lookup from VSS. These values are only good
     //       for the sample application.
     //
+    id->parts.domain_id = 0;
     if (!strcmp(name, "foo"))
         id->parts.signal_id = 1;
     else if (!strcmp(name, "bar"))
@@ -580,4 +580,137 @@ void vsi_name_string_to_id_internal ( char* name,
         id->parts.signal_id = 4;
     else if (!strcmp(name, "ivi"))
         id->parts.signal_id = 5;
+}
+
+int vsi_wait_for_all_signals(struct vsi_context *context,
+                             unsigned int *domain_id, unsigned int *signal_id,
+                             unsigned long *group_id, unsigned int timeout)
+{
+    pthread_t *signal_threads, *curr_signal;
+    unsigned long num_signals = 0, i = 0;
+    struct vsi_signal_list_entry *curr;
+    struct vsi_signal_wait_data *wait_arg;
+    struct vsi_signal wake_info;
+    sem_t control_sem, wakeup_sem;
+    int err;
+
+    // Initialize the semaphores used to wake the main thread.
+    if (!!sem_init(&control_sem, 0, 0))
+        return errno;
+    if (!!sem_init(&wakeup_sem, 0, 1))
+    {
+        sem_destroy(&control_sem);
+        return errno;
+    }
+
+    // TODO: Add group support.
+
+    // TODO: Add timeout support.
+
+    // TODO: Keep a counter of signals in some structure to avoid this loop.
+    for (curr = context->signal_head; curr; curr = curr->next)
+    {
+        num_signals++;
+    }
+
+    //
+    // Allocate the structures we need for threading.
+    //
+    // TODO: Maintain the threads with the signal structures themselves.
+    //
+    signal_threads = malloc(sizeof(pthread_t) * (num_signals + 1));
+    if (!signal_threads)
+    {
+        if (!!sem_destroy(&wakeup_sem) || !!sem_destroy(&control_sem))
+            return errno;
+
+        return -ENOMEM;
+    }
+
+    //
+    // Allocate the structures we need for the individual threads.
+    //
+    // TODO: Maintain the threads with the signal structures themselves.
+    //
+    wait_arg = malloc(sizeof(struct vsi_signal_wait_data) * (num_signals + 1));
+    if (!wait_arg)
+    {
+        free(signal_threads);
+
+        if (!!sem_destroy(&wakeup_sem) || !!sem_destroy(&control_sem))
+            return errno;
+
+        return -ENOMEM;
+    }
+
+    // Spawn off child threads to wait on individual signals.
+    for (curr = context->signal_head; curr; curr = curr->next)
+    {
+        wait_arg[i].parent_sem = &control_sem;
+        wait_arg[i].wake_ctl = &wakeup_sem;
+        wait_arg[i].curr_signal = &curr->signal;
+        wait_arg[i].wake_signal = &wake_info;
+        err = pthread_create(&signal_threads[i++], NULL, vsi_wait_for_signal,
+                             &wait_arg[i]);
+        if (err)
+            return err;
+    }
+
+    // Wait for something to happen.
+    if (!!sem_wait(&control_sem))
+    {
+        free(signal_threads);
+
+        if (!!sem_destroy(&wakeup_sem) || !!sem_destroy(&control_sem))
+            return errno;
+
+        return errno;
+    }
+
+    // Close out all threads.
+    for (i = 0; i < num_signals; i++)
+    {
+        pthread_cancel(signal_threads[i]);
+        pthread_join(signal_threads[i], NULL);
+    }
+
+    //
+    // Get the information about what signal fired to indicate to the calling
+    // application.
+    //
+    *domain_id = wake_info.signal_id.parts.domain_id;
+    *signal_id = wake_info.signal_id.parts.signal_id;
+    *group_id = wake_info.group_id;
+
+    //
+    // Clean up like good corporate citizens. Do not bother returning an error
+    // if the free fails.
+    //
+    free(wait_arg);
+    free(signal_threads);
+
+    return 0;
+}
+
+void *vsi_wait_for_signal(void *signal_ptr)
+{
+    struct vsi_signal_wait_data *signal =
+                                      (struct vsi_signal_wait_data *)signal_ptr;
+    int err;
+
+    // Wait for the signal to fire.
+    err = sem_wait(&signal->curr_signal->__sem);
+    if (err)
+        printf("Error %d waiting for the semaphore!\n", errno);
+
+    // Try to gain control of the data structure to indicate the wake data.
+    err = sem_trywait(signal->wake_ctl);
+    if (err)
+        return NULL;
+
+    // Got the wake data semaphore! Copy this signal as the one that woke.
+    memcpy(signal->wake_signal, signal->curr_signal, sizeof(struct vsi_signal));
+
+    // Wake up the main thread.
+    sem_post(signal->parent_sem);
 }
