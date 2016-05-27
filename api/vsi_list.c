@@ -40,6 +40,9 @@ int vsi_list_insert(struct vsi_context *context, unsigned int domain_id,
     new_entry->signal.group_id = 0;
     new_entry->next = NULL;
 
+    // Keep track of this signal being added.
+    context->num_signals++;
+
     // If this is the first entry, initialize the list.
     if (!context->signal_head)
     {
@@ -85,6 +88,9 @@ int vsi_list_remove(struct vsi_context *context, unsigned int domain_id,
     err = sem_destroy(&curr->signal.__sem);
     if (err)
         return -EBUSY;
+
+    // Keep track of this signal being removed.
+    context->num_signals--;
 
     // Drop the entry from the list.
     if (prev)

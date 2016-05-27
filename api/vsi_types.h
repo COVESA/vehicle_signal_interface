@@ -65,6 +65,8 @@ struct vsi_context {
     struct vsi_group_list_entry *group_head;
     /** List of current signals. */
     struct vsi_signal_list_entry *signal_head;
+    /** Number of signals. */
+    unsigned long num_signals;
 
     //
     //  Define the handle to the VSI core internal structures.

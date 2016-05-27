@@ -73,9 +73,10 @@ vsi_handle vsi_initialize()
     if (!context)
         return NULL;
 
-    // Set the lists for signals and groups to NULL.
+    // Set the lists for signals and groups to totally empty.
     context->signal_head = NULL;
     context->group_head = NULL;
+    context->num_signals = 0;
 
     //
     //  Go initialize the core shared memory system.
@@ -587,7 +588,7 @@ int vsi_wait_for_all_signals(struct vsi_context *context,
                              unsigned long *group_id, unsigned int timeout)
 {
     pthread_t *signal_threads, *curr_signal;
-    unsigned long num_signals = 0, i = 0;
+    unsigned long i = 0;
     struct vsi_signal_list_entry *curr;
     struct vsi_signal_wait_data *wait_arg;
     struct vsi_signal wake_info;
@@ -607,18 +608,12 @@ int vsi_wait_for_all_signals(struct vsi_context *context,
 
     // TODO: Add timeout support.
 
-    // TODO: Keep a counter of signals in some structure to avoid this loop.
-    for (curr = context->signal_head; curr; curr = curr->next)
-    {
-        num_signals++;
-    }
-
     //
     // Allocate the structures we need for threading.
     //
     // TODO: Maintain the threads with the signal structures themselves.
     //
-    signal_threads = malloc(sizeof(pthread_t) * (num_signals + 1));
+    signal_threads = malloc(sizeof(pthread_t) * (context->num_signals + 1));
     if (!signal_threads)
     {
         if (!!sem_destroy(&wakeup_sem) || !!sem_destroy(&control_sem))
@@ -632,7 +627,8 @@ int vsi_wait_for_all_signals(struct vsi_context *context,
     //
     // TODO: Maintain the threads with the signal structures themselves.
     //
-    wait_arg = malloc(sizeof(struct vsi_signal_wait_data) * (num_signals + 1));
+    wait_arg = malloc(sizeof(struct vsi_signal_wait_data) *
+                      (context->num_signals + 1));
     if (!wait_arg)
     {
         free(signal_threads);
@@ -668,7 +664,7 @@ int vsi_wait_for_all_signals(struct vsi_context *context,
     }
 
     // Close out all threads.
-    for (i = 0; i < num_signals; i++)
+    for (i = 0; i < context->num_signals; i++)
     {
         pthread_cancel(signal_threads[i]);
         pthread_join(signal_threads[i], NULL);
