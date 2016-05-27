@@ -18,10 +18,14 @@
 // INTERNAL FUNCTIONALITY
 // **********************
 
-struct vsi_signal_wait_data {
+struct vsi_signal_wait_ctl {
     sem_t *parent_sem;
     sem_t *wake_ctl;
     struct vsi_signal *wake_signal;
+};
+
+struct vsi_signal_wait_data {
+    struct vsi_signal_wait_ctl *ctl;
     struct vsi_signal *curr_signal;
 };
 
@@ -591,6 +595,7 @@ int vsi_wait_for_all_signals(struct vsi_context *context,
     unsigned long i = 0;
     struct vsi_signal_list_entry *curr;
     struct vsi_signal_wait_data *wait_arg;
+    struct vsi_signal_wait_ctl wait_arg_ctl;
     struct vsi_signal wake_info;
     sem_t control_sem, wakeup_sem;
     int err;
@@ -639,13 +644,16 @@ int vsi_wait_for_all_signals(struct vsi_context *context,
         return -ENOMEM;
     }
 
+    // Initialize the control structure.
+    wait_arg_ctl.parent_sem = &control_sem;
+    wait_arg_ctl.wake_ctl = &wakeup_sem;
+    wait_arg_ctl.wake_signal = &wake_info;
+
     // Spawn off child threads to wait on individual signals.
     for (curr = context->signal_head; curr; curr = curr->next)
     {
-        wait_arg[i].parent_sem = &control_sem;
-        wait_arg[i].wake_ctl = &wakeup_sem;
+        wait_arg[i].ctl = &wait_arg_ctl;
         wait_arg[i].curr_signal = &curr->signal;
-        wait_arg[i].wake_signal = &wake_info;
         err = pthread_create(&signal_threads[i++], NULL, vsi_wait_for_signal,
                              &wait_arg[i]);
         if (err)
@@ -700,13 +708,14 @@ void *vsi_wait_for_signal(void *signal_ptr)
         printf("Error %d waiting for the semaphore!\n", errno);
 
     // Try to gain control of the data structure to indicate the wake data.
-    err = sem_trywait(signal->wake_ctl);
+    err = sem_trywait(signal->ctl->wake_ctl);
     if (err)
         return NULL;
 
     // Got the wake data semaphore! Copy this signal as the one that woke.
-    memcpy(signal->wake_signal, signal->curr_signal, sizeof(struct vsi_signal));
+    memcpy(signal->ctl->wake_signal, signal->curr_signal,
+           sizeof(struct vsi_signal));
 
     // Wake up the main thread.
-    sem_post(signal->parent_sem);
+    sem_post(signal->ctl->parent_sem);
 }
