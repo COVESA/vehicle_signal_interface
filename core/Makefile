@@ -10,54 +10,97 @@
 #	Vehicle Signal Interface Core library build rules.
 #
 
+#
+#	Define the C compiler flags that we want to use.
+#
 CFLAGS+=     \
   -std=gnu11 \
   -g         \
   -Wall      \
   -fPIC      \
 
+#
+#	Define the linker flags that we want to use.
+#
 LDFLAGS+=    \
   -L.        \
   -lvsi-core \
   -lpthread  \
   -lc		 \
 
+#
+#	Define the list of include files we use.
+#
 INCLUDES=             \
   sharedMemory.h      \
   sharedMemoryLocks.h \
   vsi_core_api.h      \
   utils.h             \
 
+#
+#	Define the list of targets to be built.
+#
 TARGETS=         \
   libvsi-core.so \
   dump           \
   insert         \
   fetch          \
+  flush          \
   writeRecord    \
   readRecord     \
 
+#
+#	Define any extra files to be included in a tar output file.
+#
 EXTRA_FILES=  \
   Makefile    \
   README.md   \
+
+#
+#	Allow make to run compiles/links in parallel.
+#
+MAKEFLAGS += j
 
 #
 #	Suppress all of the automatic command echoing.
 #
 .SILENT:
 
+#
+#	Build everything by default.
+#
 default: all
 
+#
+#	Define "all" as all of the targets we defined above.
+#
 all:  $(TARGETS)
 
+#
+#	Define the rule that will unconditionally rebuild all of the targets.
+#
 rebuild:
-	make -s distclean; \
-	make all
+	make -B all
 
+#
+#	Define the rule to build the shared library file.
+#
+libvsi-core.so: vsi_core_api.o sharedMemory.o sharedMemoryLocks.o utils.o
+	echo "Linking the $@ shared library..."; \
+	gcc $(CFLAGS) -shared -o $@ vsi_core_api.o sharedMemory.o sharedMemoryLocks.o utils.o
+
+#
+#	Define the rules to build all of the utility executables.
+#
 insert : insert.o libvsi-core.so $(INCLUDES)
 	echo "Rebuilding the $@ executable..."; \
 	gcc $(CFLAGS) -o $@ $@.o $(LDFLAGS)
 
 fetch : fetch.o libvsi-core.so $(INCLUDES)
+	echo "Rebuilding the $@ executable..."; \
+	gcc $(CFLAGS) -o $@ $@.o $(LDFLAGS)
+
+flush : flush.o libvsi-core.so $(INCLUDES)
 	echo "Rebuilding the $@ executable..."; \
 	gcc $(CFLAGS) -o $@ $@.o $(LDFLAGS)
 
@@ -73,16 +116,18 @@ readRecord : readRecord.o libvsi-core.so $(INCLUDES)
 	echo "Rebuilding the $@ executable..."; \
 	gcc $(CFLAGS) -o $@ $@.o $(LDFLAGS)
 
-libvsi-core.so: vsi_core_api.o sharedMemory.o sharedMemoryLocks.o utils.o
-	echo "Linking the $@ shared library..."; \
-	gcc $(CFLAGS) -shared -o $@ vsi_core_api.o sharedMemory.o sharedMemoryLocks.o utils.o
-
+#
+#	Define the rule to build the tar package that will contain all of the
+#	source files, extra files, and executables.
+#
 tar:
 	echo "Creating the development tar package..."; \
-	make clean; \
-	make all; \
-	tar -cvzf sviPrototype.tz *.c *.h $(EXTRA_FILES) $(TARGETS)
+	make rebuild; \
+	tar -cvzf vsiCore.tz *.c *.h $(EXTRA_FILES) $(TARGETS)
 
+#
+#	Define the rules to remove generated files.
+#
 clean:
 	echo "Deleting all derived files..."; \
 	rm -f *.o *~ $(TARGETS) sviPrototype.tz
@@ -95,7 +140,10 @@ distclean:
 	make -s clean; \
 	make -s cleanshm
 
-
+#
+#	Define the rule t compile a C source file.
+#
 .c.o: $(INCLUDES)
 	echo "Compiling $?";  \
 	gcc $(CFLAGS) -c $?
+

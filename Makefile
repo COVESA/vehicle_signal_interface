@@ -21,7 +21,7 @@ subdirs: $(SUBDIRS)
 
 $(SUBDIRS):
 	curdir=$(shell pwd)/$@; \
-    echo "===> Building in $$curdir ..."; \
+    echo "---> Building in $$curdir ..."; \
     $(MAKE) MAKEFLAGS=$(MAKEFLAGS) -C $@ $(MAKECMDGOALS); \
-    echo "<=== ...Finished building in $$curdir"
+    echo "<--- ...Finished building in $$curdir"
 

@@ -54,6 +54,7 @@ Usage: %s options\n\
   ======  ==============  ======  =========== \n\
     -a    Dump All         bool      false    \n\
     -b    Bucket Count     int         4      \n\
+    -k    Dump for key     int        N/A     \n\
     -m    Message Count    int         4      \n\
     -h    Help Message     N/A        N/A     \n\
     -?    Help Message     N/A       false    \n\
@@ -80,6 +81,7 @@ int main ( int argc, char* const argv[] )
 {
 	unsigned long messagesToDump = 4;
 	unsigned long bucketsToDump  = 4;
+    unsigned int  key = 0;
 
 	//
 	//	The following locale settings will allow the use of the comma
@@ -93,7 +95,7 @@ int main ( int argc, char* const argv[] )
     //
 	char ch;
 
-    while ( ( ch = getopt ( argc, argv, "ab:hm:?" ) ) != -1 )
+    while ( ( ch = getopt ( argc, argv, "ab:hk:m:?" ) ) != -1 )
     {
         switch ( ch )
         {
@@ -116,6 +118,13 @@ int main ( int argc, char* const argv[] )
 				usage ( argv[0] );
 				exit (255);
 			}
+			break;
+
+		  //
+		  //	Get the requested message count.
+		  //
+		  case 'k':
+		    key = atol ( optarg );
 			break;
 
 		  //
@@ -173,13 +182,42 @@ int main ( int argc, char* const argv[] )
 
     sharedMemory_p sharedMemory = (sharedMemory_p)handle;
 
-	for ( unsigned int i = 0; i < bucketsToDump; i++ )
-	{
+    //
+    //  If the user did not specify a key, dump starting at the beginning
+    //  of the hash table.
+    //
+    if ( key == 0 )
+    {
+        for ( unsigned int i = 0; i < bucketsToDump; i++ )
+        {
+            //
+            //	Go dump the current hash bucket contents.
+            //
+            dumpHashBucket ( "", i, &sharedMemory->hashBuckets[i], messagesToDump );
+        }
+    }
+    //
+    //  If the user did specify a key, find the hash bucket for that key and
+    //  dump just that hash bucket.
+    //
+    else
+    {
+        //
+		//  Compute the message hash value from the input key.
 		//
-		//	Go dump the current hash bucket contents.
+		unsigned long messageHash = sm_getHash ( key );
+
 		//
-		dumpHashBucket ( "", i, &sharedMemory->hashBuckets[i], messagesToDump );
-	}
+		//  Get the address of the hash bucket that we will need for the input
+		//  key.
+		//
+		hashBucket_p hashBucket = sm_getBucketAddress ( handle, messageHash );
+
+        //
+        //	Go dump the hash bucket that corresponds to the specified key.
+        //
+        dumpHashBucket ( "", key, hashBucket, messagesToDump );
+    }
 	//
 	//	Close our shared memory segment and exit.
 	//

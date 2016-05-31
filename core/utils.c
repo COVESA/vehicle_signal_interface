@@ -81,7 +81,7 @@ void dumpHashBucket ( const char* leader, unsigned int bucketNumber,
 		//	Display the address of this bucket and it's offset within the
 		//	shared memory segment.
 		//
-		printf ( "Hash Bucket %'u[%'lu]:\n", bucketNumber,
+		printf ( "Hash Bucket %'u[%lx]:\n", bucketNumber,
 				 (void*)hashBucket - (void*)sharedMemory );
 		//
 		//	If the head offset indicates that this is the end of the message

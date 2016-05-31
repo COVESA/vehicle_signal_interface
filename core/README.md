@@ -30,7 +30,7 @@ file).
 There is considerable documentation in the header files concerning exactly how
 each of the components of the library operate.
 
-The library file (libsharedMemory.so) is made up of the following:
+The library file (libvsi-core.so) is made up of the following:
 
 ```C
     sharedMemory.h
@@ -285,3 +285,44 @@ first is a numeric interpretation of the data in the buffer (as though the
 buffer contents had been processed with "atol"), and the second is the ASCII
 representation of the data bytes in the buffer.  One or the other of these
 will most likely be incorrect depending on how the data was inserted.
+
+#### flush
+
+This utility can be used to delete all of the records with the specified
+domain and key from the data store.
+
+Example:
+
+```C
+    % flush -k 23
+    Shared memory segment has been mapped into memory
+      domain: 1
+      key...: 23
+      return: 0
+```
+
+### Caveats
+
+The current implementation of this VSI data store uses statically defined data
+structures.  These have been defined in the code as fairly substantial with
+1024 hash buckets and each hash bucket having space for 1MB of signal data for
+a total of about 1GB of storage space.  Obviously not all of that space will
+be in use (escpecially during development) and it is just a small chunk of the
+available virtual address space in a 64-bit environment but is this is not
+acceptable for your specific environment, feel free to adjust the parameters
+in any way you wish.  They are all defined in the sharedMemory.h file.
+
+Because this VSI implementation is built with a hash table of one-way linked
+lists, it is possible for more than one signal key to wind up hashing to the
+same hash bucket.  This results in multiple keys existing intermixed with each
+other in each hash bucket list.  Since the lists are therefore not homogeneous
+with respect to the key values, some of the logic is more complicated that it
+would be otherwise.  There are times when the lists must be sequentially
+accessed to perform the requested operation which will take more time than is
+optimal.  Future implementations of the VSI shared memory data structures will
+address this issue and allow dynamically defined data structures (e.g. "map"
+type structures for instance).
+
+In the current implementation, the domain values that are passed into most of
+the functions are not used as part of the signal hash.  This will also be
+fixed in later revisions of the code.

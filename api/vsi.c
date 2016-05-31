@@ -65,7 +65,7 @@ vsi_handle vsi_initialize()
     context->signal_head = NULL;
 
     //
-    //  Go initialize the core shared memory system.
+    //  Go initialize the core data store system.
     //
     vsi_core_handle coreHandle = vsi_core_open();
     if ( coreHandle == 0 )
@@ -315,15 +315,16 @@ int vsi_get_newest_signal_by_name(vsi_handle handle, char *name,
 int vsi_get_newest_signal(vsi_handle handle, unsigned int domain_id,
                           unsigned int signal_id, struct vsi_data *result)
 {
-    struct vsi_context *context;
+    struct vsi_context *context = handle;
 
     CHECK_AND_RETURN_IF_ERROR(handle && result && result->data);
 
-    *(unsigned char *)result->data = (unsigned char)42;
     result->len = 1;
-    result->status = 0;
 
-    return 0;
+    result->status = vsi_core_fetch_newest ( context->coreHandle, domain_id,
+                                             signal_id, &result->len,
+                                             &result->data );
+    return result->status;
 }
 
 int vsi_get_oldest_signal_by_name(vsi_handle handle, char *name,
@@ -363,13 +364,11 @@ int vsi_flush_signal_by_name(vsi_handle handle, char *name)
 int vsi_flush_signal(vsi_handle handle, unsigned int domain_id,
                      unsigned int signal_id)
 {
-    struct vsi_context *context;
+    struct vsi_context *context = handle;
 
     CHECK_AND_RETURN_IF_ERROR(handle);
 
-    context = (struct vsi_context *)handle;
-
-    return 0;
+    return vsi_core_flush_signal ( context->coreHandle, domain_id, signal_id );
 }
 
 int vsi_get_newest_group(vsi_handle handle, unsigned long group_id,
@@ -493,4 +492,6 @@ void vsi_name_string_to_id_internal ( char* name,
         id->parts.signal_id = 4;
     else if (!strcmp(name, "ivi"))
         id->parts.signal_id = 5;
+
+    id->parts.domain_id = 1;
 }

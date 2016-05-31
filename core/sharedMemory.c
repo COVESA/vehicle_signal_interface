@@ -64,6 +64,7 @@
 ------------------------------------------------------------------------*/
 static inline void hb_lock ( hashBucket_p hashBucket )
 {
+    LOG ( "Locking the hash bucket mutex\n" );
     pthread_mutex_lock ( &hashBucket->semaphore.mutex );
 }
 
@@ -86,6 +87,7 @@ static inline void hb_lock ( hashBucket_p hashBucket )
 ------------------------------------------------------------------------*/
 static inline void hb_unlock ( hashBucket_p hashBucket )
 {
+    LOG ( "Unlocking the hash bucket mutex\n" );
     pthread_mutex_unlock ( &hashBucket->semaphore.mutex );
 }
 
@@ -123,6 +125,8 @@ sharedMemory_p sm_initialize ( int fd, size_t sharedMemorySegmentSize )
 	int             status;
 	sharedMemory_p sharedMemory;
 
+    LOG ( "Initializing shared memory.  FD[%d], Size[%'lu]\n", fd,
+          sharedMemorySegmentSize );
 	//
 	//	Map the shared memory file into virtual memory.
 	//
@@ -777,6 +781,8 @@ int sm_fetch ( sharedMemory_p handle, enum domains domain, offset_t key,
     int              transferSize;
     int              status = 0;
 
+    LOG ( "Fetching signal domain[%d], key[%lu], dontWait[%d]\n", domain, key,
+          dontWait );
     //
     //  Compute the message hash value from the input key.
     //
@@ -912,6 +918,357 @@ int sm_fetch ( sharedMemory_p handle, enum domains domain, offset_t key,
     //
     return status;
 }
+
+
+/*!-----------------------------------------------------------------------
+
+    s m _ f e t c h _ n e w e s t
+
+    @brief Retrieve the newest message from the message buffer.
+
+    This function will attempt to retrieve the newest message with the specified
+    key and domain from the shared memory message buffer.  The message that
+    is found (and returned to the caller) will NOT be removed from the message
+    list.  If there are no messages that match the user's request, this
+    function will hang (on a semaphore) until an appropriate message is
+    available before returning to the caller depending on the setting of the
+    "dontWait" input parameter.
+
+    When calling this function, the messageSize should be the size of the data
+    buffer supplied as the "body" argument.  When we copy the data from the
+    shared memory segment to the "body" buffer, the smaller of either the body
+    buffer size or the number of bytes of data in the message found will be
+    copied into the body buffer.  The actual number of data bytes copied will
+    be return to the caller in the bodySize variable.
+
+    @param[in]  handle - The base address of the shared memory segment.
+    @param[in]  domain - The domain value of the message to be removed.
+    @param[in]  key - The key value of the message to be removed.
+    @param[in/out] bodySize - The address of the body buffer size.
+    @param[out] body - The address of where to put the message data.
+    @param[in]  dontWait - If true, don't wait for data if domain/key is not found.
+
+    @return 0 if successful.
+            -ENODATA - If waitForData == true and domain/key is not found.
+            any other value is an errno value.
+
+------------------------------------------------------------------------*/
+int sm_fetch_newest ( sharedMemory_p handle, enum domains domain, offset_t key,
+                      unsigned long* bodySize, void* body, bool dontWait )
+{
+    //
+    //  Define the local message offset and pointer variables.
+    //
+    offset_t        currentMessage = 0;
+
+    sharedMessage_p messagePtr = 0;
+    sharedMessage_p lastMessagePtr = 0;
+
+    int             transferSize = 0;
+    int             status = -ENODATA;
+
+    LOG ( "Fetching newest signal domain[%d], key[%lu], dontWait[%d]\n", domain,
+          key, dontWait );
+    //
+    //  Compute the message hash value from the input key.
+    //
+    unsigned long messageHash = sm_getHash ( key );
+
+    //
+    //  Get the address of the hash bucket that we will need for the input
+    //  key.
+    //
+    hashBucket_p hashBucket = sm_getBucketAddress ( handle, messageHash );
+
+
+    //
+    //  If this hash bucket is empty and we don't want to wait for the data to
+    //  arrive then just return the "no data" error code to the caller and
+    //  quit.
+    //
+    if ( hashBucket->semaphore.messageCount == 0 && dontWait )
+    {
+        LOG ( "Returning error code ENODATA\n" );
+        return -ENODATA;
+    }
+    //
+    //  Acquire the lock on the shared memory segment.
+    //
+    //  Note that this call will hang if someone else is currently using the
+    //  shared memory segment.  It will return once the lock is acquired and it
+    //  is safe to manipulate the shared memory data.
+    //
+    hb_lock ( hashBucket );
+
+    //
+    //  Go wait if there are no messages in the message list to be read.
+    //
+    //  Note that we will increment the "waiter" count during the time that we
+    //  are potentially waiting on the semaphore and decrement it again when
+    //  we come back from the wait.  This is used to tell the "fetch" logic
+    //  when it is OK to delete the message that is being waited on.  If more
+    //  than one process is waiting on this message then we want to give the
+    //  message to all of the processes that are waiting before we delete the
+    //  message from the message list.
+    //
+    ++hashBucket->semaphore.waiterCount;
+
+    LOG ( "%'lu  Before Fetch/semaphore wait:\n", getIntervalTime() );
+    SEM_DUMP ( "  ", &hashBucket->semaphore );
+
+    semaphoreWait ( &hashBucket->semaphore );
+
+    --hashBucket->semaphore.waiterCount;
+
+    LOG ( "%'lu  After Fetch/semaphore wait:\n", getIntervalTime() );
+    SEM_DUMP ( "  ", &hashBucket->semaphore );
+
+    //
+    //  If we get here, there is at least one message in this hash bucket.  At
+    //  that point, we can take a look at the last message in the bucket.  If
+    //  the last message matches the domain/key we are looking for then we are
+    //  done and can just return that.  If not, we will need to search the
+    //  entire hash bucket for the last match.  The list is one-way so we
+    //  can't traverse it from the end backwards.
+    //
+    currentMessage = hb_getTail ( hashBucket );
+
+    //
+	//  Get the actual memory pointer to the last message in the list.
+	//
+	messagePtr =  hb_getAddress ( hashBucket, currentMessage );
+
+    //
+    //  If this message matches the key and domain we need then we are almost
+    //  done...
+    //
+	if ( key == messagePtr->key && domain == messagePtr->domain )
+	{
+        //
+        //  Copy the message body into the caller supplied buffer.
+        //
+        //  Note that we will copy the SMALLER of either the message size
+        //  supplied by the caller or the actual data size in the message
+        //  that was found.
+        //
+        transferSize = *bodySize <= messagePtr->messageSize
+                       ? *bodySize : messagePtr->messageSize;
+
+        memcpy ( body, messagePtr->data, transferSize );
+
+        //
+        //  Return the number of bytes that were copied to the caller.
+        //
+        *bodySize = transferSize;
+
+        //
+        //  Return to the caller with a good completion code.
+        //
+        LOG ( "Returning error code 0\n" );
+        return 0;
+    }
+    //
+    //  If we get here it's because the last message in the current hash
+    //  bucket does not match the key and domain we are looking for.  In this
+    //  case, we will need to search the entire list from the beginning,
+    //  looking for the last match.
+    //
+    //  Get the current and previous message offsets.  Note that for the first
+    //  time through the loop, both of these values will be the same.
+    //
+    currentMessage = hb_getHead ( hashBucket );
+
+    //
+    //  Repeat until we reach the end of the message list in this bucket.
+    //
+    while ( currentMessage != END_OF_BUCKET_DATA )
+    {
+        //
+        //  Get the actual memory pointer to the current message.
+        //
+        messagePtr =  hb_getAddress ( hashBucket, currentMessage );
+
+        //
+        //  If this message is the one we want (i.e. the key and domain are
+        //  the same as the ones requested by the caller)...
+        //
+        if ( key == messagePtr->key && domain == messagePtr->domain )
+        {
+            //
+            //  Save the pointer to this message in case it is the last one we
+            //  find.
+            //
+            lastMessagePtr = messagePtr;
+        }
+        //
+        //  Increment our message offsets to the next message in the list.
+        //
+        currentMessage = messagePtr->nextMessageOffset;
+    }
+    LOG ( "%'lu  At the end of Fetch - waiterCount: %d\n", getIntervalTime(),
+          hashBucket->semaphore.waiterCount );
+
+    SEM_DUMP ( "     ", &hashBucket->semaphore );
+
+    //
+    //  If we did not find the message we were looking for, return an error
+    //  code to the caller indicating that we did not find the message he
+    //  wanted.
+    //
+    if ( lastMessagePtr != 0 )
+    {
+        //
+        //  Copy the message body into the caller supplied buffer.
+        //
+        //  Note that we will copy the SMALLER of either the message size
+        //  supplied by the caller or the actual data size in the message
+        //  that was found.
+        //
+        transferSize = *bodySize <= lastMessagePtr->messageSize
+                       ? *bodySize : lastMessagePtr->messageSize;
+
+        memcpy ( body, lastMessagePtr->data, transferSize );
+
+        //
+        //  Return the number of bytes that were copied to the caller.
+        //
+        *bodySize = transferSize;
+
+        //
+        //  Return a good completion code to the caller.
+        //
+        status = 0;
+    }
+    //
+    //  Give up the shared memory block lock.
+    //
+    hb_unlock ( hashBucket );
+
+    //
+    //  Return the completion code to the caller.
+    //
+    LOG ( "Returning error code %d\n", status );
+    return status;
+}
+
+
+/*!-----------------------------------------------------------------------
+
+    s m _ f l u s h _ s i g n a l
+
+    @brief Flush all specified signals from the data store.
+
+    This function will find all signals in the data store with the specified
+    domain and key value and remove them from the data store.
+
+    @param[in]  handle - The base address of the shared memory segment.
+    @param[in]  domain - The domain value of the message to be removed.
+    @param[in]  key - The key value of the message to be removed.
+
+    @return 0 if successful.
+            any other value is an errno value.
+
+------------------------------------------------------------------------*/
+int sm_flush_signal ( sharedMemory_p handle, enum domains domain, offset_t key )
+{
+    //
+    //  Define the local message offset and pointer variables.
+    //
+    offset_t         currentMessage;
+    offset_t         previousMessage;
+    offset_t         nextMessage;
+
+    sharedMessage_p messagePtr;
+
+    int              status = 0;
+
+    LOG ( "Flushing signal domain[%d], key[%lu]\n", domain, key );
+
+    //
+    //  Compute the message hash value from the input key.
+    //
+    unsigned long messageHash = sm_getHash ( key );
+
+    //
+    //  Get the address of the hash bucket that we will need for the input
+    //  key.
+    //
+    hashBucket_p hashBucket = sm_getBucketAddress ( handle, messageHash );
+
+    //
+    //  If this hash bucket is empty then we don't need to do anything.  In
+    //  this case, just return a good completion code.
+    //
+    if ( hashBucket->semaphore.messageCount == 0 )
+    {
+        return 0;
+    }
+    //
+    //  Acquire the lock on the shared memory segment.
+    //
+    //  Note that this call will hang if someone else is currently using the
+    //  shared memory segment.  It will return once the lock is acquired and it
+    //  is safe to manipulate the shared memory data.
+    //
+    hb_lock ( hashBucket );
+
+    //
+    //  Get the current and previous message offsets.  Note that for the first
+    //  time through the loop, both of these values will be the same.
+    //
+    currentMessage = previousMessage = hb_getHead ( hashBucket );
+    nextMessage = END_OF_BUCKET_DATA;
+
+    //
+    //  Repeat until we reach the end of the message list in this bucket.
+    //
+    while ( currentMessage != END_OF_BUCKET_DATA )
+    {
+        //
+        //  Get the actual memory pointer to the current message.
+        //
+        messagePtr =  hb_getAddress ( hashBucket, currentMessage );
+
+        //
+        //  Save the offset of the next message before we possibly destroy the
+        //  current message.
+        //
+        nextMessage = messagePtr->nextMessageOffset;
+
+        //
+        //  If this message is the one we want (i.e. the key and domain are
+        //  the same as the ones requested by the caller)...
+        //
+        if ( key == messagePtr->key && domain == messagePtr->domain )
+        {
+            status |= sm_removeMessage ( hashBucket, currentMessage,
+                                         previousMessage );
+        }
+        //
+        //  Increment our message offsets to the next message in the list.
+        //
+        previousMessage = currentMessage;
+        currentMessage = nextMessage;
+    }
+    //
+    //  If anyone is waiting for this message, go release them to search the
+    //  message list again.
+    //
+    if ( hashBucket->semaphore.waiterCount > 0 )
+    {
+        semaphorePost ( &hashBucket->semaphore );
+    }
+    //
+    //  Give up the shared memory block lock.
+    //
+    hb_unlock ( hashBucket );
+
+    //
+    //  Return the completion code to the caller.
+    //
+    return status;
+}
+
 
 
 /*! @} */

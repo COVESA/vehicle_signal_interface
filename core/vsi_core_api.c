@@ -257,6 +257,21 @@ int vsi_core_fetch ( vsi_core_handle handle, enum domains domain,
 }
 
 
+int vsi_core_fetch_newest ( vsi_core_handle handle, enum domains domain,
+                            offset_t key, unsigned long* bodySize,
+                            void* body )
+{
+    return sm_fetch_newest ( handle, domain, key, bodySize, body, false );
+}
+
+
+int vsi_core_flush_signal ( vsi_core_handle handle, enum domains domain,
+                            offset_t key )
+{
+    return sm_flush_signal ( handle, domain, key );
+}
+
+
 /*! @} */
 
 // vim:filetype=c:syntax=c

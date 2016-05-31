@@ -127,7 +127,7 @@ void vsi_core_insert ( vsi_core_handle handle, enum domains domain,
                    - Anything else is an error code.
 
 ------------------------------------------------------------------------*/
-int vsi_core_fetch ( vsi_core_handle vsiCore, enum domains domain,
+int vsi_core_fetch ( vsi_core_handle handle, enum domains domain,
                      offset_t key, unsigned long* bodySize,
                      void* body );
 
@@ -156,9 +156,59 @@ int vsi_core_fetch ( vsi_core_handle vsiCore, enum domains domain,
               - Anything else is an error code.
 
 ------------------------------------------------------------------------*/
-int vsi_core_fetch_wait ( vsi_core_handle vsiCore, enum domains domain,
+int vsi_core_fetch_wait ( vsi_core_handle handle, enum domains domain,
                           offset_t key, unsigned long* bodySize,
                           void* body );
+
+
+/*!-----------------------------------------------------------------------
+
+    v s i _ c o r e _ f e t c h _ n e w e s t
+
+	@brief Fetch the newest message from the VSI data store with wait.
+
+    This function will find the newest message with the specified domain and
+    key values in the VSI data store and return the message data to the
+    caller.  If the data requested is not available in the data store, this
+    function will wait indefinitely and only return when the data requested is
+    available.
+
+    @param[in] handle - The handle to the VSI core data store.
+    @param[in] domain - The domain associated with this message.
+    @param[in] key - The key value associated with this message.
+    @param[in/out] bodySize - The address of the body buffer size.
+    @param[out] body - The address of the user's message buffer.
+
+	@return 0 - Success
+              - Anything else is an error code.
+
+------------------------------------------------------------------------*/
+int vsi_core_fetch_newest ( vsi_core_handle handle, enum domains domain,
+                            offset_t key, unsigned long* bodySize,
+                            void* body );
+
+
+/*!-----------------------------------------------------------------------
+
+    v s i _ c o r e _ f l u s h _ s i g n a l
+
+	@brief Flush all instances of the specified signal from the data store.
+
+	This function will find all of the instances of signals with the specified
+    domain and key and remove them from the data store.  This call is designed
+    to allow users to basically reset all of the data associated with a signal
+    so the app can start from a known clean point.
+
+    @param[in] handle - The handle to the VSI core data store.
+    @param[in] domain - The domain associated with this message.
+    @param[in] key - The key value associated with this message.
+
+	@return 0 on Success
+            Anything else is an error code (errno value)
+
+------------------------------------------------------------------------*/
+int vsi_core_flush_signal ( vsi_core_handle handle, enum domains domain,
+                            offset_t key );
 
 
 #endif  // End of #ifndef VSI_CORE_API_H

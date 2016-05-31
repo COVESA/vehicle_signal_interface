@@ -349,8 +349,40 @@ int sm_removeMessage ( hashBucket_p hashBucket, offset_t currentMessage,
                        offset_t previousMessage );
 
 
+//
+//	Fetch the oldest available record from the core data store.
+//
+//	This function will find the oldest record in the data store with the
+//	specified domain and key and return a copy of it to the caller.
+//
+//  Note that this function will remove the record that was found from the
+//  data store.
+//
 int sm_fetch ( sharedMemory_p handle, enum domains domain, offset_t key,
                unsigned long* messageSize, void* body, bool dontWait );
+
+
+//
+//	Fetch the newest available record from the core data store.
+//
+//	This function will find the newest record in the data store with the
+//	specified domain and key and return a copy of it to the caller.
+//
+//  Note that this function will NOT remove the record that was found from the
+//  data store.
+//
+int sm_fetch_newest ( sharedMemory_p handle, enum domains domain, offset_t key,
+                      unsigned long* messageSize, void* body, bool dontWait );
+
+
+//
+//  Flush all signals in the data store with the given domain and key value.
+//
+//  This function will find all of the signals with the given domain and key
+//  vaue and remove them from the data store.
+//
+int sm_flush_signal ( sharedMemory_p handle, enum domains domain, offset_t key );
+
 
 
 #endif	// End of #ifndef SHARED_MEMORY_H
