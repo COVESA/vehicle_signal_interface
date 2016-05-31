@@ -24,7 +24,7 @@ api: vsi.c vsi_list.c $(INCLUDES)
 # Sample application that uses the API.
 sample: sample.c $(INCLUDES)
 	echo "Rebuilding the sample executable..."; \
-	gcc $(CFLAGS) -o sample sample.c $(LDFLAGS) -Wl,-rpath ./ $(LIBRARIES)
+	gcc $(CFLAGS) -o sample sample.c $(LDFLAGS) -Wl,-rpath $(CURDIR) -Wl,-rpath $(CURDIR)/../core/ $(LIBRARIES)
 
 # Build the user-facing documentation.
 docs: Doxyfile $(INCLUDES)
