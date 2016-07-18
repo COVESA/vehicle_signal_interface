@@ -1,0 +1,5 @@
+# GIT ignore file for ~/git/vehicle_signal_interface/api
+archive
+btree
+sample
+importVSS

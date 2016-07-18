@@ -1,105 +1,311 @@
-/* Copyright (C) 2016, Jaguar Land Rover. All Rights Reserved.
- *
- * This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+/*
+    Copyright (C) 2016, Jaguar Land Rover. All Rights Reserved.
+
+    This Source Code Form is subject to the terms of the Mozilla Public
+    License, v. 2.0. If a copy of the MPL was not distributed with this file,
+    You can obtain one at http://mozilla.org/MPL/2.0/.
+*/
+
 
 #include <errno.h>
+#include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+
 #include "vsi_list.h"
+// #include "trace.h"
 
-//
-// TODO: Add group support, which has been intentionally left out at this point
-//       to more rapidly give interested parties a functioning piece of code to
-//       play with.
-//
 
-int vsi_list_insert(struct vsi_context *context, unsigned int domain_id,
-                    unsigned int signal_id)
+/*!-----------------------------------------------------------------------
+
+    v s i _ l i s t _ i n i t i a l i z e
+
+	@brief Initialize a new list data structure.
+
+	This function will initialize a new list data structure by initializing
+    all of the fields in the structure and initializing the list mutex lock.
+
+    This function should be called when a new list is created before any data
+    is inserted into the list.
+
+	@param[in] list - The address of the list structure to initialize
+
+	@return status - 0: Success
+                    ~0: An error code
+
+------------------------------------------------------------------------*/
+int vsi_list_initialize ( vsi_list* list )
 {
-    struct vsi_signal_list_entry *new_entry, *curr;
-    int err;
+    int status = 0;
 
-    if (!context)
-        return -EINVAL;
+    list->listHead = NULL;
+    list->listTail = NULL;
 
-    // Create the new entry for the list.
-    new_entry = malloc(sizeof(struct vsi_signal_list_entry));
-    if (!new_entry)
-        return -ENOMEM;
+    list->count    = 0;
 
-    // TODO: Deal with semaphore ID conflicts.
-    err = sem_init(&new_entry->signal.__sem, 1, 0);
-    if (err) {
-        free(new_entry);
-        return err;
-    }
-
-    new_entry->signal.signal_id.parts.domain_id = domain_id;
-    new_entry->signal.signal_id.parts.signal_id = signal_id;
-    new_entry->signal.group_id = 0;
-    new_entry->next = NULL;
-
-    // Keep track of this signal being added.
-    context->num_signals++;
-
-    // If this is the first entry, initialize the list.
-    if (!context->signal_head)
+    status = pthread_mutex_init ( &list->mutex, NULL );
+    if ( status != 0 )
     {
-        context->signal_head = new_entry;
-        return 0;
+        printf ( "Error: Unable to initialize the list mutex: %d[%s]\n", status,
+                 strerror(status) );
+        return status;
     }
-
-    // TODO: Error on duplicate entries.
-
-    // Find the last entry in the list and insert this entry after it.
-    for (curr = context->signal_head; curr->next; curr = curr->next);
-    curr->next = new_entry;
 
     return 0;
 }
 
-int vsi_list_remove(struct vsi_context *context, unsigned int domain_id,
-                    unsigned int signal_id)
+
+/*!-----------------------------------------------------------------------
+
+    v s i _ l i s t _ i n s e r t
+
+	@brief Insert a new data record into the specified list.
+
+	This function will create a new list entry record, initialize it, put the
+    specified pointer into it, and then insert this new record at the tail of
+    the specified list.
+
+	@param[in] list - The address of the list to insert into
+	@param[in] record - The address of the data record to insert into the list.
+
+	@return status - 0: Success
+                    ~0: An error code
+
+------------------------------------------------------------------------*/
+int vsi_list_insert ( vsi_list* list, void* record )
 {
-    struct vsi_signal_list_entry *curr, *prev = NULL;
-    union vsi_signal_id id;
-    int err;
+    vsi_list_entry* newEntry;
+    int status = 0;
 
-    if (!context || !context->signal_head)
-        return -EINVAL;
-
-    // For comparison later.
-    id.parts.domain_id = domain_id;
-    id.parts.signal_id = signal_id;
-
-    // Find the match.
-    for (curr = context->signal_head; curr &&
-         curr->signal.signal_id.full_id != id.full_id; curr = curr->next)
+    //
+    //  Create a new list entry object.
+    //
+    newEntry = malloc ( sizeof(vsi_list_entry) );
+    if ( !newEntry )
     {
-        // Keep track of the last enry in the list.
-        prev = curr;
+        return -ENOMEM;
     }
+    //
+    //  Make sure no one else is messing around with this list...
+    //
+    status = pthread_mutex_lock ( &list->mutex );
+    if ( status != 0 )
+    {
+        printf ( "Error: Unable to lock list mutex: %d[%s]\n", status,
+                 strerror(status) );
+        free ( newEntry );
+        return status;
+    }
+    //
+    //  Initialize the fields in the new list entry structure.
+    //
+    newEntry->next    = NULL;
+    newEntry->pointer = record;
 
-    // If we could not find the entry to remove, error out.
-    if (!curr)
-        return -ENOENT;
+    //
+    //  Increment the list count for this new entry.
+    //
+    list->count++;
 
-    err = sem_destroy(&curr->signal.__sem);
-    if (err)
-        return -EBUSY;
-
-    // Keep track of this signal being removed.
-    context->num_signals--;
-
-    // Drop the entry from the list.
-    if (prev)
-        prev->next = curr->next;
-    else if (curr->next)
-        context->signal_head = curr->next;
+    //
+    //  If this list is currently empty, initialize the head and tail pointers
+    //  with the new entry.
+    //
+    if ( list->listHead == NULL )
+    {
+        list->listHead = newEntry;
+        list->listTail = newEntry;
+    }
+    //
+    //  If this list is not empty, add this new entry to the end of the list.
+    //
     else
-        context->signal_head = NULL;
-    free(curr);
+    {
+        list->listTail->next = newEntry;
+        list->listTail       = newEntry;
+    }
+    //
+    //  Release our lock on the list.
+    //
+    status = pthread_mutex_unlock ( &list->mutex );
+    if ( status != 0 )
+    {
+        printf ( "Error: Unable to unlock list mutex: %d[%s]\n", status,
+                 strerror(status) );
+    }
+    // TODO: Error on duplicate entries?
 
-    return 0;
+    //
+    //  Return the completion code to the caller.
+    //
+    return status;
+}
+
+
+/*!-----------------------------------------------------------------------
+
+    v s i _ l i s t _ r e m o v e
+
+	@brief Remove the specified record from the specified list
+
+	This function will find the specifield data record in the specified list,
+    remove that record from the list and update the list count.
+
+	@param[in] list - The address of the list to insert into
+	@param[in] record - The address of the data record to be removed from the
+                        list.
+
+	@return status - 0: Success
+                    ~0: An error code
+
+------------------------------------------------------------------------*/
+int vsi_list_remove ( vsi_list* list, void* record )
+{
+    vsi_list_entry* current  = list->listHead;
+    vsi_list_entry* previous = NULL;
+    int             status   = 0;
+
+    //
+    //  Make sure no one else is messing around with this list...
+    //
+    status = pthread_mutex_lock ( &list->mutex );
+    if ( status != 0 )
+    {
+        printf ( "Error: Unable to lock list mutex: %d[%s]\n", status,
+                 strerror(status) );
+        return status;
+    }
+    //
+    //  While we have not reached the end of the list...
+    //
+    while ( current != NULL )
+    {
+        //
+        //  If this record matches the one the user asked us to remove...
+        //
+        if ( current->pointer == record )
+        {
+            //
+            //  If this is not the first record in the list...
+            //
+            if ( previous != NULL )
+            {
+                //
+                //  Remove this record from the list by rechaining the linked
+                //  list around this record.
+                //
+                previous->next = current->next;
+            }
+            //
+            //  If this is the first record in the list...
+            //
+            else
+            {
+                //
+                //  Make the list head point to the next record.
+                //
+                list->listHead = current->next;
+            }
+            //
+            //  In either case, decrement the count of the number of records
+            //  in this list and free the list entry record we just removed.
+            //
+            --list->count;
+            free ( current );
+        }
+        //
+        //  If the current record isn't the record we are looking for, move on
+        //  to the next record in the list.
+        //
+        previous = current;
+        current  = current->next;
+    }
+    //
+    //  If we did not find the specified record in the list, return an error
+    //  code to the caller.
+    //
+    if ( current == NULL )
+    {
+        status = -ENOENT;
+    }
+    //
+    //  Release our lock on the list.
+    //
+    status = pthread_mutex_unlock ( &list->mutex );
+    if ( status != 0 )
+    {
+        printf ( "Error: Unable to unlock list mutex: %d[%s]\n", status,
+                 strerror(status) );
+    }
+    //
+    //  Return the completion code to the caller.
+    //
+    return status;
+}
+
+
+/*!-----------------------------------------------------------------------
+
+    v s i _ l i s t _ r e m o v e _ h e a d
+
+	@brief Remove a data record from the specified list.
+
+    This function will find the specified data record in the specified list
+    and remove that record from the list.  The removed data pointer will be
+    returned to the caller in the "record" argument supplied by the caller.
+
+    Note that if the specified list is empty then a NULL pointer will be
+    returned to the caller.
+
+	@param[in] list - The address of the list to search
+	@param[in] record - The address of where to store the removed record
+
+	@return status - 0: Success
+                    ~0: An error code
+
+------------------------------------------------------------------------*/
+int vsi_list_remove_head ( vsi_list* list, void** record )
+{
+    vsi_list_entry* head;
+    int             status;
+
+    //
+    //  Make sure no one else is messing around with this list...
+    //
+    status = pthread_mutex_lock ( &list->mutex );
+    if ( status != 0 )
+    {
+        printf ( "Error: Unable to lock list mutex: %d[%s]\n", status,
+                 strerror(status) );
+        return status;
+    }
+    //
+    //  Return the list head to the caller.
+    //
+    head = list->listHead;
+    *record = head;
+
+    //
+    //  If the list is not currently empty, update the list head pointer and
+    //  decrement the list record count.
+    //
+    if ( head != NULL )
+    {
+        list->listHead = head->next;
+        --list->count;
+        free ( head );
+    }
+    //
+    //  Release our lock on the list.
+    //
+    status = pthread_mutex_unlock ( &list->mutex );
+    if ( status != 0 )
+    {
+        printf ( "Error: Unable to unlock list mutex: %d[%s]\n", status,
+                 strerror(status) );
+    }
+    //
+    //  Return the completion code to the caller.
+    //
+    return status;
 }
