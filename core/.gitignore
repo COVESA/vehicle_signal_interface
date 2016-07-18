@@ -1,0 +1,9 @@
+# GIT ignore file for ~/git/vehicle_signal_interface/core
+dump
+fetch
+flush
+insert
+readRecord
+trace.c
+trace.h
+writeRecord

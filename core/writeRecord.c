@@ -89,7 +89,7 @@ int main ( int argc, char* const argv[] )
 	char asciiData[9] = { 0 };
 	unsigned long numericData = 0;
 	unsigned long keyValue = 0;
-	enum domains domainValue = CAN;
+	domains domainValue = CAN;
 	char ch;
 	bool numericDataSupplied = false;
 
@@ -102,7 +102,7 @@ int main ( int argc, char* const argv[] )
 		  //
 		  case 'a':
 		    strncpy ( asciiData, optarg, 8 );
-			printf ( "ASCII body data[%s] will be used.\n", asciiData );
+			LOG ( "ASCII body data[%s] will be used.\n", asciiData );
 			break;
 
 		  //
@@ -110,7 +110,7 @@ int main ( int argc, char* const argv[] )
 		  //
 		  case 'b':
 		    numericData = atol ( optarg );
-			printf ( "Numeric body data[%'lu] will be used.\n", numericData );
+			LOG ( "Numeric body data[%'lu] will be used.\n", numericData );
 			numericDataSupplied = true;
 			break;
 
@@ -119,14 +119,14 @@ int main ( int argc, char* const argv[] )
 		  //
 		  case 'd':
 		    domainValue = atol ( optarg );
-			printf ( "Using domain value[%'u]\n", domainValue );
+			LOG ( "Using domain value[%'u]\n", domainValue );
 			break;
 		  //
 		  //	Get the requested key value.
 		  //
 		  case 'k':
 		    keyValue = atol ( optarg );
-			printf ( "Using key value[%'lu]\n", keyValue );
+			LOG ( "Using key value[%'lu]\n", keyValue );
 			break;
 		  //
 		  //	Display the help message.

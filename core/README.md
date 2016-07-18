@@ -308,7 +308,7 @@ structures.  These have been defined in the code as fairly substantial with
 1024 hash buckets and each hash bucket having space for 1MB of signal data for
 a total of about 1GB of storage space.  Obviously not all of that space will
 be in use (escpecially during development) and it is just a small chunk of the
-available virtual address space in a 64-bit environment but is this is not
+available virtual address space in a 64-bit environment but if this is not
 acceptable for your specific environment, feel free to adjust the parameters
 in any way you wish.  They are all defined in the sharedMemory.h file.
 
@@ -316,7 +316,7 @@ Because this VSI implementation is built with a hash table of one-way linked
 lists, it is possible for more than one signal key to wind up hashing to the
 same hash bucket.  This results in multiple keys existing intermixed with each
 other in each hash bucket list.  Since the lists are therefore not homogeneous
-with respect to the key values, some of the logic is more complicated that it
+with respect to the key values, some of the logic is more complicated than it
 would be otherwise.  There are times when the lists must be sequentially
 accessed to perform the requested operation which will take more time than is
 optimal.  Future implementations of the VSI shared memory data structures will
@@ -326,3 +326,14 @@ type structures for instance).
 In the current implementation, the domain values that are passed into most of
 the functions are not used as part of the signal hash.  This will also be
 fixed in later revisions of the code.
+
+### Building
+
+Building this code is very straight forward.  Merely copy all of the source
+file into a directory and assuming you have a Linux development environment
+(i.e. with gcc, make, ar, etc.) all you need to do is type "make".  By
+default, everything will be compiled and all of the executables linked.  At
+that point, you are ready to go.
+
+There are multiple make recipes which are useful and these can be easily
+seen in the "Makefile".

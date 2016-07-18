@@ -98,8 +98,8 @@ int main ( int argc, char* const argv[] )
 		  //	Get the continuous run option flag if present.
 		  //
 		  case 'c':
-			printf ( "Record writing will run continuously. <ctrl-c> to "
-			         "quit...\n" );
+			LOG ( "Record writing will run continuously. <ctrl-c> to "
+			      "quit...\n" );
 		    continuousRun = true;
 			break;
 
@@ -110,7 +110,7 @@ int main ( int argc, char* const argv[] )
 		    messagesToStore = atol ( optarg );
 			if ( messagesToStore <= 0 )
 			{
-				printf ( "Invalid message count[%lu] specified.\n",
+				LOG ( "Invalid message count[%lu] specified.\n",
 						 messagesToStore );
 				usage ( argv[0] );
 				exit (255);
@@ -120,7 +120,7 @@ int main ( int argc, char* const argv[] )
 		  //	Get the random insert option flag if present.
 		  //
 		  case 'r':
-			printf ( "Record writing will be random.\n" );
+			LOG ( "Record writing will be random.\n" );
 		    useRandom = true;
 			break;
 

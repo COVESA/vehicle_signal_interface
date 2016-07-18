@@ -91,9 +91,9 @@ vsi_core_handle vsi_core_open ( void )
 
     if ( stats.st_size <= 0 )
     {
-        printf ( "VSI core data store[%s]\n"
-                 "  is uninitialized - Initializing it...\n",
-                 SHARED_MEMORY_SEGMENT_NAME );
+        LOG ( "VSI core data store[%s]\n", SHARED_MEMORY_SEGMENT_NAME );
+        LOG ( "   is uninitialized - Initializing it...\n" );
+
         //
         //  Go initialize the shared memory segment.
         //
@@ -124,7 +124,7 @@ vsi_core_handle vsi_core_open ( void )
             return 0;
         }
     }
-    printf ( "VSI core data store has been mapped into memory\n" );
+    LOG ( "VSI core data store has been mapped into memory\n" );
 
     //
     //  Close the shared memory pseudo file as we don't need it any more.
@@ -196,7 +196,7 @@ void vsi_core_close ( vsi_core_handle handle )
     @return None
 
 ------------------------------------------------------------------------*/
-void vsi_core_insert ( vsi_core_handle handle, enum domains domain,
+void vsi_core_insert ( vsi_core_handle handle, domains domain,
                        offset_t key, unsigned long newMessageSize,
                        void* body )
 {
@@ -241,23 +241,23 @@ void vsi_core_insert ( vsi_core_handle handle, enum domains domain,
     @return not 0 on error which will be an errno value.
 
 ------------------------------------------------------------------------*/
-int vsi_core_fetch_wait ( vsi_core_handle handle, enum domains domain,
+int vsi_core_fetch_wait ( vsi_core_handle handle, domains domain,
                           offset_t key, unsigned long* bodySize,
                           void* body )
-{
-    return sm_fetch ( handle, domain, key, bodySize, body, false );
-}
-
-
-int vsi_core_fetch ( vsi_core_handle handle, enum domains domain,
-                     offset_t key, unsigned long* bodySize,
-                     void* body )
 {
     return sm_fetch ( handle, domain, key, bodySize, body, true );
 }
 
 
-int vsi_core_fetch_newest ( vsi_core_handle handle, enum domains domain,
+int vsi_core_fetch ( vsi_core_handle handle, domains domain,
+                     offset_t key, unsigned long* bodySize,
+                     void* body )
+{
+    return sm_fetch ( handle, domain, key, bodySize, body, false );
+}
+
+
+int vsi_core_fetch_newest ( vsi_core_handle handle, domains domain,
                             offset_t key, unsigned long* bodySize,
                             void* body )
 {
@@ -265,7 +265,7 @@ int vsi_core_fetch_newest ( vsi_core_handle handle, enum domains domain,
 }
 
 
-int vsi_core_flush_signal ( vsi_core_handle handle, enum domains domain,
+int vsi_core_flush_signal ( vsi_core_handle handle, domains domain,
                             offset_t key )
 {
     return sm_flush_signal ( handle, domain, key );

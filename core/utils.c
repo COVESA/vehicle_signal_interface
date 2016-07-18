@@ -26,10 +26,15 @@
 #include <locale.h>
 #include <stdbool.h>
 
+#include "trace.h"
 #include "utils.h"
 
-// #define LOG(...) printf ( __VA_ARGS__ )
-#define LOG(...)
+//
+//  Define the following if you'd like the code to dump the semaphore states
+//  as it operates.  This is normally disabled as it produces a large volume
+//  of dump data.
+//
+#undef DUMP_SEMAPHORE
 
 sharedMemory_p sharedMemory;		// TEMP - Used by the dump code
 
@@ -69,8 +74,8 @@ sharedMemory_p sharedMemory;		// TEMP - Used by the dump code
 	@return None
 
 ------------------------------------------------------------------------*/
-void dumpHashBucket ( const char* leader, unsigned int bucketNumber,
-					  hashBucket_p hashBucket, int maxMessages )
+void dumpHashBucket ( unsigned int bucketNumber, hashBucket_p hashBucket,
+                      int maxMessages )
 {
 	//
 	//	If there are some messages in this hash bucket...
@@ -81,7 +86,7 @@ void dumpHashBucket ( const char* leader, unsigned int bucketNumber,
 		//	Display the address of this bucket and it's offset within the
 		//	shared memory segment.
 		//
-		printf ( "Hash Bucket %'u[%lx]:\n", bucketNumber,
+		LOG ( "Hash Bucket %'u[%lx]:\n", bucketNumber,
 				 (void*)hashBucket - (void*)sharedMemory );
 		//
 		//	If the head offset indicates that this is the end of the message
@@ -89,7 +94,7 @@ void dumpHashBucket ( const char* leader, unsigned int bucketNumber,
 		//
 		if ( hashBucket->head == END_OF_BUCKET_DATA )
 		{
-			printf ( "%sHead offset............: End of List Marker\n", leader );
+			LOG ( "Head offset............: End of List Marker\n" );
 		}
 		//
 		//	Otherwise, display the head offset value.  This is the offset in
@@ -97,8 +102,7 @@ void dumpHashBucket ( const char* leader, unsigned int bucketNumber,
 		//
 		else
 		{
-			printf ( "%sHead offset............: %'lu\n", leader,
-					 hashBucket->head );
+			LOG ( "Head offset............: %'lu\n", hashBucket->head );
 		}
 		//
 		//	If the tail offset indicates that this is the end of the message
@@ -106,7 +110,7 @@ void dumpHashBucket ( const char* leader, unsigned int bucketNumber,
 		//
 		if ( hashBucket->tail == END_OF_BUCKET_DATA )
 		{
-			printf ( "%sTail offset............: End of List Marker\n", leader );
+			LOG ( "Tail offset............: End of List Marker\n" );
 		}
 		//
 		//	Otherwise, display the tail offset value.  This is the offset in
@@ -114,53 +118,41 @@ void dumpHashBucket ( const char* leader, unsigned int bucketNumber,
 		//
 		else
 		{
-			printf ( "%sTail offset............: %'lu\n", leader,
-					 hashBucket->tail );
+			LOG ( "Tail offset............: %'lu\n", hashBucket->tail );
 		}
 		//
 		//	Display the number of messages currently stored in this hash
 		//	bucket.
 		//
-		printf ( "%sMessage count..........: %'lu\n", leader,
-				 hashBucket->currentMessageCount );
+		LOG ( "Message count..........: %'lu\n", hashBucket->currentMessageCount );
 		//
 		//	Display the generation number of this hash bucket.  The
 		//	generation number is incremented each time the messages being
 		//	inserted reach the end of the buffer and we have wrapped around
 		//	back to the beginning of the buffer.
 		//
-		printf ( "%sGeneration number......: %'lu\n", leader,
-				 hashBucket->generationNumber );
+		LOG ( "Generation number......: %'lu\n", hashBucket->generationNumber );
 		//
 		//	Display the message sequence number.  This number is the total
 		//	number of messages that have been stored in this hash bucket since
 		//	the shared memory segment was created.  This can be used as an
 		//	indicator of how often this bucket has been used.
 		//
-		printf ( "%sMessage sequence number: %'lu\n", leader,
-				 hashBucket->messageSequenceNumber );
+		LOG ( "Message sequence number: %'lu\n", hashBucket->messageSequenceNumber );
 		//
 		//	Display the number of bytes of memory that have been allocated to
 		//	this hash bucket for the storage of messages.  This value is
 		//	static and does not change as the hash bucket is used.
 		//
-		printf ( "%sTotal message size.....: %'lu\n", leader,
-				 hashBucket->totalMessageSize );
+		LOG ( "Total message size.....: %'lu\n", hashBucket->totalMessageSize );
 		//
 		//	Display the total size of this hash bucket in bytes.
 		//
-		printf ( "%sHash bucket size.......: %'d\n", leader,
-				 HASH_BUCKET_DATA_SIZE );
+		LOG ( "Hash bucket size.......: %'d\n", HASH_BUCKET_DATA_SIZE );
 		//
 		//	Go dump the contents of the message list in this hash bucket.
 		//
-		dumpMessageList ( "   ", hashBucket, maxMessages );
-
-		//
-		//	Output an extra blank line to separate the hash bucket output
-		//	lines to make it easier to find the start of a hash bucket.
-		//
-		putc ( '\n', stdout );
+		dumpMessageList ( hashBucket, maxMessages );
 	}
 	return;
 }
@@ -176,20 +168,15 @@ void dumpHashBucket ( const char* leader, unsigned int bucketNumber,
 	Only the meta-data of each message is dump.  The actual binary contents of
 	each message is not dumped (to keep the output reasonable).
 
-	The leader argument is designed to allow the caller to specify a string
-	that is output at the beginning of each dump line.  This allows the user
-	to specify an indentation for the following dump information for instance.
-
-	@param[in] leader - The string to be output at the start of each line
 	@param[in] bucketNumber - The bucket index number to be dumped
 	@param[in] maxMessages - The maximum number of messages to dump for this
 							 hash bucket.
 	@return None
 
 ------------------------------------------------------------------------*/
-void dumpMessageList ( const char* leader, hashBucket_p hashBucket,
-					   int maxMessages )
+void dumpMessageList ( hashBucket_p hashBucket, int maxMessages )
 {
+#ifdef VSI_DEBUG
 	int i = 0;
 
 	//
@@ -197,13 +184,14 @@ void dumpMessageList ( const char* leader, hashBucket_p hashBucket,
 	//	list offsets of each message.
 	//
 	void* baseAddress = hb_getAddress ( hashBucket, 0 );
+#endif
 
 	//
 	//	Get an actual pointer to the first message in this bucket.  This is
 	//	the message that is pointed to by the "head" offset.
 	//
 	sharedMessage_p message = hb_getAddress ( hashBucket,
-											   hb_getHead ( hashBucket ) );
+											  hb_getHead ( hashBucket ) );
 	//
 	//	Repeat until we reach the end of the message list in this bucket.
 	//
@@ -215,22 +203,22 @@ void dumpMessageList ( const char* leader, hashBucket_p hashBucket,
 		//	the message list in this hash bucket.  The first message in the
 		//	list will be at offset "0".
 		//
-		printf ( "%sMessage number %'d[%p-%'lu]:\n", leader, ++i, message,
+		LOG ( "Message number %'d[%p-%'lu]:\n", ++i, message,
 				 (void*)message - baseAddress );
 		//
 		//	Display the domain associated with this message.
 		//
-		printf ( "%s   Domain..............: %'u\n",  leader, message->domain );
+		LOG ( "   Domain..............: %'u\n", message->domain );
 
 		//
 		//	Display the key value that was associated with this message.
 		//
-		printf ( "%s   Key.................: %'lu\n", leader, message->key );
+		LOG ( "   Key.................: %'u\n", message->key );
 
 		//
 		//	Display the size of this message in bytes.
 		//
-		printf ( "%s   Message size........: %'lu\n", leader, message->messageSize );
+		LOG ( "   Message size........: %'lu\n", message->messageSize );
 
 		//
 		//	If the "next" message offset indicates that this is the end of the
@@ -238,8 +226,7 @@ void dumpMessageList ( const char* leader, hashBucket_p hashBucket,
 		//
 		if ( message->nextMessageOffset == END_OF_BUCKET_DATA )
 		{
-			printf ( "%s   Next message offset.: End of List Marker\n", leader );
-			// break;
+			LOG ( "   Next message offset.: End of List Marker\n" );
 		}
 		//
 		//	Otherwise, display the head offset value.  This is the offset in
@@ -248,13 +235,13 @@ void dumpMessageList ( const char* leader, hashBucket_p hashBucket,
 		//
 		else
 		{
-			printf ( "%s   Next message offset.: %'lu\n", leader,
-					 message->nextMessageOffset );
+			LOG ( "   Next message offset.: %'lu\n",
+                  message->nextMessageOffset );
 		}
 		//
 		//	Go dump the contents of the data field for this message.
 		//
-		HEX_DUMP_TL ( message->data, 8, "Data", 6 );
+		HX_DUMP ( message->data, message->messageSize, "Message Data" );
 
 		if ( message->nextMessageOffset == END_OF_BUCKET_DATA ||
 			 --maxMessages == 0 )
@@ -283,18 +270,27 @@ void dumpMessageList ( const char* leader, hashBucket_p hashBucket,
 	@param[in] semaphore - The address of the semaphore to be dumped.
 
 ------------------------------------------------------------------------*/
-void dumpSemaphore ( const char* leader, semaphore_p semaphore )
+void dumpSemaphore ( semaphore_p semaphore )
 {
-	//
-	//	Display the message count value.
-	//
-	LOG ( "%sMessage Count: %'d\n", leader, semaphore->messageCount );
+#ifdef DUMP_SEMAPHORE
+	LOG ( "semaphore: %3p\n", (void*)((long)&semaphore->mutex % 0x1000 ) );
 
 	//
-	//	Display the waiter count value.
+	//	Display our count values.
 	//
-	LOG ( "%sWaiter Count.: %'d\n", leader, semaphore->waiterCount );
+	LOG ( "   message count.........: %'d\n", semaphore->messageCount );
+	LOG ( "   waiter count..........: %'d\n", semaphore->waiterCount );
 
+	//
+	//	Display the semaphore data...
+	//
+    LOG ( "   semaphore.mutex.lock..: %d\n", semaphore->mutex.__data.__lock );
+    LOG ( "   semaphore.mutex.count.: %d\n", semaphore->mutex.__data.__count );
+    LOG ( "   semaphore.mutex.owner.: %d\n", semaphore->mutex.__data.__owner );
+    LOG ( "   semaphore.mutex.nusers: %d\n", semaphore->mutex.__data.__nusers );
+    LOG ( "   semaphore.mutex.kind..: %d\n", semaphore->mutex.__data.__kind );
+
+#endif
 	return;
 }
 
@@ -356,14 +352,14 @@ void dumpSemaphore ( const char* leader, semaphore_p semaphore )
 #define MAX_DUMP_SIZE ( 1024 )
 
 //
-//	Define some macros to make it easier to call the HexDump function with
-//	various combinations of arguments.
+//	The following macros are defined in the header file to make it easier to
+//	call the HexDump function with various combinations of arguments.
 //
 // #define HEX_DUMP( data, length )           HexDump ( data, length, "", 0 )
 // #define HEX_DUMP_T( data, length, title )  HexDump ( data, length, title, 0 )
 // #define HEX_DUMP_L( data, length, spaces ) HexDump ( data, length, "", spaces )
 // #define HEX_DUMP_TL                        HexDump
-
+//
 
 void HexDump ( const char *data, int length, const char *title,
 			   int leadingSpaces )
@@ -375,7 +371,7 @@ void HexDump ( const char *data, int length, const char *title,
     int           outputWidth = 16;
     int           currentLineWidth = 0;
     int           originalLength = 0;
-	char          asciiString[40];
+	char          asciiString[400] = { 0 };
 
 	XPRINT ( "data(%d): \"%s\", title: %p, width: %d, spaces: %d\n", length,
 			 data, title, outputWidth, leadingSpaces );
@@ -390,6 +386,12 @@ void HexDump ( const char *data, int length, const char *title,
         //
         length = MAX_DUMP_SIZE;
     }
+#ifdef VSI_TRACE
+    //
+    //  If tracing is enabled, print out the trace indentation string.
+    //
+    printTraceLeader();
+#endif
     //
     //    Output the leader string at the beginning of the title line.
     //
@@ -444,6 +446,12 @@ void HexDump ( const char *data, int length, const char *title,
                 asciiString[0] = 0;
 				s = 0;
             }
+#ifdef VSI_TRACE
+            //
+            //  If tracing is enabled, print out the trace indentation string.
+            //
+            printTraceLeader();
+#endif
             //
             //    Output the leader string at the beginning of the new line.
             //
@@ -503,6 +511,12 @@ void HexDump ( const char *data, int length, const char *title,
     //
     if ( originalLength > length )
     {
+#ifdef VSI_TRACE
+        //
+        //  If tracing is enabled, print out the trace indentation string.
+        //
+        printTraceLeader();
+#endif
 		printf ( "       ...Dump of %d bytes has been truncated\n", originalLength );
     }
     //
@@ -521,7 +535,6 @@ void HexDump ( const char *data, int length, const char *title,
 //	portion of the time is not very interesting and just clutters up the
 //	output.
 //
-
 #define NS_PER_SEC ( 1000000000 )
 #define NS_PER_US  ( 1000 )
 
@@ -545,6 +558,7 @@ unsigned long getIntervalTime ( void )
     {
         return 0;
     }
+
 }
 
 

@@ -30,6 +30,8 @@
 #include "vsi_core_api.h"
 #include "sharedMemory.h"
 
+#include "trace.h"
+
 
 /*! @{ */
 
@@ -57,7 +59,7 @@ Usage: %s options\n\
     -k    Dump for key     int        N/A     \n\
     -m    Message Count    int         4      \n\
     -h    Help Message     N/A        N/A     \n\
-    -?    Help Message     N/A       false    \n\
+    -?    Help Message     N/A        N/A     \n\
 \n\n\
 ",
              executable );
@@ -100,7 +102,7 @@ int main ( int argc, char* const argv[] )
         switch ( ch )
         {
           case 'a':
-            printf ( "Dumping all non-empty buckets.\n" );
+            LOG ( "Dumping all non-empty buckets.\n" );
             bucketsToDump = HASH_BUCKET_COUNT;
             messagesToDump = 999999999;
 
@@ -113,8 +115,7 @@ int main ( int argc, char* const argv[] )
 		    bucketsToDump = atol ( optarg );
 			if ( bucketsToDump <= 0 )
 			{
-				printf ( "Invalid bucket count[%lu] specified.\n",
-						 bucketsToDump );
+				LOG ( "Invalid bucket count[%lu] specified.\n", bucketsToDump );
 				usage ( argv[0] );
 				exit (255);
 			}
@@ -134,8 +135,7 @@ int main ( int argc, char* const argv[] )
 		    messagesToDump = atol ( optarg );
 			if ( messagesToDump <= 0 )
 			{
-				printf ( "Invalid message count[%lu] specified.\n",
-						 messagesToDump );
+				LOG ( "Invalid message count[%lu] specified.\n", messagesToDump );
 				usage ( argv[0] );
 				exit (255);
 			}
@@ -177,7 +177,7 @@ int main ( int argc, char* const argv[] )
 	//
 	//	For each of the messages we were asked to dump...
 	//
-	printf ( "Beginning dump of VSI core data store[%s]...\n",
+	LOG ( "Beginning dump of VSI core data store[%s]...\n",
 	         SHARED_MEMORY_SEGMENT_NAME );
 
     sharedMemory_p sharedMemory = (sharedMemory_p)handle;
@@ -193,7 +193,7 @@ int main ( int argc, char* const argv[] )
             //
             //	Go dump the current hash bucket contents.
             //
-            dumpHashBucket ( "", i, &sharedMemory->hashBuckets[i], messagesToDump );
+            dumpHashBucket ( i, &sharedMemory->hashBuckets[i], messagesToDump );
         }
     }
     //
@@ -216,7 +216,7 @@ int main ( int argc, char* const argv[] )
         //
         //	Go dump the hash bucket that corresponds to the specified key.
         //
-        dumpHashBucket ( "", key, hashBucket, messagesToDump );
+        dumpHashBucket ( key, hashBucket, messagesToDump );
     }
 	//
 	//	Close our shared memory segment and exit.

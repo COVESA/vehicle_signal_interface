@@ -100,7 +100,7 @@ void vsi_core_close ( vsi_core_handle handle );
 	@return None
 
 ------------------------------------------------------------------------*/
-void vsi_core_insert ( vsi_core_handle handle, enum domains domain,
+void vsi_core_insert ( vsi_core_handle handle, domains domain,
                        offset_t key, unsigned long newMessageSize,
                        void* body );
 
@@ -108,13 +108,13 @@ void vsi_core_insert ( vsi_core_handle handle, enum domains domain,
 
 	v s i _ c o r e _ f e t c h
 
-	@brief Fetch and remove a message from the VSI data store.
+	@brief Fetch and remove the oldest message from the VSI data store.
 
-    This function will find the message with the specified domain and key
-    values in the VSI data store, return the message data to the caller and
-    delete the message from the VSI data store.  If the data requested is not
-    available in the data store, this function will return immediately with an
-    error code.
+    This function will find the oldest message with the specified domain and
+    key values in the VSI data store, return the message data to the caller
+    and delete the message from the VSI data store.  If the data requested is
+    not available in the data store, this function will return immediately
+    with an error code.
 
     @param[in] handle - The handle to the VSI core data store.
     @param[in] domain - The domain associated with this message.
@@ -127,7 +127,7 @@ void vsi_core_insert ( vsi_core_handle handle, enum domains domain,
                    - Anything else is an error code.
 
 ------------------------------------------------------------------------*/
-int vsi_core_fetch ( vsi_core_handle handle, enum domains domain,
+int vsi_core_fetch ( vsi_core_handle handle, domains domain,
                      offset_t key, unsigned long* bodySize,
                      void* body );
 
@@ -156,7 +156,7 @@ int vsi_core_fetch ( vsi_core_handle handle, enum domains domain,
               - Anything else is an error code.
 
 ------------------------------------------------------------------------*/
-int vsi_core_fetch_wait ( vsi_core_handle handle, enum domains domain,
+int vsi_core_fetch_wait ( vsi_core_handle handle, domains domain,
                           offset_t key, unsigned long* bodySize,
                           void* body );
 
@@ -183,7 +183,7 @@ int vsi_core_fetch_wait ( vsi_core_handle handle, enum domains domain,
               - Anything else is an error code.
 
 ------------------------------------------------------------------------*/
-int vsi_core_fetch_newest ( vsi_core_handle handle, enum domains domain,
+int vsi_core_fetch_newest ( vsi_core_handle handle, domains domain,
                             offset_t key, unsigned long* bodySize,
                             void* body );
 
@@ -207,7 +207,7 @@ int vsi_core_fetch_newest ( vsi_core_handle handle, enum domains domain,
             Anything else is an error code (errno value)
 
 ------------------------------------------------------------------------*/
-int vsi_core_flush_signal ( vsi_core_handle handle, enum domains domain,
+int vsi_core_flush_signal ( vsi_core_handle handle, domains domain,
                             offset_t key );
 
 

@@ -46,7 +46,15 @@
 
 #include <stdbool.h>
 
+// #include "vsi.h"
 #include "sharedMemoryLocks.h"
+
+typedef enum
+{
+    VSS = 1,
+    CAN = 2
+
+}   domains;
 
 
 /*! @{ */
@@ -72,15 +80,11 @@
 #define END_OF_BUCKET_DATA ( 0xfffffffffffffffful )
 
 //
-//	Define all of the possible key domain names.
-//
-enum domains { CAN = 1 };
-
-//
 //	Define the type to be used for all of the offset references inside the
 //	shared memory segment.
 //
 typedef unsigned long offset_t;
+typedef unsigned int  vsiKey_t;
 
 
 /*!-----------------------------------------------------------------------
@@ -137,11 +141,11 @@ typedef unsigned long offset_t;
 ------------------------------------------------------------------------*/
 typedef struct sharedMessage_t
 {
-	offset_t     key;
-	offset_t     messageSize;
-	offset_t     nextMessageOffset;
-	enum domains domain;
-	char         data[0];
+	vsiKey_t    key;
+	offset_t messageSize;
+	offset_t nextMessageOffset;
+	domains  domain;
+	char     data[0];
 
 }   sharedMessage_t, *sharedMessage_p;
 
@@ -186,12 +190,6 @@ typedef struct hashBucket_t
 	unsigned long generationNumber;
 	unsigned long messageSequenceNumber;
 	unsigned long totalMessageSize;
-
-	//
-    //	Define the mutex that will be used to lock this shared memory
-	//	segment when it is being updated.
-    //
-	pthread_mutex_t lock;
 
 	//
 	//	Define the semaphore that will be used to manage the processes waiting
@@ -299,7 +297,7 @@ typedef struct sharedMemory_t
 //	This is the implementation of the hashing function that operates on the
 //	supplied key value and return an index into the array of hash buckets.
 //
-inline static unsigned long sm_getHash ( unsigned long key )
+inline static unsigned long sm_getHash ( vsiKey_t key )
 {
 	return key % HASH_BUCKET_COUNT;
 }
@@ -333,7 +331,7 @@ sharedMemory_p sm_initialize ( int fd, size_t sharedMemorySegmentSize );
 //  domain and insert the caller's data into the message list of that hash
 //  bucket.
 //
-void sm_insert ( sharedMemory_p handle, enum domains domain, offset_t key,
+void sm_insert ( sharedMemory_p handle, domains domain, vsiKey_t key,
                  unsigned long newMessageSize, void* body );
 
 //
@@ -358,7 +356,7 @@ int sm_removeMessage ( hashBucket_p hashBucket, offset_t currentMessage,
 //  Note that this function will remove the record that was found from the
 //  data store.
 //
-int sm_fetch ( sharedMemory_p handle, enum domains domain, offset_t key,
+int sm_fetch ( sharedMemory_p handle, domains domain, vsiKey_t key,
                unsigned long* messageSize, void* body, bool dontWait );
 
 
@@ -371,7 +369,7 @@ int sm_fetch ( sharedMemory_p handle, enum domains domain, offset_t key,
 //  Note that this function will NOT remove the record that was found from the
 //  data store.
 //
-int sm_fetch_newest ( sharedMemory_p handle, enum domains domain, offset_t key,
+int sm_fetch_newest ( sharedMemory_p handle, domains domain, vsiKey_t key,
                       unsigned long* messageSize, void* body, bool dontWait );
 
 
@@ -381,7 +379,7 @@ int sm_fetch_newest ( sharedMemory_p handle, enum domains domain, offset_t key,
 //  This function will find all of the signals with the given domain and key
 //  vaue and remove them from the data store.
 //
-int sm_flush_signal ( sharedMemory_p handle, enum domains domain, offset_t key );
+int sm_flush_signal ( sharedMemory_p handle, domains domain, vsiKey_t key );
 
 
 

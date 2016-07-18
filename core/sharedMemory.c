@@ -25,27 +25,27 @@
 #include <fcntl.h>
 #include <stdbool.h>
 
+#include "vsi_core_api.h"
 #include "sharedMemory.h"
 #include "utils.h"
 
-//
-//  Set this flag for debugging log messages and timing.
-//
-#undef DEBUG
-// #define DEBUG
-
-#ifdef DEBUG
-#   define LOG(...) printf ( __VA_ARGS__ )
-#   define HX_DUMP(...) HEX_DUMP_T ( __VA_ARGS__ )
-#   define SEM_DUMP(...) dumpSemaphore ( __VA_ARGS__ )
-#else
-#   define LOG(...)
-#   define HX_DUMP(...)
-#   define SEM_DUMP(...)
-#endif
-
 
 /*! @{ */
+
+
+//
+//  Define the cleanup handler for the semaphore wait below.  This handler
+//  will be executed if this thread is cancelled while it is waiting.  What
+//  this function needs to do is release the mutex that this thread is holding
+//  when it enters the wait state.  Without this cleanup handler, the mutex
+//  will remain locked when this thread is cancelled and almost certainly
+//  cause a hang condition in the code the next time someone tries to lock
+//  this same mutex.
+//
+static inline void semaphoreCleanupHandler ( void* arg )
+{
+    pthread_mutex_unlock ( arg );
+}
 
 
 /*!-----------------------------------------------------------------------
@@ -64,7 +64,15 @@
 ------------------------------------------------------------------------*/
 static inline void hb_lock ( hashBucket_p hashBucket )
 {
-    LOG ( "Locking the hash bucket mutex\n" );
+    LOG ( "Locking the hash bucket mutex at %4p\n",
+          (void*)((long)&hashBucket->semaphore.mutex % 1000 ) );
+
+    SEM_DUMP ( &hashBucket->semaphore );
+
+    //
+    //  Go lock the hash bucket mutex so we can mess with the data structures
+    //  in the hash bucket.
+    //
     pthread_mutex_lock ( &hashBucket->semaphore.mutex );
 }
 
@@ -87,8 +95,12 @@ static inline void hb_lock ( hashBucket_p hashBucket )
 ------------------------------------------------------------------------*/
 static inline void hb_unlock ( hashBucket_p hashBucket )
 {
-    LOG ( "Unlocking the hash bucket mutex\n" );
+    LOG ( "Unlocking the hash bucket mutex at %4p\n",
+          (void*)((long)&hashBucket->semaphore.mutex % 1000 ) );
+
     pthread_mutex_unlock ( &hashBucket->semaphore.mutex );
+
+    SEM_DUMP ( &hashBucket->semaphore );
 }
 
 
@@ -125,7 +137,7 @@ sharedMemory_p sm_initialize ( int fd, size_t sharedMemorySegmentSize )
 	int             status;
 	sharedMemory_p sharedMemory;
 
-    LOG ( "Initializing shared memory.  FD[%d], Size[%'lu]\n", fd,
+    LOG ( "Initializing shared memory - fd[%d], Size[%'lu]\n", fd,
           sharedMemorySegmentSize );
 	//
 	//	Map the shared memory file into virtual memory.
@@ -235,16 +247,6 @@ sharedMemory_p sm_initialize ( int fd, size_t sharedMemorySegmentSize )
 		hashBucket->totalMessageSize      = HASH_BUCKET_DATA_SIZE;
 
 		//
-		//	Initialize the hash bucket data lock mutex.
-		//
-		status = pthread_mutex_init ( &hashBucket->lock, &mutexAttributes );
-		if ( status != 0 )
-		{
-			printf ( "Unable to initialize hash bucket data lock mutex - "
-			 		 "errno: %u[%m].\n", status );
-			return 0;
-		}
-		//
 		//	Initialize the hash bucket semaphore mutex.
 		//
 		status = pthread_mutex_init ( &hashBucket->semaphore.mutex,
@@ -321,10 +323,10 @@ sharedMemory_p sm_initialize ( int fd, size_t sharedMemorySegmentSize )
     @return None
 
 ------------------------------------------------------------------------*/
-void sm_insert ( sharedMemory_p handle, enum domains domain, offset_t key,
+void sm_insert ( sharedMemory_p handle, domains domain, vsiKey_t key,
                  unsigned long newMessageSize, void* body )
 {
-    LOG ( "Inserting domain[%d] key[%lu]\n", domain, key );
+    LOG ( "Inserting domain[%d] key[%u]\n", domain, key );
 
     //
     //  Define the local message offset and pointer variables.
@@ -359,6 +361,13 @@ void sm_insert ( sharedMemory_p handle, enum domains domain, offset_t key,
     //  to manipulate the hash bucket.
     //
     hb_lock ( hashBucket );
+
+    //
+    //  Install the cancellation cleanup handler in case this thread gets
+    //  destroyed before the lock is released.  This will prevent this process
+    //  shared mutex from remaining locked if the process exits or crashes.
+    //
+    pthread_cleanup_push ( semaphoreCleanupHandler, &(hashBucket->semaphore.mutex) );
 
     //
     //  Get the head as the offset to the first message in the message list
@@ -647,13 +656,18 @@ void sm_insert ( sharedMemory_p handle, enum domains domain, offset_t key,
     //  Increment the semaphore count to reflect the message we just inserted
     //  into the message list.
     //
-    LOG ( "%'lu  Before Insert/semaphore post:\n", getIntervalTime() );
-    SEM_DUMP ( "     ", &hashBucket->semaphore );
+    // LOG ( "%'lu  Before Insert/semaphore post:\n", getIntervalTime() );
+    SEM_DUMP ( &hashBucket->semaphore );
 
     semaphorePost ( &hashBucket->semaphore );
 
-    LOG ( "%'lu  After Insert/semaphore post:\n", getIntervalTime() );
-    SEM_DUMP ( "     ", &hashBucket->semaphore );
+    // LOG ( "%'lu  After Insert/semaphore post:\n", getIntervalTime() );
+    SEM_DUMP ( &hashBucket->semaphore );
+
+    //
+    //  Pop off the pthread mutex cleanup handler.
+    //
+    pthread_cleanup_pop ( 0 );
 
     //
     //  Give up the hash bucket memory lock.
@@ -760,15 +774,15 @@ int sm_removeMessage ( hashBucket_p hashBucket, offset_t currentMessage,
     @param[in]  key - The key value of the message to be removed.
     @param[in/out] bodySize - The address of the body buffer size.
     @param[out] body - The address of where to put the message data.
-    @param[in]  dontWait - If true, don't wait for data if domain/key is not found.
+    @param[in]  wait - If true, wait for data if domain/key is not found.
 
     @return 0 if successful.
             -ENODATA - If waitForData == true and domain/key is not found.
             any other value is an errno value.
 
 ------------------------------------------------------------------------*/
-int sm_fetch ( sharedMemory_p handle, enum domains domain, offset_t key,
-               unsigned long* bodySize, void* body, bool dontWait )
+int sm_fetch ( sharedMemory_p handle, domains domain, vsiKey_t key,
+               unsigned long* bodySize, void* body, bool wait )
 {
     //
     //  Define the local message offset and pointer variables.
@@ -781,8 +795,8 @@ int sm_fetch ( sharedMemory_p handle, enum domains domain, offset_t key,
     int              transferSize;
     int              status = 0;
 
-    LOG ( "Fetching signal domain[%d], key[%lu], dontWait[%d]\n", domain, key,
-          dontWait );
+    LOG ( "Fetching signal domain[%d], key[%u], wait[%d]\n", domain, key,
+          wait );
     //
     //  Compute the message hash value from the input key.
     //
@@ -800,7 +814,7 @@ int sm_fetch ( sharedMemory_p handle, enum domains domain, offset_t key,
     //  arrive then just return the "no data" error code to the caller and
     //  quit.
     //
-    if ( hashBucket->semaphore.messageCount == 0 && dontWait )
+    if ( hashBucket->semaphore.messageCount == 0 && !wait )
     {
         return -ENODATA;
     }
@@ -812,6 +826,13 @@ int sm_fetch ( sharedMemory_p handle, enum domains domain, offset_t key,
     //  is safe to manipulate the shared memory data.
     //
     hb_lock ( hashBucket );
+
+    //
+    //  Install the cancellation cleanup handler in case this thread gets
+    //  destroyed before the lock is released.  This will prevent this process
+    //  shared mutex from remaining locked if the process exits or crashes.
+    //
+    pthread_cleanup_push ( semaphoreCleanupHandler, &hashBucket->semaphore.mutex );
 
     //
     //  Go wait if there are no messages in the message list to be read.
@@ -826,15 +847,15 @@ int sm_fetch ( sharedMemory_p handle, enum domains domain, offset_t key,
     //
     ++hashBucket->semaphore.waiterCount;
 
-    LOG ( "%'lu  Before Fetch/semaphore wait:\n", getIntervalTime() );
-    SEM_DUMP ( "  ", &hashBucket->semaphore );
+    // LOG ( "%'lu  Before Fetch/semaphore wait:\n", getIntervalTime() );
+    SEM_DUMP ( &hashBucket->semaphore );
 
     semaphoreWait ( &hashBucket->semaphore );
 
     --hashBucket->semaphore.waiterCount;
 
-    LOG ( "%'lu  After Fetch/semaphore wait:\n", getIntervalTime() );
-    SEM_DUMP ( "  ", &hashBucket->semaphore );
+    // LOG ( "%'lu  After Fetch/semaphore wait:\n", getIntervalTime() );
+    SEM_DUMP ( &hashBucket->semaphore );
 
     //
     //  Get the current and previous message offsets.  Note that for the first
@@ -898,7 +919,7 @@ int sm_fetch ( sharedMemory_p handle, enum domains domain, offset_t key,
     LOG ( "%'lu  At the end of Fetch - waiterCount: %d\n", getIntervalTime(),
              hashBucket->semaphore.waiterCount );
 
-    SEM_DUMP ( "     ", &hashBucket->semaphore );
+    SEM_DUMP ( &hashBucket->semaphore );
 
     //
     //  If we did not find the message we were looking for, return an error
@@ -908,6 +929,11 @@ int sm_fetch ( sharedMemory_p handle, enum domains domain, offset_t key,
     {
         status = -ENODATA;
     }
+    //
+    //  Pop off the pthread mutex cleanup handler.
+    //
+    pthread_cleanup_pop ( 0 );
+
     //
     //  Give up the shared memory block lock.
     //
@@ -932,7 +958,7 @@ int sm_fetch ( sharedMemory_p handle, enum domains domain, offset_t key,
     list.  If there are no messages that match the user's request, this
     function will hang (on a semaphore) until an appropriate message is
     available before returning to the caller depending on the setting of the
-    "dontWait" input parameter.
+    "wait" input parameter.
 
     When calling this function, the messageSize should be the size of the data
     buffer supplied as the "body" argument.  When we copy the data from the
@@ -946,15 +972,15 @@ int sm_fetch ( sharedMemory_p handle, enum domains domain, offset_t key,
     @param[in]  key - The key value of the message to be removed.
     @param[in/out] bodySize - The address of the body buffer size.
     @param[out] body - The address of where to put the message data.
-    @param[in]  dontWait - If true, don't wait for data if domain/key is not found.
+    @param[in]  wait - If true, wait for data if domain/key is not found.
 
     @return 0 if successful.
             -ENODATA - If waitForData == true and domain/key is not found.
             any other value is an errno value.
 
 ------------------------------------------------------------------------*/
-int sm_fetch_newest ( sharedMemory_p handle, enum domains domain, offset_t key,
-                      unsigned long* bodySize, void* body, bool dontWait )
+int sm_fetch_newest ( sharedMemory_p handle, domains domain, vsiKey_t key,
+                      unsigned long* bodySize, void* body, bool wait )
 {
     //
     //  Define the local message offset and pointer variables.
@@ -965,10 +991,10 @@ int sm_fetch_newest ( sharedMemory_p handle, enum domains domain, offset_t key,
     sharedMessage_p lastMessagePtr = 0;
 
     int             transferSize = 0;
-    int             status = -ENODATA;
+    int             status = 0;
 
-    LOG ( "Fetching newest signal domain[%d], key[%lu], dontWait[%d]\n", domain,
-          key, dontWait );
+    LOG ( "Fetching newest signal domain[%d], key[%u], wait[%d]\n", domain,
+          key, wait );
     //
     //  Compute the message hash value from the input key.
     //
@@ -986,7 +1012,7 @@ int sm_fetch_newest ( sharedMemory_p handle, enum domains domain, offset_t key,
     //  arrive then just return the "no data" error code to the caller and
     //  quit.
     //
-    if ( hashBucket->semaphore.messageCount == 0 && dontWait )
+    if ( hashBucket->semaphore.messageCount == 0 && !wait )
     {
         LOG ( "Returning error code ENODATA\n" );
         return -ENODATA;
@@ -1001,6 +1027,13 @@ int sm_fetch_newest ( sharedMemory_p handle, enum domains domain, offset_t key,
     hb_lock ( hashBucket );
 
     //
+    //  Install the cancellation cleanup handler in case this thread gets
+    //  destroyed before the lock is released.  This will prevent this process
+    //  shared mutex from remaining locked if the process exits or crashes.
+    //
+    pthread_cleanup_push ( semaphoreCleanupHandler, &(hashBucket->semaphore.mutex) );
+
+    //
     //  Go wait if there are no messages in the message list to be read.
     //
     //  Note that we will increment the "waiter" count during the time that we
@@ -1013,15 +1046,15 @@ int sm_fetch_newest ( sharedMemory_p handle, enum domains domain, offset_t key,
     //
     ++hashBucket->semaphore.waiterCount;
 
-    LOG ( "%'lu  Before Fetch/semaphore wait:\n", getIntervalTime() );
-    SEM_DUMP ( "  ", &hashBucket->semaphore );
+    // LOG ( "%'lu  Before Fetch/semaphore wait:\n", getIntervalTime() );
+    SEM_DUMP ( &hashBucket->semaphore );
 
     semaphoreWait ( &hashBucket->semaphore );
 
     --hashBucket->semaphore.waiterCount;
 
-    LOG ( "%'lu  After Fetch/semaphore wait:\n", getIntervalTime() );
-    SEM_DUMP ( "  ", &hashBucket->semaphore );
+    // LOG ( "%'lu  After Fetch/semaphore wait:\n", getIntervalTime() );
+    SEM_DUMP ( &hashBucket->semaphore );
 
     //
     //  If we get here, there is at least one message in this hash bucket.  At
@@ -1064,8 +1097,14 @@ int sm_fetch_newest ( sharedMemory_p handle, enum domains domain, offset_t key,
         //
         //  Return to the caller with a good completion code.
         //
+        //  Note: Sorry for the "goto" but it's the easiest way to ensure that
+        //  this function only has one exit path.  The real issue is that the
+        //  pthread cleanup push & pop functions HAVE to be paired in the same
+        //  compilation context... A REALLY STUPID IMPLEMENTATION!!
+        //  (commentary by DWM).
+        //
         LOG ( "Returning error code 0\n" );
-        return 0;
+        goto Exit;
     }
     //
     //  If we get here it's because the last message in the current hash
@@ -1108,7 +1147,7 @@ int sm_fetch_newest ( sharedMemory_p handle, enum domains domain, offset_t key,
     LOG ( "%'lu  At the end of Fetch - waiterCount: %d\n", getIntervalTime(),
           hashBucket->semaphore.waiterCount );
 
-    SEM_DUMP ( "     ", &hashBucket->semaphore );
+    SEM_DUMP ( &hashBucket->semaphore );
 
     //
     //  If we did not find the message we were looking for, return an error
@@ -1139,6 +1178,12 @@ int sm_fetch_newest ( sharedMemory_p handle, enum domains domain, offset_t key,
         //
         status = 0;
     }
+Exit:
+    //
+    //  Pop off the pthread mutex cleanup handler.
+    //
+    pthread_cleanup_pop ( 0 );
+
     //
     //  Give up the shared memory block lock.
     //
@@ -1169,7 +1214,7 @@ int sm_fetch_newest ( sharedMemory_p handle, enum domains domain, offset_t key,
             any other value is an errno value.
 
 ------------------------------------------------------------------------*/
-int sm_flush_signal ( sharedMemory_p handle, enum domains domain, offset_t key )
+int sm_flush_signal ( sharedMemory_p handle, domains domain, vsiKey_t key )
 {
     //
     //  Define the local message offset and pointer variables.
@@ -1182,7 +1227,7 @@ int sm_flush_signal ( sharedMemory_p handle, enum domains domain, offset_t key )
 
     int              status = 0;
 
-    LOG ( "Flushing signal domain[%d], key[%lu]\n", domain, key );
+    LOG ( "Flushing signal domain[%d], key[%u]\n", domain, key );
 
     //
     //  Compute the message hash value from the input key.
@@ -1211,6 +1256,13 @@ int sm_flush_signal ( sharedMemory_p handle, enum domains domain, offset_t key )
     //  is safe to manipulate the shared memory data.
     //
     hb_lock ( hashBucket );
+
+    //
+    //  Install the cancellation cleanup handler in case this thread gets
+    //  destroyed before the lock is released.  This will prevent this process
+    //  shared mutex from remaining locked if the process exits or crashes.
+    //
+    pthread_cleanup_push ( semaphoreCleanupHandler, &(hashBucket->semaphore.mutex) );
 
     //
     //  Get the current and previous message offsets.  Note that for the first
@@ -1258,6 +1310,11 @@ int sm_flush_signal ( sharedMemory_p handle, enum domains domain, offset_t key )
     {
         semaphorePost ( &hashBucket->semaphore );
     }
+    //
+    //  Pop off the pthread mutex cleanup handler.
+    //
+    pthread_cleanup_pop ( 0 );
+
     //
     //  Give up the shared memory block lock.
     //

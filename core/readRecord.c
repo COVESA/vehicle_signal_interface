@@ -82,9 +82,8 @@ int main ( int argc, char* const argv[] )
     //
 	char asciiData[9] = { 0 };		// We only copy 8 bytes so it is always
 									// null terminated
-	unsigned long numericData = 0;
 	unsigned long keyValue = 0;
-	enum domains domainValue = CAN;
+	domains domainValue = CAN;
 	int status = 0;
 	char ch;
     bool getNewest = false;
@@ -98,20 +97,20 @@ int main ( int argc, char* const argv[] )
 		  //
 		  case 'd':
 		    domainValue = atol ( optarg );
-			// printf ( "Using domain value[%'u]\n", domainValue );
+			LOG ( "Using domain value[%'u]\n", domainValue );
 			break;
 		  //
 		  //	Get the requested key value.
 		  //
 		  case 'k':
 		    keyValue = atol ( optarg );
-			// printf ( "Using key value[%'lu]\n", keyValue );
+			LOG ( "Using key value[%'lu]\n", keyValue );
 			break;
 		  //
 		  //	Get the "newest" message flag.
 		  //
 		  case 'n':
-			// printf ( "Using key value[%'lu]\n", keyValue );
+			LOG ( "Using key value[%'lu]\n", keyValue );
             getNewest = true;
 			break;
 		  //
@@ -150,7 +149,7 @@ int main ( int argc, char* const argv[] )
 	//
 	//	Go read this message from the message pool.
 	//
-	printf ( "  domain: %'u\n  key...: %'lu\n", domainValue, keyValue );
+	LOG ( "  domain: %'u\n  key...: %'lu\n", domainValue, keyValue );
 
     unsigned long dataSize = sizeof(asciiData) - 1;
     if ( getNewest )
@@ -163,12 +162,12 @@ int main ( int argc, char* const argv[] )
         status = vsi_core_fetch_wait ( handle, domainValue, keyValue, &dataSize,
                                        asciiData );
     }
-
-	numericData = atol ( asciiData );
-
 	if ( status == 0 )
 	{
-		printf ( "  value.: %'lu[%s]\n", numericData, asciiData );
+#ifdef VSI_DEBUG
+        unsigned long numericData = atol ( asciiData );
+		LOG ( "  value.: %'lu[%s]\n", numericData, asciiData );
+#endif
 	}
 	else
 	{

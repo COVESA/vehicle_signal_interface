@@ -28,8 +28,6 @@
 #include "sharedMemoryLocks.h"
 #include "utils.h"
 
-// #define LOG(...) printf ( __VA_ARGS__ )
-#define LOG(...)
 
 /*! @{ */
 
@@ -61,18 +59,14 @@ void semaphorePost ( semaphore_p semaphore )
 	int status;
 
 	//
-	//	Obtain the lock on the semaphore's mutex.
-	//
-	// pthread_mutex_lock ( &semaphore->mutex );
-
-	//
 	//	If the semaphore count is at 0 then someone may be currently waiting
 	//	on this semaphore so just signal the condition variable to indicate
 	//	that the resource is available and release the process(s) that are
 	//	waiting.
 	//
-	LOG ( "%'lu  Before semaphore broadcast:\n", getIntervalTime() );
-	dumpSemaphore ( "     ", semaphore );
+	LOG ( "%'lu Before semaphore broadcast of %p:\n", getIntervalTime(),
+          semaphore );
+	dumpSemaphore ( semaphore );
 
 	status = pthread_cond_broadcast ( &semaphore->conditionVariable );
 	if ( status != 0 )
@@ -81,25 +75,30 @@ void semaphorePost ( semaphore_p semaphore )
 				 "errno: %u[%s].\n", status, strerror(status) );
 	}
 
-	LOG ( "%'lu  After semaphore broadcast:\n", getIntervalTime() );
-	dumpSemaphore ( "     ", semaphore );
+	LOG ( "%'lu After semaphore broadcast of %p:\n", getIntervalTime(),
+          semaphore );
+	dumpSemaphore ( semaphore );
+}
 
-	//
-	//	Give up the lock on the semaphore's mutex to give others a chance to
-	//	play with this semaphore.
-	//
-	// pthread_mutex_unlock ( &semaphore->mutex );
+
+//
+//  Define the cleanup handler for the semaphore wait below.  This handler
+//  will be executed if this thread is cancelled while it is waiting.  What
+//  this function needs to do is release the mutex that this thread is holding
+//  when it enters the wait state.  Without this cleanup handler, the mutex
+//  will remain locked when this thread is cancelled and almost certainly
+//  cause a hang condition in the code the next time someone tries to lock
+//  this same mutex.
+//
+static void semaphoreCleanupHandler ( void* arg )
+{
+    pthread_mutex_unlock ( arg );
 }
 
 
 void semaphoreWait ( semaphore_p semaphore )
 {
 	int status;
-
-	//
-	//	Obtain the lock on the semaphore's mutex.
-	//
-	// pthread_mutex_lock ( &semaphore->mutex );
 
 	//
 	//	If the semaphore count is at 0 then the resource is not available so
@@ -110,14 +109,21 @@ void semaphoreWait ( semaphore_p semaphore )
 	//	released, we guarantee that only one process will actually acquire the
 	//	semaphore.
 	//
-	LOG ( "%'lu  Before semaphore wait:\n", getIntervalTime() );
-	dumpSemaphore ( "  ", semaphore );
+	LOG ( "%'lu Before semaphore wait on %p:\n", getIntervalTime(),
+          semaphore );
+	dumpSemaphore ( semaphore );
 
 	while ( semaphore->messageCount == 0 )
 	{
-		LOG ( "%'lu    In semaphore while[%p] - waiterCount: %d, messageCount: %d\n",
+		LOG ( "%'lu In semaphore while[%p] - waiterCount: %d, messageCount: %d\n",
 				 getIntervalTime(), semaphore, semaphore->waiterCount,
 				 semaphore->messageCount );
+
+        //
+        //  Install the cancellation cleanup handler function.
+        //
+        pthread_cleanup_push ( semaphoreCleanupHandler, &semaphore->mutex );
+
 		status = pthread_cond_wait ( &semaphore->conditionVariable,
 									 &semaphore->mutex );
 		if ( status != 0 )
@@ -125,16 +131,14 @@ void semaphoreWait ( semaphore_p semaphore )
 			printf ( "Unable to wait on condition variable - "
 					 "errno: %u[%s].\n", status, strerror(status) );
 		}
+        //
+        //  Release the cancellation cleanup handler function.
+        //
+        pthread_cleanup_pop ( 0 );
 	}
-
-	LOG ( "%'lu  After semaphore wait:\n", getIntervalTime() );
-	dumpSemaphore ( "  ", semaphore );
-
-	//
-	//	Give up the lock on the semaphore's mutex to give others a chance to
-	//	play with this semaphore.
-	//
-	// pthread_mutex_unlock ( &semaphore->mutex );
+	LOG ( "%'lu After semaphore wait on %p:\n", getIntervalTime(),
+          semaphore );
+	dumpSemaphore ( semaphore );
 }
 
 /*! @} */
