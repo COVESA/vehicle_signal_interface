@@ -202,12 +202,21 @@ static int Lua_vsiCoreClose ( lua_State* L )
 ------------------------------------------------------------------------*/
 static int Lua_vsiCoreInsert ( lua_State* L )
 {
+    //
+    //  Get the 3 input arguments from the stack.
+    //
     unsigned int  domain = lua_tonumber ( L, 1 );
     unsigned int  key    = lua_tonumber ( L, 2 );
     unsigned long value  = lua_tonumber ( L, 3 );
 
+    //
+    //  Go insert the requested signal into the VSI core data store.
+    //
     vsi_core_insert ( handle, domain, key, 8, &value );
 
+    //
+    //  Don't return anything to the caller.
+    //
     return 0;
 }
 
@@ -261,8 +270,8 @@ static int Lua_vsiCoreFetch ( lua_State* L )
 
     int status = vsi_core_fetch ( handle, domain, key, &size, &value );
 
-    lua_pushnumber ( L, value );
-    lua_pushnumber ( L, status );
+    lua_pushinteger ( L, value );
+    lua_pushinteger ( L, status );
 
     return 2;
 }
@@ -319,8 +328,8 @@ static int Lua_vsiCoreFetchWait ( lua_State* L )
 
     int status = vsi_core_fetch_wait ( handle, domain, key, &size, &value );
 
-    lua_pushnumber ( L, value );
-    lua_pushnumber ( L, status );
+    lua_pushinteger ( L, value );
+    lua_pushinteger ( L, status );
 
     return 2;
 }
@@ -375,8 +384,8 @@ static int Lua_vsiCoreFetchNewest ( lua_State* L )
 
     int status = vsi_core_fetch_newest ( handle, domain, key, &size, &value );
 
-    lua_pushnumber ( L, value );
-    lua_pushnumber ( L, status );
+    lua_pushinteger ( L, value );
+    lua_pushinteger ( L, status );
 
     return 2;
 }
@@ -421,7 +430,7 @@ static int Lua_vsiCoreFlushSignal ( lua_State* L )
 
     int status = vsi_core_flush_signal ( handle, domain, key );
 
-    lua_pushnumber ( L, status );
+    lua_pushinteger ( L, status );
 
     return 1;
 }

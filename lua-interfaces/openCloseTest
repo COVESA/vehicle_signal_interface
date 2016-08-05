@@ -2,9 +2,9 @@
 
 require ( "liblua_vsi_core" )
 
+print ( "\nLua wrapper - open/close test...\n" )
+
 handle, statusString = Lua_vsiCoreOpen()
-print ( handle )
-print ( statusString )
+print ( handle, statusString )
 
 Lua_vsiCoreClose ( handle )
-
