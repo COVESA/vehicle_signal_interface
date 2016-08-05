@@ -1,0 +1,10 @@
+#! /usr/local/bin/lua
+
+require ( "liblua_vsi_core" )
+
+handle, statusString = Lua_vsiCoreOpen()
+print ( handle )
+print ( statusString )
+
+Lua_vsiCoreClose ( handle )
+

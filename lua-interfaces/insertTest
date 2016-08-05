@@ -1,0 +1,14 @@
+#! /usr/local/bin/lua
+
+require ( "liblua_vsi_core" )
+
+print ( "\nLua wrapper - Insert test...\n" )
+
+handle, statusString = Lua_vsiCoreOpen()
+print ( handle, statusString )
+
+print ( "Inserting signal 0,2 into VSI core" );
+Lua_vsiCoreInsert ( 0, 2, 222 );
+
+Lua_vsiCoreClose ( handle )
+

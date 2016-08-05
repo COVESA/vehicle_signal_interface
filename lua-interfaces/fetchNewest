@@ -1,0 +1,30 @@
+#! /usr/local/bin/lua
+
+require ( "liblua_vsi_core" )
+require ( "os" )
+
+print ( "\nLua wrapper - Fetch test...\n" )
+
+handle, statusString = Lua_vsiCoreOpen()
+print ( handle, statusString )
+
+print ( "Make sure the core data store is empty..." )
+os.execute ( "../core/dump" )
+
+print ( "Add 3 records to 0,2 with values of 111, 112, 113" )
+os.execute ( "../core/writeRecord -d 0 -k 2 -b 111" )
+os.execute ( "../core/writeRecord -d 0 -k 2 -b 112" )
+os.execute ( "../core/writeRecord -d 0 -k 2 -b 113" )
+
+print ( "Fetching newest signal 0,2 from the VSI core" );
+value, status = Lua_vsiCoreFetchNewest ( 0, 2 );
+
+print ( "Received newest value: " .. value .. ", status: " .. status )
+
+print ( "Fetching oldest signal 0,2 from the VSI core" );
+value, status = Lua_vsiCoreFetchWait ( 0, 2 );
+
+print ( "Received oldest value: " .. value .. ", status: " .. status )
+
+Lua_vsiCoreClose ( handle )
+

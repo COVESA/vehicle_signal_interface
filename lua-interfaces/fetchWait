@@ -1,0 +1,16 @@
+#! /usr/local/bin/lua
+
+require ( "liblua_vsi_core" )
+
+print ( "\nLua wrapper - Fetch test...\n" )
+
+handle, statusString = Lua_vsiCoreOpen()
+print ( handle, statusString )
+
+print ( "Fetching signal 0,2 from the VSI core" );
+value, status = Lua_vsiCoreFetchWait ( 0, 2 );
+
+print ( "Received value: " .. value .. ", status: " .. status )
+
+Lua_vsiCoreClose ( handle )
+
