@@ -26,8 +26,16 @@
 #include <locale.h>
 #include <stdbool.h>
 
-#include "trace.h"
 #include "utils.h"
+
+#ifdef VSI_DEBUG
+#    define LOG printf
+#    define HX_DUMP HexDump
+#else
+#    define LOG(...)
+#    define HX_DUMP(...)
+#    undef VSI_TRACE
+#endif
 
 //
 //  Define the following if you'd like the code to dump the semaphore states
@@ -35,6 +43,7 @@
 //  of dump data.
 //
 #undef DUMP_SEMAPHORE
+
 
 sharedMemory_p sharedMemory;		// TEMP - Used by the dump code
 

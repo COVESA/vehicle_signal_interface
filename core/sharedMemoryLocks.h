@@ -20,7 +20,6 @@
 
 #include <pthread.h>
 
-#include "trace.h"
 
 /*! @{ */
 

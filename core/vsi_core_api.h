@@ -22,6 +22,17 @@
 #include "utils.h"
 
 
+#ifdef VSI_DEBUG
+#    define LOG printf
+#    define HX_DUMP HexDump
+#    define SEM_DUMP semaphoreDump
+#else
+#    define HX_DUMP(...)
+#    define LOG(...)
+#    define SEM_DUMP(...)
+#endif
+
+
 /*! @{ */
 
 

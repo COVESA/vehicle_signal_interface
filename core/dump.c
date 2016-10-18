@@ -30,8 +30,6 @@
 #include "vsi_core_api.h"
 #include "sharedMemory.h"
 
-#include "trace.h"
-
 
 /*! @{ */
 

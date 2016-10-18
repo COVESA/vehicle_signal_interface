@@ -25,6 +25,7 @@
 #include <sys/types.h>
 #include <string.h>
 
+#include "vsi_core_api.h"
 #include "sharedMemoryLocks.h"
 #include "utils.h"
 

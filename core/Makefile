@@ -18,31 +18,11 @@
 #      VSI_DEBUG - Enable debugging mode.  Displays info messages during
 #                  program execution.
 #
-#      VSI_TRACE - Enable function tracing mode.  Displays an indented call
-#                  trace graph with Entry/Exit messages for all functions.
-#                  This mode also indents VSI_DEBUG messages if they are
-#                  enabled.
-#
-#      TRACE_PRINT - Enable function tracing debug mode.  This is normally only
-#                    used to debug problems in the tracing mode functions.
-#
 DEFINES =
 
 ifdef VSI_DEBUG
   $(info Setting VSI_DEBUG mode...)
   DEFINES += -DVSI_DEBUG
-endif
-
-ifdef VSI_TRACE
-  $(info Setting VSI_TRACE mode...)
-  DEFINES += -DVSI_TRACE -finstrument-functions -Wl,--export-dynamic
-  LDFLAGS += trace.o -ldl
-  INCLUDES += trace.h
-endif
-
-ifdef TRACE_PRINT
-  $(info Setting TRACE_PRINT mode...)
-  DEFINES += -DTRACE_PRINT
 endif
 
 #
@@ -121,7 +101,7 @@ rebuild:
 #
 #	Define the rule to build the shared library file.
 #
-libvsi-core.so: vsi_core_api.o sharedMemory.o sharedMemoryLocks.o utils.o trace.o
+libvsi-core.so: vsi_core_api.o sharedMemory.o sharedMemoryLocks.o utils.o
 	echo "Linking the $@ shared library..."; \
 	gcc $(CFLAGS) $(DEFINES) -shared -o $@ vsi_core_api.o sharedMemory.o \
 		sharedMemoryLocks.o utils.o $(LDFLAGS)
