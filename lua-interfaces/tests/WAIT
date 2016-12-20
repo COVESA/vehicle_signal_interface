@@ -1,0 +1,32 @@
+#! /usr/local/bin/lua
+
+--[[
+    Copyright (C) 2016, Jaguar Land Rover. All Rights Reserved.
+
+    This Source Code Form is subject to the terms of the Mozilla Public
+    License, v. 2.0. If a copy of the MPL was not distributed with this file,
+    You can obtain one at http://mozilla.org/MPL/2.0/.
+--]]
+
+require ( "liblua_vsi" )
+
+
+--[[
+        Initialization tests
+--]]
+handle, statusString = Lua_vsi_initialize ( false )
+print ( "-- Lua_vsi_initialize: ", handle, statusString )
+
+status, value, name = Lua_vsi_get_newest_signal ( "Attribute.Chassis.Height" )
+print ( "-- Lua_vsi_get_newest_signal string: ", status, value, name )
+
+status, value, name = Lua_vsi_get_oldest_signal ( 1, 55 )
+print ( "-- Lua_vsi_get_oldest_signal string: ", status, value, name )
+
+
+
+--[[
+        System close/destroy
+--]]
+print ( "\n   System destroy tests...\n" )
+Lua_vsi_destroy ( handle )

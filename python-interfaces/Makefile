@@ -196,7 +196,7 @@ endif
 # SO_GOALS = libsharedLibrary.so
 # AR_GOALS = archiveLibrary.so
 
-SO_GOALS = liblua_vsi_core.so liblua_vsi_api.so liblua_vsi.so
+SO_GOALS = vsi_py.so
 
 #
 #    Define the list of alternate source directories.  This is a space or colon
@@ -256,9 +256,7 @@ SO_GOALS = liblua_vsi_core.so liblua_vsi_api.so liblua_vsi.so
 #
 # OBJS_testJson = testJson.o
 
-OBJS_liblua_vsi_core = lua_vsi_core.o
-OBJS_liblua_vsi_api  = lua_vsi_api.o
-OBJS_liblua_vsi      = lua_vsi.o lua_vsi_api.o lua_vsi_core.o
+OBJS_vsi_py = vsi_py.o
 
 #
 #    Define the directory to be used to store object files and "goal" files.
@@ -372,6 +370,8 @@ include $(TOP)/build/master.mk
 #
 # INCLUDE_DIRS += -I../some/path/to/include/files
 
+INCLUDE_DIRS += -I/usr/include/python3.5m
+
 #
 #    Define any additional link flags that need to be used to form the "goal"
 #    files.  By default, all of the "usual" flags will be automatically
@@ -440,8 +440,7 @@ include $(TOP)/build/master.mk
 #INSTALL_PLAIN_LIB_FILES = ""
 #INSTALL_PLAIN_INCLUDE_FILES = $(wildcard *.h)
 
-INSTALL_LIB_FILES           = liblua_vsi_core.so liblua_vsi_api.so liblua_vsi.so
-INSTALL_PLAIN_INCLUDE_FILES = $(wildcard *.h)
+INSTALL_LIB_FILES = vsi_py.so
 
 #
 #    Define the following macro if additional dependencies are needed for the

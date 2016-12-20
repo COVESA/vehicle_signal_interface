@@ -43,6 +43,7 @@ typedef struct userData
 {
     domain_t domainId;
     signal_t signalId;
+    signal_t privateId;
     char*    name;
 
 }   userData;
@@ -62,7 +63,7 @@ typedef struct userData
 //  that process will result in a call to this function to render the data the
 //  way the user wants it to be displayed.
 //
-void printFunction ( char* leader, void* data )
+static void printFunction ( char* leader, void* data )
 {
     if ( data == NULL )
     {
@@ -71,8 +72,9 @@ void printFunction ( char* leader, void* data )
     }
     userData* userDataPtr = data;
 
-    printf ( "%sdomainId: %u, signalId: %u, name[%s]\n", leader,
-             userDataPtr->domainId, userDataPtr->signalId, userDataPtr->name );
+    printf ( "%sdomainId: %lu, signalId: %lu, privateId: %lu, name[%s]\n", leader,
+             userDataPtr->domainId, userDataPtr->signalId,
+             userDataPtr->privateId, userDataPtr->name );
 }
 
 
@@ -82,14 +84,14 @@ void printFunction ( char* leader, void* data )
 //  encountered in the traversal process will result in a call to this
 //  function to render the data the way the user wants it to be displayed.
 //
-void traverseFunction ( void* dataPtr )
+static void traverseFunction ( char* leader, void* dataPtr )
 {
     if ( dataPtr == NULL )
     {
         printf ( "(nil)\n" );
         return;
     }
-    printFunction ( "  ", dataPtr );
+    printFunction ( leader, dataPtr );
 }
 
 
@@ -112,6 +114,7 @@ int main ( int argc, char* argv[] )
     char  name[MAX_LINE] = { 0 };
     char  line[MAX_LINE] = { 0 };
     int   id = 0;
+    int   privateId = 0;
     int   tokenCount = 0;
     int   signalCount = 0;
     int   status = 0;
@@ -178,7 +181,7 @@ int main ( int argc, char* argv[] )
         inputFile = fopen ( argv[optind], "r" );
     }
     //
-    //  If the user did not specify the input files, report the error and
+    //  If the user did not specify the input file, report the error and
     //  quit.
     //
     else
@@ -207,7 +210,7 @@ int main ( int argc, char* argv[] )
     //
     //  Go initialize the VSI system.
     //
-    vsi_handle handle =  vsi_initialize();
+    vsi_handle handle =  vsi_initialize ( true );
     if (!handle)
     {
         printf ( "Failed to initialize the VSI system!\n" );
@@ -236,12 +239,21 @@ int main ( int argc, char* argv[] )
             continue;
         }
         //
+        //  Initialize the field variables.
+        //
+        id        = 0;
+        privateId = 0;
+
+        //
         //  If it's not a comment, scan the line for the fields we need.
         //
-        tokenCount = sscanf ( line, " %s %d \n", name, &id );
+        tokenCount = sscanf ( line, " %s %d %d \n", name, &id, &privateId );
 
-        if ( veryVerbose ) printf ( "==> Scaned %d tokens: name[%s], id[%d]\n",
-                                    tokenCount, name, id );
+        //if ( veryVerbose )
+        //{
+            printf ( "==> Scaned %d tokens: name[%s], id[%d], privateId[%d]\n",
+                                        tokenCount, name, id, privateId );
+        //}
         //
         //  If this is the first line that we've seen with only 1 token on it,
         //  it must be the version number line so read it as a version string.
@@ -255,15 +267,15 @@ int main ( int argc, char* argv[] )
             versionLineSeen = true;
         }
         //
-        //  If there are 2 tokens on the line, it should be a signal
+        //  If there are at least 2 tokens on the line, it should be a signal
         //  definition line.
         //
-        else if ( tokenCount == 2 )
+        else if ( tokenCount >= 2 )
         {
             //
             //  Go define this signal in the VSI database.
             //
-            status = vsi_define_signal_name ( handle, VSS, id, name );
+            status = vsi_define_signal_name ( handle, VSS, id, privateId, name );
 
             //
             //  Increment the number of signals that we've defined.
@@ -281,31 +293,28 @@ int main ( int argc, char* argv[] )
             }
             if ( veryVerbose ) printf ( "====> %s\t%d\n", name, id );
         }
-        //
-        //  If there are more than 2 tokens on the input line, it is an error
-        //  so report it to the user.
-        //
-        else
-        {
-            printf ( "ERROR: Invalid input line[%s]\n", line );
-        }
     }
     //
     //  We are finished reading the input file so close it.
     //
     fclose ( inputFile );
 
+    // print_tree ( &((vsi_context*)handle)->privateIdIndex, printFunction );
+
     //
-    //  If we are in "verbose" mode, go dump the 2 btrees that were created
+    //  If we are in "verbose" mode, go dump the 3 btrees that were created
     //  while reading the input file.
     //
     if ( verbose )
     {
         printf ( "\nThe imported VSS data in ID order:...\n\n" );
-        btree_traverse ( ((vsi_context*)handle)->signalIdIndex, traverseFunction );
+        btree_traverse ( &((vsi_context*)handle)->signalIdIndex, traverseFunction );
 
         printf ( "\nThe imported VSS data in name order:...\n\n" );
-        btree_traverse ( ((vsi_context*)handle)->signalNameIndex, traverseFunction );
+        btree_traverse ( &((vsi_context*)handle)->signalNameIndex, traverseFunction );
+
+        printf ( "\nThe imported VSS data in private ID order:...\n\n" );
+        btree_traverse ( &((vsi_context*)handle)->privateIdIndex, traverseFunction );
     }
     //
     //  Let the user know how many signals we processed.

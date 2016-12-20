@@ -133,12 +133,15 @@ any signal or groups of signals.
 #### vsi_initialize
 
 ```C
-    vsi_handle vsi_initialize ();
+    vsi_handle vsi_initialize ( bool createNew );
 ```
 
 This function will cause the VSI database to be loaded into memory and readied
 for operation.  The function returns a VSI handle object that will need to be
 supplied to the other functions to define the context for this specific user.
+
+If the "createNew" parameter is "true", a brand new empty data store instance
+will be created instead of opening an existing instance (assuming one exists).
 
 This function should only be called once within each process that will access
 the VSI data.
@@ -649,11 +652,11 @@ vice versa.
                                 domain_t*   domainId,
                                 signal_t*   signalId );
 
-    int vsi_name_id_to_string ( vsi_handle     handle,
-                                const domain_t domainId,
-                                const signal_t signalId,
-                                char**         name,
-                                unsigned int   nameLength );
+    int vsi_signal_id_to_string ( vsi_handle     handle,
+                                  const domain_t domainId,
+                                  const signal_t signalId,
+                                  char**         name,
+                                  unsigned int   nameLength );
 
 	int vsi_define_signal_name ( vsi_handle     handle,
 								 const domain_t domainId,
@@ -666,7 +669,7 @@ and signal ID that corresponds to that name.  The domain/ID mapping must have
 been previously defined with a call to the vsi_define_signal_name function
 above for this function to work properly.
 
-The vsi_name_id_to_string function is the inverse of the previous function.
+The vsi_signal_id_to_string function is the inverse of the previous function.
 It takes the signal domain/ID and returns the signal name that corresponds to
 that signal.  The domain/ID mapping must have been previously defined with a
 call to the vsi_define_signal_name function above for this function to work

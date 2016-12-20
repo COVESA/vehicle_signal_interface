@@ -1,11 +1,3 @@
-#
-#   Copyright (C) 2016, Jaguar Land Rover. All Rights Reserved.
-#
-#   This Source Code Form is subject to the terms of the Mozilla Public
-#   License, v. 2.0. If a copy of the MPL was not distributed with this file,
-#   You can obtain one at http://mozilla.org/MPL/2.0/.
-#
-
 #******************************************************************************
 #
 #	M a k e f i l e
@@ -192,11 +184,9 @@ endif
 #    subdirectories that need to be built but no code in the top level
 #    directory.
 #
-# GOALS    = mux
+# GOALS    = someExecutable
 # SO_GOALS = libsharedLibrary.so
 # AR_GOALS = archiveLibrary.so
-
-SO_GOALS = liblua_vsi_core.so liblua_vsi_api.so liblua_vsi.so
 
 #
 #    Define the list of alternate source directories.  This is a space or colon
@@ -255,10 +245,6 @@ SO_GOALS = liblua_vsi_core.so liblua_vsi_api.so liblua_vsi.so
 #    be used, even if the goal is a single goal of a particular type.
 #
 # OBJS_testJson = testJson.o
-
-OBJS_liblua_vsi_core = lua_vsi_core.o
-OBJS_liblua_vsi_api  = lua_vsi_api.o
-OBJS_liblua_vsi      = lua_vsi.o lua_vsi_api.o lua_vsi_core.o
 
 #
 #    Define the directory to be used to store object files and "goal" files.
@@ -439,9 +425,6 @@ include $(TOP)/build/master.mk
 #INSTALL_LIB_FILES       = ""
 #INSTALL_PLAIN_LIB_FILES = ""
 #INSTALL_PLAIN_INCLUDE_FILES = $(wildcard *.h)
-
-INSTALL_LIB_FILES           = liblua_vsi_core.so liblua_vsi_api.so liblua_vsi.so
-INSTALL_PLAIN_INCLUDE_FILES = $(wildcard *.h)
 
 #
 #    Define the following macro if additional dependencies are needed for the

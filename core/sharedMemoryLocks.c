@@ -66,7 +66,7 @@ void semaphorePost ( semaphore_p semaphore )
 	//
 	LOG ( "%'lu Before semaphore broadcast of %p:\n", getIntervalTime(),
           semaphore );
-	dumpSemaphore ( semaphore );
+	SEM_DUMP ( semaphore );
 
 	status = pthread_cond_broadcast ( &semaphore->conditionVariable );
 	if ( status != 0 )
@@ -77,7 +77,7 @@ void semaphorePost ( semaphore_p semaphore )
 
 	LOG ( "%'lu After semaphore broadcast of %p:\n", getIntervalTime(),
           semaphore );
-	dumpSemaphore ( semaphore );
+	SEM_DUMP ( semaphore );
 }
 
 
@@ -111,7 +111,7 @@ void semaphoreWait ( semaphore_p semaphore )
 	//
 	LOG ( "%'lu Before semaphore wait on %p:\n", getIntervalTime(),
           semaphore );
-	dumpSemaphore ( semaphore );
+	SEM_DUMP ( semaphore );
 
 	while ( semaphore->messageCount == 0 )
 	{
@@ -138,7 +138,7 @@ void semaphoreWait ( semaphore_p semaphore )
 	}
 	LOG ( "%'lu After semaphore wait on %p:\n", getIntervalTime(),
           semaphore );
-	dumpSemaphore ( semaphore );
+	SEM_DUMP ( semaphore );
 }
 
 /*! @} */

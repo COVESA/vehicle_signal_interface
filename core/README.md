@@ -85,13 +85,16 @@ and the record will not be inserted.
 #### vsi_core_open
 
 ```C
-    vsi_core_handle vsi_core_open ( void );
+    vsi_core_handle vsi_core_open ( bool createNew );
 ```
 
 This call is mandatory before any other function can be executed on the data
 in the shared memory segment.  The code will open an existing instance of the
 shared memory segment or if none exists or one exists but contains no data, a
 new shared memory segment will be automatically created and initialized.
+
+If the "createNew" argument is "true" then a new empty data store will be
+created and opened.
 
 The return value is a handle to the shared memory segment and will be needed
 for subsequent calls to the API functions.

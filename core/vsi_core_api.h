@@ -48,13 +48,13 @@ typedef void* vsi_core_handle;
     If the VSI core environment does not exist yet, it will be created by this
     call.
 
-	@param  None
+	@param[in] - createNew - Create a brand new empty data store.
 
 	@return The handle to the VSI core data store.
             NULL indicates an error.
 
 ------------------------------------------------------------------------*/
-vsi_core_handle vsi_core_open ( void );
+void vsi_core_open ( bool createNew );
 
 
 /*!-----------------------------------------------------------------------
@@ -71,12 +71,10 @@ vsi_core_handle vsi_core_open ( void );
     After calling this function, any access to an item located in the core
     data store will result in a SEGV signal being generated.
 
-	@param[in] handle - The VSI data store handle.
-
 	@return None
 
 ------------------------------------------------------------------------*/
-void vsi_core_close ( vsi_core_handle handle );
+void vsi_core_close ( void );
 
 
 /*!-----------------------------------------------------------------------
@@ -100,7 +98,7 @@ void vsi_core_close ( vsi_core_handle handle );
 	@return None
 
 ------------------------------------------------------------------------*/
-void vsi_core_insert ( vsi_core_handle handle, domains domain,
+void vsi_core_insert ( domain_t domain,
                        offset_t key, unsigned long newMessageSize,
                        void* body );
 
@@ -127,7 +125,7 @@ void vsi_core_insert ( vsi_core_handle handle, domains domain,
                    - Anything else is an error code.
 
 ------------------------------------------------------------------------*/
-int vsi_core_fetch ( vsi_core_handle handle, domains domain,
+int vsi_core_fetch ( domain_t domain,
                      offset_t key, unsigned long* bodySize,
                      void* body );
 
@@ -156,7 +154,7 @@ int vsi_core_fetch ( vsi_core_handle handle, domains domain,
               - Anything else is an error code.
 
 ------------------------------------------------------------------------*/
-int vsi_core_fetch_wait ( vsi_core_handle handle, domains domain,
+int vsi_core_fetch_wait ( domain_t domain,
                           offset_t key, unsigned long* bodySize,
                           void* body );
 
@@ -183,7 +181,7 @@ int vsi_core_fetch_wait ( vsi_core_handle handle, domains domain,
               - Anything else is an error code.
 
 ------------------------------------------------------------------------*/
-int vsi_core_fetch_newest ( vsi_core_handle handle, domains domain,
+int vsi_core_fetch_newest ( domain_t domain,
                             offset_t key, unsigned long* bodySize,
                             void* body );
 
@@ -207,7 +205,7 @@ int vsi_core_fetch_newest ( vsi_core_handle handle, domains domain,
             Anything else is an error code (errno value)
 
 ------------------------------------------------------------------------*/
-int vsi_core_flush_signal ( vsi_core_handle handle, domains domain,
+int vsi_core_flush_signal ( domain_t domain,
                             offset_t key );
 
 

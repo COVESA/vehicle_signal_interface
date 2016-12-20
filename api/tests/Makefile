@@ -196,7 +196,7 @@ endif
 # SO_GOALS = libsharedLibrary.so
 # AR_GOALS = archiveLibrary.so
 
-SO_GOALS = liblua_vsi_core.so liblua_vsi_api.so liblua_vsi.so
+GOALS = importVSS sample
 
 #
 #    Define the list of alternate source directories.  This is a space or colon
@@ -256,9 +256,8 @@ SO_GOALS = liblua_vsi_core.so liblua_vsi_api.so liblua_vsi.so
 #
 # OBJS_testJson = testJson.o
 
-OBJS_liblua_vsi_core = lua_vsi_core.o
-OBJS_liblua_vsi_api  = lua_vsi_api.o
-OBJS_liblua_vsi      = lua_vsi.o lua_vsi_api.o lua_vsi_core.o
+OBJS_importVSS = importVSS.o
+OBJS_sample    = sample.o
 
 #
 #    Define the directory to be used to store object files and "goal" files.
@@ -394,6 +393,8 @@ include $(TOP)/build/master.mk
 # SO_LIBS_testJson += -L../someDirectory -ljunk -lpthreads
 # AR_LIBS_testJson += -L../someDirectory -ljunk -lpthreads
 
+LD_LIBS += -lvsi-api -lvsi-core -pthread
+
 #
 #    Define any files that need to be removed when the "make clean" command is
 #    issued.  All of the derived files such as object files and executables
@@ -438,10 +439,6 @@ include $(TOP)/build/master.mk
 #INSTALL_PLAIN_BIN_FILES = ""
 #INSTALL_LIB_FILES       = ""
 #INSTALL_PLAIN_LIB_FILES = ""
-#INSTALL_PLAIN_INCLUDE_FILES = $(wildcard *.h)
-
-INSTALL_LIB_FILES           = liblua_vsi_core.so liblua_vsi_api.so liblua_vsi.so
-INSTALL_PLAIN_INCLUDE_FILES = $(wildcard *.h)
 
 #
 #    Define the following macro if additional dependencies are needed for the

@@ -84,10 +84,22 @@ static vsi_core_handle handle = 0;
 ------------------------------------------------------------------------*/
 static int Lua_vsiCoreOpen ( lua_State* L )
 {
+    bool createNew = false;
+
+    //
+    //  Get the first argument as a boolean.
+    //
+    if ( lua_gettop ( L ) != 0 )
+    {
+        createNew = lua_toboolean ( L, 1 );
+    }
+    LOG ( "\nLua_vsiCoreOpen[%d] is initializing the Lua interface library...\n",
+          createNew );
     //
     //  Go open the VSI core data store.
     //
-    handle = vsi_core_open();
+    vsi_core_open ( createNew );
+    handle = smControl;
 
     //
     //  If there was an error, return a NIL value to the caller along with the
@@ -148,7 +160,7 @@ static int Lua_vsiCoreClose ( lua_State* L )
     //
     //  Go close the VSI core data store.
     //
-    vsi_core_close ( handle );
+    vsi_core_close();
 
     //
     //  Mark the VSI core data store as "closed".
@@ -205,14 +217,14 @@ static int Lua_vsiCoreInsert ( lua_State* L )
     //
     //  Get the 3 input arguments from the stack.
     //
-    unsigned int  domain = lua_tonumber ( L, 1 );
-    unsigned int  key    = lua_tonumber ( L, 2 );
-    unsigned long value  = lua_tonumber ( L, 3 );
+    unsigned int  domain = luaL_checkinteger ( L, 1 );
+    unsigned int  key    = luaL_checkinteger ( L, 2 );
+    unsigned long value  = luaL_checkinteger ( L, 3 );
 
     //
     //  Go insert the requested signal into the VSI core data store.
     //
-    vsi_core_insert ( handle, domain, key, 8, &value );
+    vsi_core_insert ( domain, key, 8, &value );
 
     //
     //  Don't return anything to the caller.
@@ -265,10 +277,10 @@ static int Lua_vsiCoreFetch ( lua_State* L )
     unsigned long value = 0;
     unsigned long size  = 8;
 
-    unsigned int  domain = lua_tonumber ( L, 1 );
-    unsigned int  key    = lua_tonumber ( L, 2 );
+    unsigned int  domain = luaL_checkinteger ( L, 1 );
+    unsigned int  key    = luaL_checkinteger ( L, 2 );
 
-    int status = vsi_core_fetch ( handle, domain, key, &size, &value );
+    int status = vsi_core_fetch ( domain, key, &size, &value );
 
     lua_pushinteger ( L, value );
     lua_pushinteger ( L, status );
@@ -323,10 +335,10 @@ static int Lua_vsiCoreFetchWait ( lua_State* L )
     unsigned long value = 0;
     unsigned long size  = 8;
 
-    unsigned int  domain = lua_tonumber ( L, 1 );
-    unsigned int  key    = lua_tonumber ( L, 2 );
+    unsigned int  domain = luaL_checkinteger ( L, 1 );
+    unsigned int  key    = luaL_checkinteger ( L, 2 );
 
-    int status = vsi_core_fetch_wait ( handle, domain, key, &size, &value );
+    int status = vsi_core_fetch_wait ( domain, key, &size, &value );
 
     lua_pushinteger ( L, value );
     lua_pushinteger ( L, status );
@@ -379,10 +391,10 @@ static int Lua_vsiCoreFetchNewest ( lua_State* L )
     unsigned long value = 0;
     unsigned long size  = 8;
 
-    unsigned int  domain = lua_tonumber ( L, 1 );
-    unsigned int  key    = lua_tonumber ( L, 2 );
+    unsigned int  domain = luaL_checkinteger ( L, 1 );
+    unsigned int  key    = luaL_checkinteger ( L, 2 );
 
-    int status = vsi_core_fetch_newest ( handle, domain, key, &size, &value );
+    int status = vsi_core_fetch_newest ( domain, key, &size, &value );
 
     lua_pushinteger ( L, value );
     lua_pushinteger ( L, status );
@@ -425,10 +437,10 @@ static int Lua_vsiCoreFetchNewest ( lua_State* L )
 ------------------------------------------------------------------------*/
 static int Lua_vsiCoreFlushSignal ( lua_State* L )
 {
-    unsigned int domain = lua_tonumber ( L, 1 );
-    unsigned int key    = lua_tonumber ( L, 2 );
+    unsigned int domain = luaL_checkinteger ( L, 1 );
+    unsigned int key    = luaL_checkinteger ( L, 2 );
 
-    int status = vsi_core_flush_signal ( handle, domain, key );
+    int status = vsi_core_flush_signal ( domain, key );
 
     lua_pushinteger ( L, status );
 

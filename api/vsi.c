@@ -26,11 +26,10 @@
 #include <pthread.h>
 
 #include "vsi.h"
-#include "vsi_list.h"
-#include "btree.h"
-#include "vsi_core_api.h"
-
-// #include "trace.h"
+// #include "vsi_list.h"
+// #include "btree.h"
+// #include "vsi_core_api.h"
+// #include "sharedMemory.h"
 
 
 /*!-----------------------------------------------------------------------
@@ -81,11 +80,10 @@
     are not.
 */
 #define CHECK_AND_RETURN_IF_ERROR(input) \
-    do                                   \
-    {                                    \
-        if (!(input))                    \
-            return -EINVAL;              \
-    } while (0)
+{                                        \
+    if (!(input))                        \
+        return -EINVAL;                  \
+}
 
 
 //
@@ -93,33 +91,6 @@
 //  above.  This function will do the comparison based on the domain and
 //  signal ID.
 //
-int compareIds ( void* a, void* b )
-{
-    vsi_id_name_definition* userDataPtr1 = a;
-    vsi_id_name_definition* userDataPtr2 = b;
-    int                     result;
-
-    if ( ( result = userDataPtr1->domainId - userDataPtr2->domainId ) == 0 )
-    {
-        return userDataPtr1->signalId - userDataPtr2->signalId;
-    }
-    return result;
-}
-
-
-//
-//  This function will compare 2 pointers to the user defined data structures
-//  above.  This function will do the comparison based on the signal name.
-//
-int compareNames ( void* a, void* b )
-{
-    vsi_id_name_definition* userDataPtr1 = a;
-    vsi_id_name_definition* userDataPtr2 = b;
-
-    return strcmp ( userDataPtr1->name, userDataPtr2->name );
-}
-
-
 //
 //  This function will be called by the btree code when it has been called to
 //  print out the btree nodes.  Each userData entry that is encountered in
@@ -135,14 +106,25 @@ void printFunction ( char* leader, void* data )
     }
     vsi_id_name_definition* userDataPtr = data;
 
-    printf ( "%sdomainId: %u, signalId: %u, name[%s]\n", leader,
+    printf ( "%sdomainId: %lu, signalId: %lu, name[%s]\n", leader,
              userDataPtr->domainId, userDataPtr->signalId, userDataPtr->name );
+}
+
+
+void traverseFunction ( void* dataPtr )
+{
+    if ( dataPtr == NULL )
+    {
+        printf ( "(nil)\n" );
+        return;
+    }
+    printFunction ( "  ", dataPtr );
 }
 
 
 //
 //  This function will compare 2 pointers to the user defined data structures
-//  above.  This function will do the comparison based on the signal name.
+//  above.  This function will do the comparison based on the group Ids.
 //
 int compareGroupIds ( void* a, void* b )
 {
@@ -169,13 +151,45 @@ void printGroupFunction ( char* leader, void* data )
     vsi_signal_group* userDataPtr = data;
 
     //
-    //  TODO: Fix this to enumerate the list for the group.
+    //  Print the list header record.
     //
-    printf ( "%sgroupId: %u, list head: [%p]\n", leader,
-             userDataPtr->groupId, &userDataPtr->list );
+    printf ( "%sgroupId: %lu, count: %d, list head: [%p]\n", leader,
+             userDataPtr->groupId, userDataPtr->count, &userDataPtr->list );
+    //
+    //  Go get the first item in the list.
+    //
+    vsi_list*       listDef = &userDataPtr->list;
+    vsi_list_entry* current = listDef->listHead;
 
+    //
+    //  If the list is empty, tell the caller that and quit.
+    //
+    if ( current == NULL )
+    {
+		printf ( "%s  Group has no members defined.\n", leader );
+        return;
+    }
+    //
+    //  While we have not reached the end of the signal list...
+    //
+    while ( current != NULL )
+    {
+        //
+        //  Go print the contents of the current signal structure.
+        //
+        // printFunction ( leader, current->pointer );
+        vsi_id_name_definition* signalData = current->pointer;
+        printf ( "%s  Domain: %lu, Signal: %lu, Name: %s\n", leader,
+                 signalData->domainId, signalData->signalId, signalData->name );
+        //
+        //  Get the next signal definition object in the list for this group.
+        //
+        current = current->next;
+    }
     return;
 }
+
+void dumpGroups ( vsi_handle handle );
 
 
 /*!-----------------------------------------------------------------------
@@ -191,45 +205,57 @@ void printGroupFunction ( char* leader, void* data )
     If this function fails for some reason, the returned value will be NULL
     and errno will reflect the error that occurred.
 
+    If the "createNew" argument is "true", a brand new empty data store will
+    be created rather than opening an existing data store.
+
 ------------------------------------------------------------------------*/
-vsi_handle vsi_initialize ( void )
+vsi_handle vsi_initialize ( bool createNew )
 {
     struct vsi_context *context;
 
+    //
+    //  Allocate our system context data structure.
+    //
     context = malloc ( sizeof(struct vsi_context) );
     if ( !context )
     {
         return NULL;
     }
     //
-    //  Go initialize the core data store system.
+    //  Go initialize the shared memory manager system (including the
+    //  pageManager and B-tree systems).
     //
-    vsi_core_handle coreHandle = vsi_core_open();
-
-    if ( coreHandle == 0 )
+    vsi_core_open ( false );
+    context->coreHandle = smControl;
+    if ( ! context->coreHandle )
     {
-        printf ( "ERROR: Unable to initialize the VSI core data store!\n" );
+        printf ( "Error: Unable to open the shared memory manager - Aborting!\n" );
         return NULL;
     }
     //
-    //  Save the core handle in our context for later use.
-    //
-    context->coreHandle = coreHandle;
-
-    //
     //  Initialize the btree indices for the signal names and ids.
     //
-    context->signalNameIndex = btree_create ( VSI_NAME_ID_BTREE_ORDER,
-                                              compareNames, printFunction );
-
-    context->signalIdIndex = btree_create ( VSI_NAME_ID_BTREE_ORDER,
-                                              compareIds, printFunction );
+    btree_create_in_place ( &context->signalNameIndex, 21, 1, 3, 0, 0, 0 );
+    btree_create_in_place ( &context->signalIdIndex, 21, 2, 0, 1, 0, 0 );
+    btree_create_in_place ( &context->privateIdIndex, 21, 2, 0, 2, 0, 0 );
 
     //
     //  Initialize the btree index for the group ids.
     //
-    context->groupIdIndex = btree_create ( VSI_GROUP_BTREE_ORDER,
-                                           compareGroupIds, printGroupFunction );
+    btree_create_in_place ( &context->groupIdIndex, 21, 1, 0, 0, 0, 0 );
+
+    //
+    //  Go import all of the VSS definitions into the system.
+    //
+    LOG ( "\nImporting the VSS definition file from [%s]\n", VSS_INPUT_FILE );
+    (void) vsi_VSS_import ( context, VSS_INPUT_FILE );
+
+    // LOG ( "\nImported VSS signals by ID:\n\n" );
+    // btree_traverse ( &context->signalIdIndex, traverseFunction );
+
+    // LOG ( "\nImported VSS signals by name:\n\n" );
+    // btree_traverse ( &context->signalNameIndex, traverseFunction );
+
     //
     //  Return the context handle to the caller.
     //
@@ -237,14 +263,155 @@ vsi_handle vsi_initialize ( void )
 }
 
 
+/*!----------------------------------------------------------------------------
+
+    v s i _ V S S _ i m p o r t
+
+    @brief Import a VSS file into the VSI data store.
+
+    This function will read the specified file and import the contents of it
+    into the specified VSI environment.
+
+    @param[in] - handle - The VSI context handle
+    @param[in] - fileName - The pathname to the VSS definition file to be read
+
+    @return - Completion code - 0 = Succesful
+                                Anything else is an error code
+
+-----------------------------------------------------------------------------*/
+int vsi_VSS_import ( vsi_handle handle, const char* fileName )
+{
+    FILE*    inputFile;
+    char     name[MAX_VSS_LINE] = { 0 };
+    char     line[MAX_VSS_LINE] = { 0 };
+    signal_t id = 0;
+    signal_t privateId = 0;
+    int      tokenCount = 0;
+    int      signalCount = 0;
+    int      status = 0;
+    bool     versionLineSeen = false;
+
+    //
+    //  If the user did not supply a valid file name, complain and quit.
+    //
+    if ( fileName == NULL )
+    {
+        //
+        //  Treat the argument as the name of the VSS file to be read and open
+        //  that file.
+        //
+        fprintf ( stderr, "ERROR: NULL VSS input file specified.\n" );
+        return ENOENT;
+    }
+	//
+	//  Attempt to open the specified file.
+	//
+	inputFile = fopen ( fileName, "r" );
+
+    //
+    //  If we could not open the file that was specified complain and quit.
+    //
+    if ( inputFile == NULL )
+    {
+        fprintf ( stderr, "ERROR: VSS input file[%s] could not be opened: "
+                  "%d[%s]\n", fileName, errno, strerror(errno) );
+        return ENOENT;
+    }
+    //
+    //  Now read in the VSS definition file.
+    //
+    //  While we have not reached the end of the input file, read a line from
+    //  the input file.
+    //
+    while ( fgets ( line, MAX_VSS_LINE, inputFile ) != NULL )
+    {
+        //
+        //  Make sure the line is null terminated.
+        //
+        line[strlen(line)-1] = 0;
+
+        //
+        //  If this line begins with a '#', it is a comment line so just
+        //  ignore it.
+        //
+        if ( line[0] == '#' )
+        {
+            continue;
+        }
+        //
+        //  If it's not a comment, scan the line for the fields we need.
+        //
+        id        = 0;
+        privateId = 0;
+        tokenCount = sscanf ( line, " %s %lu %lu \n", name, &id, &privateId );
+
+        //
+        //  If this is the first line that we've seen with only 1 token on it,
+        //  it must be the version number line so read it as a version string.
+        //
+        //  Note that if we see any more lines with only a single token, it
+        //  will be an error.
+        //
+        if ( tokenCount == 1 && !versionLineSeen )
+        {
+            // TODO: Insert code here to handle the version number.
+            versionLineSeen = true;
+        }
+        //
+        //  If there are 2 tokens on the line, it should be a signal
+        //  definition line.
+        //
+        else if ( tokenCount >= 2 )
+        {
+            //
+            //  Go define this signal in the VSI database.
+            //
+            status = vsi_define_signal_name ( handle, VSS, (signal_t)id, privateId, name );
+
+            //
+            //  Increment the number of signals that we've defined.
+            //
+            signalCount++;
+
+            //
+            //  If the above call generated an error, let the user know about
+            //  it.
+            //
+            if ( status != 0 )
+            {
+                printf ( "ERROR: Inserting data into the VSI: %d[%s]\n",
+                         status, strerror(status) );
+            }
+        }
+        //
+        //  If there are more than 2 tokens on the input line, it is an error
+        //  so report it to the user.
+        //
+        else
+        {
+            printf ( "ERROR: Invalid input line[%s]\n", line );
+        }
+    }
+    //
+    //  We are finished reading the input file so close it.
+    //
+    fclose ( inputFile );
+
+    //
+    //  Return the status code to the caller.
+    //
+    return status;
+}
+
+
 /*!-----------------------------------------------------------------------
 
     v s i _ d e s t r o y
 
-    Destroy the supplied VSI context.
+    Destroy the supplied VSI context->
 
     This function will free all resources allocated to the specified VSI
-    context.  The context will not be usable after this function is called and
+    context->  The context will not be usable after this function is called and
     accesses to it will likely result in a SEGV error.
 
 ------------------------------------------------------------------------*/
@@ -260,25 +427,15 @@ int vsi_destroy ( vsi_handle handle )
         //
         //  Destroy all of the btree indices that we created.
         //
-        if ( context->signalNameIndex )
-        {
-            btree_destroy ( context->signalNameIndex );
-            context->signalNameIndex = NULL;
-        }
-        if ( context->signalIdIndex )
-        {
-            btree_destroy ( context->signalIdIndex );
-            context->signalIdIndex = NULL;
-        }
-        if ( context->groupIdIndex )
-        {
-            btree_destroy ( context->groupIdIndex );
-            context->groupIdIndex = NULL;
-        }
+        btree_destroy ( &context->signalNameIndex );
+        btree_destroy ( &context->signalIdIndex );
+        btree_destroy ( &context->privateIdIndex );
+        btree_destroy ( &context->groupIdIndex );
+
         //
         //  Close the VSI core data store.
         //
-        vsi_core_close ( context->coreHandle );
+        vsi_core_close();
     }
     //
     //  Finally, free the handle.
@@ -306,10 +463,8 @@ int vsi_fire_signal ( vsi_handle  handle,
     CHECK_AND_RETURN_IF_ERROR ( handle && result && result->data
                                 && result->dataLength );
 
-    vsi_context* context = handle;
-
-    vsi_core_insert ( context->coreHandle, result->domainId, result->signalId,
-                      result->dataLength, result->data );
+    vsi_core_insert ( result->domainId, result->signalId,
+                      result->dataLength, &result->data );
     return 0;
 }
 
@@ -340,14 +495,17 @@ int vsi_fire_signal_by_name ( vsi_handle  handle,
 int vsi_get_oldest_signal ( vsi_handle  handle,
                             vsi_result* result )
 {
+    LOG ( "vsi_get_oldest_signal: %d,%d[%s]\n", result->domainId,
+          result->signalId, result->name );
+
     CHECK_AND_RETURN_IF_ERROR ( handle && result && result->data
                                 && result->dataLength );
 
-    vsi_context* context =  handle;
+    result->status = vsi_core_fetch ( result->domainId, result->signalId,
+                                      &result->dataLength, result->data );
 
-    result->status = vsi_core_fetch ( context->coreHandle, result->domainId,
-                                      result->signalId, &result->dataLength,
-                                      result->data );
+    LOG ( "vsi_get_oldest_signal returning: %lu\n", *(unsigned long*)result->data );
+
     return result->status;
 }
 
@@ -381,11 +539,8 @@ int vsi_get_newest_signal ( vsi_handle  handle,
     CHECK_AND_RETURN_IF_ERROR ( handle && result && result->data &&
                                 result->dataLength );
 
-    vsi_context *context = handle;
-
-    result->status = vsi_core_fetch_newest ( context->coreHandle, result->domainId,
-                                             result->signalId, &result->dataLength,
-                                             result->data );
+    result->status = vsi_core_fetch_newest ( result->domainId, result->signalId,
+                                             &result->dataLength, result->data );
     return result->status;
 }
 
@@ -420,9 +575,7 @@ int vsi_flush_signal ( vsi_handle     handle,
 {
     CHECK_AND_RETURN_IF_ERROR ( handle );
 
-    struct vsi_context *context = handle;
-
-    return vsi_core_flush_signal ( context->coreHandle, domainId, signalId );
+    return vsi_core_flush_signal ( domainId, signalId );
 }
 
 
@@ -469,7 +622,7 @@ static bool groupExists ( vsi_context*  context,
 
     group.groupId = groupId;
 
-    temp = btree_search ( context->groupIdIndex, &group );
+    temp = btree_search ( &context->groupIdIndex, &group );
 
     if ( temp != NULL )
     {
@@ -491,20 +644,33 @@ int vsi_create_signal_group ( vsi_handle    handle,
 {
     int status = 0;
 
+    LOG ( "Creating group %lu\n", groupId );
+
     CHECK_AND_RETURN_IF_ERROR ( handle && groupId );
 
     vsi_context *context = handle;
 
     if ( groupExists ( context, groupId ) )
     {
-        return -EEXIST;
+        LOG ( "Error: group[%lu] already exists\n", groupId );
+        return -EINVAL;
     }
     vsi_signal_group* group = malloc ( sizeof(vsi_signal_group) );
 
+    if ( group == NULL )
+    {
+        printf ( "ERROR: Unable to allocate memory for group\n" );
+        return -ENOMEM;
+    }
     group->groupId = groupId;
+    group->count   = 0;
     vsi_list_initialize ( &group->list );
 
-    status = btree_insert ( context->groupIdIndex, group );
+    LOG ( "  inserting into btree\n" );
+
+    status = btree_insert ( &context->groupIdIndex, group );
+
+    LOG ( "  returning %d\n", status );
 
     return status;
 }
@@ -526,18 +692,64 @@ int vsi_delete_signal_group ( vsi_handle    handle,
 
     vsi_context *context = handle;
 
-    if ( ! groupExists ( context, groupId ) )
+    //
+    //  Get the group object that the user specified.
+    //
+	vsi_signal_group  group;
+    vsi_signal_group* temp;
+
+    group.groupId = groupId;
+
+    temp = btree_search ( &context->groupIdIndex, &group );
+
+    //
+    //  If the specified group does not exist, return an error code to the
+    //  caller.
+    //
+    if ( temp == NULL )
     {
-        return -ENOENT;
+        return -EINVAL;
     }
-    // TODO: Add code to delete signal list!
+    //
+    //  Go get the first item in the group list.
+    //
+    vsi_list*       listDef = &temp->list;
+    vsi_list_entry* current = listDef->listHead;
+    vsi_list_entry* next    = NULL;
 
-    status = btree_delete ( context->groupIdIndex,
-                            context->groupIdIndex->root,
-                            (group_t*)&groupId );
+    //
+    //  While we have not reached the end of the signal list for this group...
+    //
+    while ( current != NULL )
+    {
+        //
+        //  Save the pointer to the next list element.
+        //
+        next = current->next;
 
-    context->groupIdIndex = NULL;
+        //
+        //  Go give this signal structure back to the system.
+        //
+        free ( current );
 
+        //
+        //  Move to the next signal structure in the list.
+        //
+        current = next;
+    }
+    //
+    //  Go remove this signal group object from the group definition btree.
+    //
+    status = btree_delete ( &context->groupIdIndex, temp );
+
+    //
+    //  Give the signal group object back to the memory manager.
+    //
+    free ( temp );
+
+    //
+    //  Return the completion status back to the caller.
+    //
     return status;
 }
 
@@ -557,7 +769,7 @@ int vsi_add_signal_to_group ( vsi_handle     handle,
                               const group_t  groupId )
 {
     int               status = 0;
-    vsi_signal_group  group;
+    vsi_signal_group  group = { 0 };
     vsi_signal_group* temp = 0;
 
     CHECK_AND_RETURN_IF_ERROR ( handle && groupId );
@@ -566,7 +778,7 @@ int vsi_add_signal_to_group ( vsi_handle     handle,
 
     group.groupId = groupId;
 
-    temp = btree_search ( context->groupIdIndex, &group );
+    temp = btree_search ( &context->groupIdIndex, &group );
 
     if ( temp == NULL )
     {
@@ -583,6 +795,8 @@ int vsi_add_signal_to_group ( vsi_handle     handle,
     signalDef->name     = NULL;
 
     status = vsi_list_insert ( &temp->list, signalDef );
+
+    temp->count++;
 
     return status;
 }
@@ -638,7 +852,7 @@ int vsi_remove_signal_from_group ( vsi_handle     handle,
 
     group.groupId = groupId;
 
-    temp = btree_search ( context->groupIdIndex, &group );
+    temp = btree_search ( &context->groupIdIndex, &group );
 
     if ( temp == NULL )
     {
@@ -663,6 +877,7 @@ int vsi_remove_signal_from_group ( vsi_handle     handle,
     {
         return -ENOENT;
     }
+    temp->count--;
     return vsi_list_remove ( &temp->list, signalDef );
 }
 
@@ -751,7 +966,7 @@ int vsi_get_newest_in_group ( vsi_handle    handle,
     //
     group.groupId = groupId;
 
-    temp = btree_search ( context->groupIdIndex, &group );
+    temp = btree_search ( &context->groupIdIndex, &group );
 
     //
     //  If the group id specified does not exist, return an error code to the
@@ -915,7 +1130,7 @@ int vsi_get_oldest_in_group ( vsi_handle    handle,
     //
     group.groupId = groupId;
 
-    temp = btree_search ( context->groupIdIndex, &group );
+    temp = btree_search ( &context->groupIdIndex, &group );
 
     //
     //  If the group id specified does not exist, return an error code to the
@@ -958,7 +1173,7 @@ int vsi_get_oldest_in_group ( vsi_handle    handle,
         results[resultIndex].signalId = signalDef->signalId;
 
         //
-        //  Go get the newest entry in the database for this signal.
+        //  Go get the oldest entry in the database for this signal.
         //
         //  Note that the return information will be populated in the result
         //  object that is passed in.
@@ -1066,7 +1281,7 @@ static void* waitForSignalOnAny ( void* resultsPtr )
     vsi_result*   result = tData->result;
     int           status = 0;
 
-    LOG ( "New thread %lu has started - Waiting for %u, %u\n",
+    LOG ( "New thread %lu has started - Waiting for %lu, %lu\n",
           pthread_self() % 10000, result->domainId,
           result->signalId );
     //
@@ -1074,8 +1289,7 @@ static void* waitForSignalOnAny ( void* resultsPtr )
     //  this function will hang on a semaphore if there is nothing to fetch.
     //  When it returns, it will have gotten the requested signal data.
     //
-    status = vsi_core_fetch_wait ( result->context->coreHandle,
-                                   result->domainId,
+    status = vsi_core_fetch_wait ( result->domainId,
                                    result->signalId,
                                    (unsigned long*)result->data,
                                    &result->dataLength );
@@ -1086,8 +1300,8 @@ static void* waitForSignalOnAny ( void* resultsPtr )
     {
         return NULL;
     }
-    LOG ( "Thread found signal, %u, %u status[%d], with data %u\n", status,
-          result->domainId, result->signalId, result->data[0] );
+    LOG ( "Thread found signal, %lu, %lu status[%d], with data %u\n",
+          result->domainId, result->signalId, status, result->data[0] );
     //
     //  If we get here it's because we were able to fetch the requested signal
     //  data.  At this point, we need to kill all the other threads that have
@@ -1175,7 +1389,7 @@ int vsi_listen_any_in_group ( vsi_handle    handle,
     //
     group.groupId = groupId;
 
-    temp = btree_search ( context->groupIdIndex, &group );
+    temp = btree_search ( &context->groupIdIndex, &group );
 
     //
     //  If the group id specified does not exist, return an error code to the
@@ -1236,7 +1450,7 @@ int vsi_listen_any_in_group ( vsi_handle    handle,
     {
         signalDef = current->pointer;
 
-        LOG ( "  Creating listening thread for %u, %u\n",
+        LOG ( "  Creating listening thread for %lu, %lu\n",
               signalDef->domainId, signalDef->signalId );
 
         //
@@ -1377,15 +1591,14 @@ static void* waitForSignalOnAll ( void* resultsPtr )
     vsi_result*   result = tData->result;
     int           status = 0;
 
-    LOG ( "New thread %lu has started - Waiting for %u, %u\n",
+    LOG ( "New thread %lu has started - Waiting for %lu, %lu\n",
           pthread_self() % 10000, result->domainId, result->signalId );
     //
     //  Go fetch the requested signal from the core data store.  Note that
     //  this function will hang on a semaphore if there is nothing to fetch.
     //  When it returns, it will have gotten the requested signal data.
     //
-    status = vsi_core_fetch_wait ( result->context->coreHandle,
-                                   result->domainId,
+    status = vsi_core_fetch_wait ( result->domainId,
                                    result->signalId,
                                    (unsigned long*)result->data,
                                    &result->dataLength );
@@ -1396,8 +1609,8 @@ static void* waitForSignalOnAll ( void* resultsPtr )
     {
         return NULL;
     }
-    LOG ( "Thread found signal, %u, %u status[%d], with data %u\n", status,
-          result->domainId, result->signalId, result->data[0] );
+    LOG ( "Thread found signal, %lu, %lu status[%d], with data %u\n",
+          result->domainId, result->signalId, status, result->data[0] );
     //
     //  Exit the thread.
     //
@@ -1472,7 +1685,7 @@ int vsi_listen_all_in_group ( vsi_handle    handle,
     //
     group.groupId = groupId;
 
-    temp = btree_search ( context->groupIdIndex, &group );
+    temp = btree_search ( &context->groupIdIndex, &group );
 
     //
     //  If the group id specified does not exist, return an error code to the
@@ -1532,7 +1745,7 @@ int vsi_listen_all_in_group ( vsi_handle    handle,
     {
         signalDef = current->pointer;
 
-        LOG ( "  Creating listening thread for %u, %u\n",
+        LOG ( "  Creating listening thread for %lu, %lu\n",
               signalDef->domainId, signalDef->signalId );
 
         //
@@ -1659,7 +1872,7 @@ int vsi_flush_group ( vsi_handle    handle,
     //
     group.groupId = groupId;
 
-    temp = btree_search ( context->groupIdIndex, &group );
+    temp = btree_search ( &context->groupIdIndex, &group );
 
     //
     //  If the group id specified does not exist, return an error code to the
@@ -1767,7 +1980,7 @@ int vsi_name_string_to_id ( vsi_handle  handle,
     //
     //  Go find the record that has this name.
     //
-    temp = btree_search ( context->signalNameIndex, &nameIdDefinition );
+    temp = btree_search ( &context->signalNameIndex, &nameIdDefinition );
 
     //
     //  If the search failed, return an error code to the caller.  The name
@@ -1792,7 +2005,7 @@ int vsi_name_string_to_id ( vsi_handle  handle,
 
 /*!-----------------------------------------------------------------------
 
-    v s i _ n a m e _ i d _ t o _ s t r i n g
+    v s i _ s i g n a l _ i d _ t o _ s t r i n g
 
     @brief Convert a signal domain and ID to it's ASCII string name.
 
@@ -1825,10 +2038,10 @@ int vsi_name_string_to_id ( vsi_handle  handle,
     @return - status - The return status of the function
 
 ------------------------------------------------------------------------*/
-int vsi_name_id_to_string ( vsi_handle     handle,
-                            const domain_t domainId,
-                            const signal_t signalId,
-                            char**         name )
+int vsi_signal_id_to_string ( vsi_handle     handle,
+                              const domain_t domainId,
+                              const signal_t signalId,
+                              char**         name )
 {
     vsi_id_name_definition* temp;
     vsi_id_name_definition  nameIdDefinition;
@@ -1852,7 +2065,7 @@ int vsi_name_id_to_string ( vsi_handle     handle,
     //
     //  Go find the record that has this name.
     //
-    temp = btree_search ( context->signalIdIndex, &nameIdDefinition );
+    temp = btree_search ( &context->signalIdIndex, &nameIdDefinition );
 
     //
     //  If the search failed, return an error code to the caller.  The id
@@ -1896,6 +2109,7 @@ int vsi_name_id_to_string ( vsi_handle     handle,
 int vsi_define_signal_name ( vsi_handle     handle,
                              const domain_t domainId,
                              const signal_t signalId,
+                             const signal_t privateId,
                              const char*    name )
 {
     //
@@ -1903,6 +2117,8 @@ int vsi_define_signal_name ( vsi_handle     handle,
     //
     CHECK_AND_RETURN_IF_ERROR ( handle && name );
 
+    LOG ( "Defining: domainId: %lu, signalId: %lu, privateId: %lu, name[%s]\n",
+          domainId, signalId, privateId, name );
     //
     //  Cast the generic handle into a context pointer.
     //
@@ -1912,24 +2128,76 @@ int vsi_define_signal_name ( vsi_handle     handle,
     //  Go allocate a new id/name definition data structure in memory.
     //
     vsi_id_name_definition* nameIdDefinition =
-        malloc ( sizeof(vsi_id_name_definition ) );
+        sm_malloc ( sizeof(vsi_id_name_definition) );
 
     //
     //  Initialize the fields of the id/name definition structure.
     //
     nameIdDefinition->domainId = domainId;
     nameIdDefinition->signalId = signalId;
-    nameIdDefinition->name     = strdup ( name );
+    nameIdDefinition->privateId = privateId;
+
+    //
+    //  TODO: Check for string overflow here!
+    //
+    nameIdDefinition->name = sm_malloc ( strlen(name) + 1 );
+    strncpy ( nameIdDefinition->name, name, strlen(name) );
+    nameIdDefinition->name[strlen(name)+1] = 0;
 
     //
     //  Go insert the new id/name definition structure into both of the btree
     //  indices defined for them.
     //
-    btree_insert ( context->signalNameIndex, nameIdDefinition );
-    btree_insert ( context->signalIdIndex,   nameIdDefinition );
+    btree_insert ( &context->signalNameIndex, nameIdDefinition );
+    btree_insert ( &context->signalIdIndex,   nameIdDefinition );
 
+    //
+    //  If there is a valid private ID for this signal, add it's definition to
+    //  the private index as well.
+    //
+    if ( privateId != 0 )
+    {
+        btree_insert ( &context->privateIdIndex,   nameIdDefinition );
+    }
     //
     //  Return a good completion code to the caller.
     //
     return 0;
+}
+
+
+static void groupTraverseFunction ( char* leader, void* dataPtr )
+{
+    if ( dataPtr == NULL )
+    {
+        printf ( "(nil)\n" );
+        return;
+    }
+    printGroupFunction ( leader, dataPtr );
+}
+
+
+void dumpGroups ( vsi_handle handle )
+{
+    printf ( "  Dumping the group assignments...\n" );
+
+    //
+    //  Make sure the handle is not null.
+    //
+    if ( handle == NULL )
+    {
+        printf ( "Null VSI handle supplied - Aborting\n" );
+        return;
+    }
+    //
+    //  Cast the generic handle into a context pointer.
+    //
+    vsi_context *context = handle;
+
+    //
+    //  Go print all of the currently defined group records.
+    //
+    btree_traverse ( &context->groupIdIndex, groupTraverseFunction );
+
+    return;
 }
