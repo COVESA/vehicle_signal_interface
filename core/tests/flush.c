@@ -40,7 +40,6 @@ Usage: %s options\n\
   ======  ==============  ======  =========== \n\
 	-d    Domain Value     int        CAN     \n\
 	-k    Key Value        int         0	  \n\
-	-n    Find Newest      N/A       false    \n\
     -h    Help Message     N/A        N/A     \n\
     -?    Help Message     N/A        N/A     \n\
 \n\n\
@@ -80,13 +79,10 @@ int main ( int argc, char* const argv[] )
     //
     //	Parse any command line options the user may have supplied.
     //
-	char asciiData[9] = { 0 };		// We only copy 8 bytes so it is always
-									// null terminated
 	unsigned long keyValue = 0;
-	domains domainValue = CAN;
-	int status = 0;
-	char ch;
-    bool getNewest = false;
+	domain_t domainValue   = DOMAIN_CAN;
+	int status             = 0;
+	char ch                = 0;
 
     while ( ( ch = getopt ( argc, argv, "d:k:nh?" ) ) != -1 )
     {
@@ -97,7 +93,7 @@ int main ( int argc, char* const argv[] )
 		  //
 		  case 'd':
 		    domainValue = atol ( optarg );
-			LOG ( "Using domain value[%'u]\n", domainValue );
+			LOG ( "Using domain value[%'lu]\n", domainValue );
 			break;
 		  //
 		  //	Get the requested key value.
@@ -105,13 +101,6 @@ int main ( int argc, char* const argv[] )
 		  case 'k':
 		    keyValue = atol ( optarg );
 			LOG ( "Using key value[%'lu]\n", keyValue );
-			break;
-		  //
-		  //	Get the "newest" message flag.
-		  //
-		  case 'n':
-			LOG ( "Using key value[%'lu]\n", keyValue );
-            getNewest = true;
 			break;
 		  //
 		  //	Display the help message.
@@ -140,43 +129,22 @@ int main ( int argc, char* const argv[] )
 	//	Note that if the shared memory segment does not already exist, this
 	//	call will create it.
 	//
-	vsi_core_handle handle = vsi_core_open();
-	if ( handle == 0 )
-	{
-		printf ( "Unable to open the VSI core data store - Aborting\n" );
-		exit ( 255 );
-	}
-	//
-	//	Go read this message from the message pool.
-	//
-	LOG ( "  domain: %'u\n  key...: %'lu\n", domainValue, keyValue );
+	vsi_core_open ( false );
 
-    unsigned long dataSize = sizeof(asciiData) - 1;
-    if ( getNewest )
-    {
-        status = vsi_core_fetch_newest ( handle, domainValue, keyValue, &dataSize,
-                                         asciiData );
-    }
-    else
-    {
-        status = vsi_core_fetch_wait ( handle, domainValue, keyValue, &dataSize,
-                                       asciiData );
-    }
-	if ( status == 0 )
-	{
-#ifdef VSI_DEBUG
-        unsigned long numericData = atol ( asciiData );
-		LOG ( "  value.: %'lu[%s]\n", numericData, asciiData );
-#endif
-	}
-	else
+	//
+	//	Go flush all messages with the given domain and key.
+	//
+	LOG ( "  Flushing domain: %'lu\n  key...: %'lu\n", domainValue, keyValue );
+
+    status = vsi_core_flush_signal ( domainValue, keyValue );
+	if ( status != 0 )
 	{
 		printf ( "----> Error %d[%s] returned\n", status, strerror(status) );
 	}
 	//
 	//	Close our shared memory segment and exit.
 	//
-	vsi_core_close ( handle );
+	vsi_core_close();
 
 	//
 	//	Return a good completion code to the caller.

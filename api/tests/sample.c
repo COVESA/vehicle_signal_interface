@@ -1,8 +1,10 @@
-/* Copyright (C) 2016, Jaguar Land Rover. All Rights Reserved.
- *
- * This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+/*
+    Copyright (C) 2016, Jaguar Land Rover. All Rights Reserved.
+
+    This Source Code Form is subject to the terms of the Mozilla Public
+    License, v. 2.0. If a copy of the MPL was not distributed with this file,
+    You can obtain one at http://mozilla.org/MPL/2.0/.
+*/
 
 #include <errno.h>
 #include <stdio.h>
@@ -10,6 +12,7 @@
 #include <string.h>
 
 #include "vsi.h"
+#include "btree.h"
 
 
 //
@@ -19,6 +22,29 @@ static vsi_handle handle;
 
 // static unsigned char data;
 
+extern void btree_print ( btree_t* btree, printFunc printCB );
+
+//
+//  This function will be called by the btree code when it has been called to
+//  print out the btree nodes.  Each userData entry that is encountered in
+//  that process will result in a call to this function to render the data the
+//  way the user wants it to be displayed.
+//
+void printFunction ( char* leader, void* data )
+{
+    if ( data == NULL )
+    {
+        printf ( "%s(nil)\n", leader );
+        return;
+    }
+    vsi_id_name_definition* userDataPtr = data;
+
+    printf ( "%sUserData: domainId: %lu, signalId: %lu, privateId: %lu, name[%s]\n",
+			 leader, userDataPtr->domainId, userDataPtr->signalId,
+			 userDataPtr->privateId, userDataPtr->name );
+}
+
+
 //
 //  A handy utility function to add signals to the core data store.
 //
@@ -27,7 +53,7 @@ static int storeSignal ( vsi_result* result, domain_t domain_id,
 {
     int status = 0;
 
-    printf ( "Storing domain %u, signal %u, data %u in the core data store.\n",
+    printf ( "Storing domain %lu, signal %lu, data %u in the core data store.\n",
              domain_id, signal_id, dataValue );
 
     result->domainId = domain_id;
@@ -40,11 +66,11 @@ static int storeSignal ( vsi_result* result, domain_t domain_id,
     result->status = status;
     if ( status != 0 )
     {
-        printf ( "Failed to store %u, %u! Error code %d.\n", domain_id,
+        printf ( "Failed to store %lu, %lu! Error code %d.\n", domain_id,
                  signal_id, status );
         return status;
     }
-    printf ( "Successfully stored %u, %u in the core data store.\n",
+    printf ( "Successfully stored %lu, %lu in the core data store.\n",
              domain_id, signal_id );
 
     return 0;
@@ -63,9 +89,10 @@ static int storeSignal ( vsi_result* result, domain_t domain_id,
 ------------------------------------------------------------------------*/
 int main()
 {
-    domain_t    domain_id;
-    signal_t    signal_id;
-    int         status;
+    domain_t domain_id;
+    signal_t signal_id;
+    int      status;
+    long     dummyData = 0;
 
     vsi_result  result;
     vsi_result* results = malloc ( sizeof(vsi_result) * 10 );
@@ -73,7 +100,7 @@ int main()
     //
     //  Call into the API to initialize the memory.
     //
-    handle = vsi_initialize();
+    handle = vsi_initialize ( true );
     if (!handle)
     {
         printf("Failed to allocate memory for VSI!\n");
@@ -90,22 +117,24 @@ int main()
     //  memory records.
     //
     result.name       = "(empty)";
-    result.data       = malloc ( 32 );
+    result.data       = (char*)&dummyData;
     result.dataLength = sizeof(unsigned char);
 
     //
     //  Define some signals for the test functions.
     //
-    vsi_define_signal_name ( (void*)context, 0, 1, "foo" );
-    vsi_define_signal_name ( (void*)context, 0, 2, "bar" );
-    vsi_define_signal_name ( (void*)context, 0, 3, "baz" );
-    vsi_define_signal_name ( (void*)context, 0, 4, "gen" );
-    vsi_define_signal_name ( (void*)context, 0, 5, "ivi" );
+    vsi_define_signal_name ( (void*)context, 0, 1, 0, "foo" );
+    vsi_define_signal_name ( (void*)context, 0, 2, 0, "bar" );
+    vsi_define_signal_name ( (void*)context, 0, 3, 0, "baz" );
+    vsi_define_signal_name ( (void*)context, 0, 4, 0, "gen" );
+    vsi_define_signal_name ( (void*)context, 0, 5, 0, "ivi" );
+
+    btree_print ( &context->signalNameIndex, printFunction );
 
     //
     //  Fire a signal into the void to show how generating a signal works.
     //
-    printf("(1) Firing signal \"bar\".\n");
+    printf("\n(1) Firing signal \"bar\".\n");
     status = vsi_name_string_to_id(handle, "bar", &domain_id, &signal_id);
     if (status)
     {
@@ -116,6 +145,32 @@ int main()
     storeSignal ( &result, domain_id, signal_id, 41 );
     printf("Successfully fired signal \"bar\".\n");
 
+    //
+    //  Fire a signal by name.
+    //
+    #define testSignalName "Attribute.Body.BodyType"
+
+    printf ( "\nStoring domain %d, signal [%s], data [%s] in the core data store.\n",
+             0, testSignalName, "name" );
+
+    result.domainId = 0;
+    result.name = testSignalName;
+    result.data = "name";
+    result.dataLength = strlen(result.data);
+
+    status = vsi_fire_signal_by_name ( handle, &result );
+
+    result.status = status;
+    if ( status != 0 )
+    {
+        printf ( "Failed to store %u, [%s]! Error code %d.\n", 0,
+                 testSignalName, status );
+        return status;
+    }
+    result.data = (char*)&dummyData;
+
+    printf ( "Successfully stored %u, [%s] in the core data store.\n",
+             0, testSignalName );
     //
     //  Store another "bar" signal in the core data store with a larger data
     //  field.  We'll use this and the previous one to test the "get newest"
@@ -128,7 +183,7 @@ int main()
     //
     //  Read the latest update from the "bar" signal.
     //
-    printf ( "(2) Getting newest \"bar\" signal.\n" );
+    printf ( "\n(2) Getting newest \"bar\" signal.\n" );
     result.name = "bar";
     status = vsi_get_newest_signal_by_name(handle, &result);
     if (status)
@@ -142,7 +197,7 @@ int main()
     //
     //  Read the oldest update from the "bar" signal.
     //
-    printf ( "(3) Getting oldest \"bar\" signal.\n" );
+    printf ( "\n(3) Getting oldest \"bar\" signal.\n" );
     status = vsi_get_oldest_signal_by_name(handle, &result);
     if (status)
     {
@@ -155,7 +210,7 @@ int main()
     //
     //  Read all of the "bar" signals from oldest to newest...
     //
-    printf ( "(4) Reading the \"bar\" signals, oldest first.\n" );
+    printf ( "\n(4) Reading the \"bar\" signals, oldest first.\n" );
     do
     {
         result.name = "bar";
@@ -181,16 +236,49 @@ int main()
     //  Go through the flow of creating a group and then listening for that
     //  group to fire.
     //
-    printf ( "(5) Creating a signal group.\n" );
+    printf ( "\n(5) Creating signal group 10 (should pass).\n" );
     status = vsi_create_signal_group(handle, 10);
     if (status)
     {
         printf("Failed to create signal group 10! Error code %d.\n", status);
         return status;
     }
-    printf("Created signal group 10.\n");
+    dumpGroups ( handle );
 
-    printf ( "(6) Adding \"gen\" to the signal group.\n" );
+    printf("\nCreating signal group 10 again (should fail).\n");
+    status = vsi_create_signal_group(handle, 10);
+    if (status)
+    {
+        printf("Failed to create signal group 10! Error code %d.\n", status);
+    }
+    dumpGroups ( handle );
+
+    printf("\nDeleting signal group 11 (should fail).\n");
+    status = vsi_delete_signal_group (handle, 11);
+    if (status)
+    {
+        printf("Failed to delete signal group 11! Error code %d.\n", status);
+    }
+    dumpGroups ( handle );
+
+    printf("\nDeleting signal group 10 (should pass).\n");
+    status = vsi_delete_signal_group (handle, 10);
+    if (status)
+    {
+        printf("Failed to delete signal group 10! Error code %d.\n", status);
+    }
+    dumpGroups ( handle );
+
+    printf("\nCreated signal group 10 again (should pass).\n");
+    status = vsi_create_signal_group(handle, 10);
+    if (status)
+    {
+        printf("Failed to create signal group 10! Error code %d.\n", status);
+        return status;
+    }
+    dumpGroups ( handle );
+
+    printf ( "\n(6) Adding \"gen\" to the signal group.\n" );
     status = vsi_add_signal_to_group_by_name(handle, "gen", 10);
     if (status)
     {
@@ -198,7 +286,9 @@ int main()
                status);
         return status;
     }
-    printf ( "(7) Adding \"ivi\" to the signal group.\n" );
+    dumpGroups ( handle );
+
+    printf ( "\n(7) Adding \"ivi\" to the signal group.\n" );
     status = vsi_add_signal_to_group_by_name(handle, "ivi", 10);
     if (status)
     {
@@ -207,6 +297,18 @@ int main()
         return status;
     }
     printf("Added signals \"gen\" and \"ivi\" to group 10.\n");
+
+    printf ( "\n(7) Adding \"Attribute.Body.BodyType\" to the signal group.\n" );
+    status = vsi_add_signal_to_group_by_name(handle, "Attribute.Body.BodyType", 10);
+    if (status)
+    {
+        printf("Failed to add signal \"ivi\" to group 10! Error code %d.\n",
+               status);
+        return status;
+    }
+    printf("Added signals \"gen\", \"ivi\", and \"Attribute.Body.BodyType\" to group 10.\n");
+
+    dumpGroups ( handle );
 
     //
     //  Initialize the memory for the array of vsi_result structures.
@@ -226,7 +328,7 @@ int main()
     //  As a pit stop in this example, read the current value of the group to
     //  showcase the functionality.
     //
-    printf ( "(8) Get the newest items in the group.\n" );
+    printf ( "\n(8) Get the newest items in the group.\n" );
     status = vsi_get_newest_in_group ( handle, 10, results );
     if ( status )
     {
@@ -238,7 +340,7 @@ int main()
     {
         if ( results[i].status == 0 )
         {
-            printf ( "    Newest data for group 10[%d]: domain[%d], signal[%d],"
+            printf ( "    Newest data for group 10[%d]: domain[%lu], signal[%lu],"
                      " data[%u]\n", i, results[i].domainId, results[i].signalId,
                      results[i].data[0] );
         }
@@ -248,7 +350,7 @@ int main()
     //
     //  Now go fetch the oldest signals in our group.
     //
-    printf ( "(9) Get oldest signals in the group.\n" );
+    printf ( "\n(9) Get oldest signals in the group.\n" );
 
     //
     //  Clear out and reinitialize out results array.
@@ -272,7 +374,7 @@ int main()
     {
         if ( results[i].status == 0 )
         {
-            printf ( "    Oldest data for group 10[%d]: domain[%d], signal[%d],"
+            printf ( "    Oldest data for group 10[%d]: domain[%lu], signal[%lu],"
                      " data[%u]\n", i, results[i].domainId, results[i].signalId,
                      results[i].data[0] );
         }
@@ -282,7 +384,7 @@ int main()
     //
     //  Clean up the group, since we no longer need it.
     //
-    printf ( "(10) Cleaning up the group structures.\n" );
+    printf ( "\n(10) Cleaning up the group structures.\n" );
     status = vsi_delete_signal_group(handle, 10);
     if (status)
     {
@@ -299,7 +401,7 @@ int main()
     //  allocated during this test but for neatness, it should normally be
     //  freed.
     //
-    printf ( "(11) Closing the VSI system.\n" );
+    printf ( "\n(11) Closing the VSI system.\n" );
     status = vsi_destroy ( handle );
     if ( status )
     {
