@@ -25,134 +25,156 @@
 #include <string.h>
 #include <locale.h>
 #include <stdbool.h>
+#include <limits.h>
 
-#include "trace.h"
+#include "sharedMemory.h"
 #include "utils.h"
 
-//
-//  Define the following if you'd like the code to dump the semaphore states
-//  as it operates.  This is normally disabled as it produces a large volume
-//  of dump data.
-//
-#undef DUMP_SEMAPHORE
-
-sharedMemory_p sharedMemory;		// TEMP - Used by the dump code
 
 /*! @{ */
 
 //
-//	WARNING!!!: All references (and pointers) to data in the can message
-//	buffer is performed by using the index into the array of messages.  All of
-//	these references need to be relocatable references so this will work in
-//	multiple processes that have their shared memory segments mapped to
-//	different base addresses.
+//	WARNING!!!: All references (and pointers) to data in the VSI signal buffer
+//	are performed by using the offset from the shared memory segment base
+//	address.  All of these references need to be relocatable references so
+//	this will work in multiple processes that have their shared memory
+//	segments mapped to different base addresses.
 //
+
+
+#if 0
+/*!----------------------------------------------------------------------------
+
+    d u m p A l l S i g n a l s
+
+	@brief Dump all of the signals currently defined.
+
+	This function will dump all of the signals currently defined.  It
+    traverses all of the signal lists and dumps them in the order in which
+    they are found.  This order is determined by the comparison function
+    defined for the signal list B-tree (usually the domain & ID of the
+    signal).
+
+	@param[in] maxSignals - The maximum number of signals to dump per list.
+
+	@return None
+
+-----------------------------------------------------------------------------*/
+void dumpAllSignals ( int maxSignals )
+{
+	signalList_t* signals;
+
+    //
+    //  If the system has not finished initializing yet, just ignore this call.
+    //
+    if ( ! smControl->systemInitialized )
+    {
+        return;
+    }
+
+	btree_iter iter = btree_iter_begin ( &smControl->signals );
+
+	while ( ! btree_iter_at_end ( iter ) )
+	{
+		signals = btree_iter_data ( iter );
+
+		dumpSignalList ( signals, maxSignals );
+
+		btree_iter_next ( iter );
+	}
+	btree_iter_cleanup ( iter );
+
+    return;
+}
+#endif
 
 
 /*!-----------------------------------------------------------------------
 
-	d u m p H a s h B u c k e t
+    d u m p S i g n a l L i s t
 
-	@brief Dump the contents of the specified hash table bucket.
+	@brief Dump the contents of the specified signal list.
 
-	This function will Dump the contents of a single hash bucket.  This will
-	also dump the message list contained in this bucket but not the binary
-	data contained in each message.
+	This function will Dump the contents of a single signal list.  This will
+	also dump the individual signals contained in this list.
 
-    Note that hash buckets that do not contain any data will be silently
-	ignored.
-
-	The leader argument is designed to allow the caller to specify a string
-	that is output at the beginning of each dump line.  This allows the user
-	to specify an indentation for the following dump information for instance.
-
-	@param[in] leader - The string to be output at the start of each line
-	@param[in] bucketNumber - The bucket index number to be dumped
-	@param[in] hashBucket - The address of the hash bucket to be dumped
-	@param[in] maxMessages - The maximum number of message to display in each
-	                         hash bucket.
+	@param[in] signalList - The address of the signal list to be dumped
+	@param[in] maxSignals - The maximum number of signals to display in each
+	                         signal list.
 	@return None
 
 ------------------------------------------------------------------------*/
-void dumpHashBucket ( unsigned int bucketNumber, hashBucket_p hashBucket,
-                      int maxMessages )
+void dumpSignalList ( signalList_t* signalList, int maxSignals )
 {
+    //
+    //  If the system has not finished initializing yet, just ignore this call.
+    //
+    if ( ! smControl->systemInitialized )
+    {
+        return;
+    }
 	//
-	//	If there are some messages in this hash bucket...
+	//	If there are some signals in this signal list...
 	//
-	if ( hashBucket->currentMessageCount > 0 )
+	if ( signalList->currentSignalCount > 0 )
 	{
 		//
-		//	Display the address of this bucket and it's offset within the
-		//	shared memory segment.
+        //	Display the address of this signal list and it's offset within the
+        //	shared memory segment.
 		//
-		LOG ( "Hash Bucket %'u[%lx]:\n", bucketNumber,
-				 (void*)hashBucket - (void*)sharedMemory );
+		LOG ( "Signal List %p[0x%lx]:\n", signalList, toOffset ( signalList ) );
+
 		//
-		//	If the head offset indicates that this is the end of the message
-		//	list, display a message saying we hit the end of the list.
+		//	If the head offset indicates that this is the end of the signal
+		//	list, display a signal saying we hit the end of the list.
 		//
-		if ( hashBucket->head == END_OF_BUCKET_DATA )
+		if ( signalList->head == END_OF_LIST_MARKER )
 		{
 			LOG ( "Head offset............: End of List Marker\n" );
 		}
 		//
 		//	Otherwise, display the head offset value.  This is the offset in
-		//	the segment of the first data message record.
+		//	the segment of the first data signal record.
 		//
 		else
 		{
-			LOG ( "Head offset............: %'lu\n", hashBucket->head );
+			LOG ( "Head offset............: 0x%lx[%lu]\n", signalList->head,
+                  signalList->head );
 		}
 		//
-		//	If the tail offset indicates that this is the end of the message
-		//	list, display a message saying we hit the end of the list.
+		//	If the tail offset indicates that this is the end of the signal
+		//	list, display a signal saying we hit the end of the list.
 		//
-		if ( hashBucket->tail == END_OF_BUCKET_DATA )
+		if ( signalList->tail == END_OF_LIST_MARKER )
 		{
 			LOG ( "Tail offset............: End of List Marker\n" );
 		}
 		//
 		//	Otherwise, display the tail offset value.  This is the offset in
-		//	the segment of the start of the last data message record.
+		//	the segment of the start of the last data signal record.
 		//
 		else
 		{
-			LOG ( "Tail offset............: %'lu\n", hashBucket->tail );
+			LOG ( "Tail offset............: 0x%lx[%lu]\n", signalList->tail,
+                  signalList->tail );
 		}
 		//
 		//	Display the number of messages currently stored in this hash
 		//	bucket.
 		//
-		LOG ( "Message count..........: %'lu\n", hashBucket->currentMessageCount );
+		LOG ( "Message count..........: %'lu\n", signalList->currentSignalCount );
+
 		//
-		//	Display the generation number of this hash bucket.  The
-		//	generation number is incremented each time the messages being
-		//	inserted reach the end of the buffer and we have wrapped around
-		//	back to the beginning of the buffer.
+        //	Display the number of bytes of memory that have been allocated to
+        //	this signal list for the storage of signals.
 		//
-		LOG ( "Generation number......: %'lu\n", hashBucket->generationNumber );
+		LOG ( "Total signal size......: %lu[0x%lx]\n", signalList->totalSignalSize,
+              signalList->totalSignalSize );
+
 		//
-		//	Display the message sequence number.  This number is the total
-		//	number of messages that have been stored in this hash bucket since
-		//	the shared memory segment was created.  This can be used as an
-		//	indicator of how often this bucket has been used.
+		//	Go dump the contents of the signal list in this entry.
 		//
-		LOG ( "Message sequence number: %'lu\n", hashBucket->messageSequenceNumber );
-		//
-		//	Display the number of bytes of memory that have been allocated to
-		//	this hash bucket for the storage of messages.  This value is
-		//	static and does not change as the hash bucket is used.
-		//
-		LOG ( "Total message size.....: %'lu\n", hashBucket->totalMessageSize );
-		//
-		//	Display the total size of this hash bucket in bytes.
-		//
-		LOG ( "Hash bucket size.......: %'d\n", HASH_BUCKET_DATA_SIZE );
-		//
-		//	Go dump the contents of the message list in this hash bucket.
-		//
-		dumpMessageList ( hashBucket, maxMessages );
+		dumpSignals ( signalList, maxSignals );
 	}
 	return;
 }
@@ -160,98 +182,118 @@ void dumpHashBucket ( unsigned int bucketNumber, hashBucket_p hashBucket,
 
 /*!-----------------------------------------------------------------------
 
-	d u m p M e s s a g e L i s t
+    d u m p S i g n a l s
 
-	@brief Dump the contents of the specified shared memory message list.
+	@brief Dump the contents of the specified shared memory signal list.
 
-	This function will dump all of the messages in the specified message list.
-	Only the meta-data of each message is dump.  The actual binary contents of
-	each message is not dumped (to keep the output reasonable).
+    This function will dump all of the signals in the specified signals list.
+    The actual binary contents of each message is also dumped.
 
-	@param[in] bucketNumber - The bucket index number to be dumped
-	@param[in] maxMessages - The maximum number of messages to dump for this
-							 hash bucket.
+	@param[in] signalList - The address of the signalList to be dumped.
+	@param[in] maxSignals - The maximum number of signals to dump for this
+							 signal list.
 	@return None
 
 ------------------------------------------------------------------------*/
-void dumpMessageList ( hashBucket_p hashBucket, int maxMessages )
+void dumpSignals ( signalList_t* signalList, int maxSignals )
 {
 #ifdef VSI_DEBUG
-	int i = 0;
-
-	//
-	//	Get the base address of the message list so that we can display the
-	//	list offsets of each message.
-	//
-	void* baseAddress = hb_getAddress ( hashBucket, 0 );
+    int i = 0;
 #endif
 
+    //
+    //  If the system has not finished initializing yet, just ignore this call.
+    //
+    if ( ! smControl->systemInitialized )
+    {
+        return;
+    }
+    //
+    //  If the user did not specify a maximum signal count, set it to a large
+    //  number.
+    //
+    if ( maxSignals == 0 )
+    {
+        maxSignals = INT_MAX;
+    }
+    //
+    //  Get the offset to the first signal in this list.
+    //
+    offset_t signalOffset = signalList->head;
+
+    //
+    //  If this signal list is empty, just silently quit.
+    //
+    if ( signalList->currentSignalCount <= 0 )
+    {
+        return;
+    }
 	//
-	//	Get an actual pointer to the first message in this bucket.  This is
-	//	the message that is pointed to by the "head" offset.
+	//	Get an actual pointer to the first signal in this list.  This is
+	//	the signal that is pointed to by the "head" offset.
 	//
-	sharedMessage_p message = hb_getAddress ( hashBucket,
-											  hb_getHead ( hashBucket ) );
+	signalData_t* signal = toAddress ( signalOffset );
+
+    //
+    //	Display the signal list address.
+    //
+    LOG ( "    Signal list [%p]:\n", signalList );
+
+    //
+    //	Display the domain associated with this signal.
+    //
+    LOG ( "      Domain: %'lu\n", signalList->domain );
+
+    //
+    //	Display the key value that was associated with this signal.
+    //
+    LOG ( "      Key:    %'lu\n", signalList->key );
+
 	//
-	//	Repeat until we reach the end of the message list in this bucket.
+	//	Repeat until we reach the end of the signal list in this bucket.
 	//
-	while ( true )
+	while ( signalOffset != END_OF_LIST_MARKER )
 	{
 		//
-		//	Display the message number (starting at "1"), the address of this
-		//	message and the offset of this message relative to the start of
-		//	the message list in this hash bucket.  The first message in the
-		//	list will be at offset "0".
+		//	Display the size of this signal in bytes.
 		//
-		LOG ( "Message number %'d[%p-%'lu]:\n", ++i, message,
-				 (void*)message - baseAddress );
-		//
-		//	Display the domain associated with this message.
-		//
-		LOG ( "   Domain..............: %'u\n", message->domain );
+		LOG ( "      %'d - Signal data size...: %'lu\n", ++i, signal->messageSize );
 
 		//
-		//	Display the key value that was associated with this message.
+		//	If the "next" signal offset indicates that this is the end of the
+		//	signal list, display a message saying we hit the end of the list.
 		//
-		LOG ( "   Key.................: %'u\n", message->key );
-
-		//
-		//	Display the size of this message in bytes.
-		//
-		LOG ( "   Message size........: %'lu\n", message->messageSize );
-
-		//
-		//	If the "next" message offset indicates that this is the end of the
-		//	message list, display a message saying we hit the end of the list.
-		//
-		if ( message->nextMessageOffset == END_OF_BUCKET_DATA )
+        signalOffset = signal->nextMessageOffset;
+		if ( signalOffset == END_OF_LIST_MARKER )
 		{
-			LOG ( "   Next message offset.: End of List Marker\n" );
+			LOG ( "      Next signal offset.: End of List Marker\n" );
 		}
 		//
-		//	Otherwise, display the head offset value.  This is the offset in
-		//	the message list where the next logical message in the list is
-		//	located.
+        //	Otherwise, display the next signal offset value.  This is the
+        //	offset in the signal list where the next logical signal in the
+        //	list is located.
 		//
 		else
 		{
-			LOG ( "   Next message offset.: %'lu\n",
-                  message->nextMessageOffset );
+			LOG ( "       Next signal offset.: %'lu\n", signalOffset );
 		}
 		//
-		//	Go dump the contents of the data field for this message.
+		//	Go dump the contents of the data field for this signal.
 		//
-		HX_DUMP ( message->data, message->messageSize, "Message Data" );
+		HexDump ( signal->data, signal->messageSize, "Signal Data", 6 );
 
-		if ( message->nextMessageOffset == END_OF_BUCKET_DATA ||
-			 --maxMessages == 0 )
+        //
+        //  If we have reached the maximum number of signals the caller asked
+        //  us to disply, break out of this loop and quit.
+        //
+		if ( --maxSignals == 0 )
 		{
 			break;
 		}
 		//
-		//	Get the address of where the next message in the list is located.
+		//	Get the address of where the next signal in the list is located.
 		//
-		message =  hb_getAddress ( hashBucket, message->nextMessageOffset );
+        signal = toAddress ( signalOffset );
 	}
 	return;
 }
@@ -346,7 +388,7 @@ void dumpSemaphore ( semaphore_p semaphore )
 //    The following macro is designed for debugging this function.  To enable
 //    it, define this as a synonym for "printf".
 //
-// #define XPRINT(...) printf ( __VA_ARGS__ )
+// #define XPRINT printf
 #define XPRINT(...)
 
 #define MAX_DUMP_SIZE ( 1024 )
@@ -355,7 +397,7 @@ void dumpSemaphore ( semaphore_p semaphore )
 //	The following macros are defined in the header file to make it easier to
 //	call the HexDump function with various combinations of arguments.
 //
-// #define HEX_DUMP( data, length )           HexDump ( data, length, "", 0 )
+// #define HEX_DUMP(   data, length )         HexDump ( data, length, "", 0 )
 // #define HEX_DUMP_T( data, length, title )  HexDump ( data, length, title, 0 )
 // #define HEX_DUMP_L( data, length, spaces ) HexDump ( data, length, "", spaces )
 // #define HEX_DUMP_TL                        HexDump
@@ -367,10 +409,10 @@ void HexDump ( const char *data, int length, const char *title,
     unsigned char c;
     int           i;
     int           j;
-    int           s = 0;
-    int           outputWidth = 16;
+    int           s                = 0;
+    int           outputWidth      = 16;
     int           currentLineWidth = 0;
-    int           originalLength = 0;
+    int           originalLength   = 0;
 	char          asciiString[400] = { 0 };
 
 	XPRINT ( "data(%d): \"%s\", title: %p, width: %d, spaces: %d\n", length,
@@ -386,12 +428,6 @@ void HexDump ( const char *data, int length, const char *title,
         //
         length = MAX_DUMP_SIZE;
     }
-#ifdef VSI_TRACE
-    //
-    //  If tracing is enabled, print out the trace indentation string.
-    //
-    printTraceLeader();
-#endif
     //
     //    Output the leader string at the beginning of the title line.
     //
@@ -446,12 +482,6 @@ void HexDump ( const char *data, int length, const char *title,
                 asciiString[0] = 0;
 				s = 0;
             }
-#ifdef VSI_TRACE
-            //
-            //  If tracing is enabled, print out the trace indentation string.
-            //
-            printTraceLeader();
-#endif
             //
             //    Output the leader string at the beginning of the new line.
             //
@@ -511,12 +541,6 @@ void HexDump ( const char *data, int length, const char *title,
     //
     if ( originalLength > length )
     {
-#ifdef VSI_TRACE
-        //
-        //  If tracing is enabled, print out the trace indentation string.
-        //
-        printTraceLeader();
-#endif
 		printf ( "       ...Dump of %d bytes has been truncated\n", originalLength );
     }
     //
@@ -525,6 +549,7 @@ void HexDump ( const char *data, int length, const char *title,
     return;
 }
 
+#ifdef VSI_DEBUG
 
 //
 //	TODO: The following function is for debugging purposes.
@@ -535,6 +560,10 @@ void HexDump ( const char *data, int length, const char *title,
 //	portion of the time is not very interesting and just clutters up the
 //	output.
 //
+//  The first time this function is called it will set the global base time
+//  contained in the shared memory control block.  All subsequent times are
+//  then computed relative to this base time.
+//
 #define NS_PER_SEC ( 1000000000 )
 #define NS_PER_US  ( 1000 )
 
@@ -543,16 +572,16 @@ unsigned long getIntervalTime ( void )
 	unsigned long currentTime;
 	struct timespec timeSpec;
 
-    if ( sharedMemory != 0 )
+    if ( smControl != 0 )
     {
         clock_gettime ( CLOCK_REALTIME, &timeSpec );
         currentTime = timeSpec.tv_sec * NS_PER_SEC + timeSpec.tv_nsec;
 
-        if ( sharedMemory->globalTime == 0 )
+        if ( smControl->globalTime == 0 )
         {
-            sharedMemory->globalTime = currentTime;
+            smControl->globalTime = currentTime;
         }
-        return ( currentTime - sharedMemory->globalTime ) / NS_PER_US;
+        return ( currentTime - smControl->globalTime ) / NS_PER_US;
     }
     else
     {
@@ -560,6 +589,8 @@ unsigned long getIntervalTime ( void )
     }
 
 }
+
+#endif      // #ifdef VSI_DEBUG
 
 
 /*! @} */

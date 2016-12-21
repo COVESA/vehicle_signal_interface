@@ -1,0 +1,24 @@
+#! /usr/local/bin/lua
+
+--[[
+    Copyright (C) 2016, Jaguar Land Rover. All Rights Reserved.
+
+    This Source Code Form is subject to the terms of the Mozilla Public
+    License, v. 2.0. If a copy of the MPL was not distributed with this file,
+    You can obtain one at http://mozilla.org/MPL/2.0/.
+--]]
+
+require ( "liblua_vsi_core" )
+
+print ( "\nLua wrapper - Fetch test...\n" )
+
+handle, statusString = Lua_vsiCoreOpen()
+print ( handle, statusString )
+
+print ( "Fetching signal 0,2 from the VSI core" );
+value, status = Lua_vsiCoreFetch ( 0, 2 );
+
+print ( "Received value: " .. value .. ", status: " .. status )
+
+Lua_vsiCoreClose ( handle )
+

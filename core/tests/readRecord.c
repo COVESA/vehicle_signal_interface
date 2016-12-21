@@ -8,9 +8,9 @@
 
 /*!----------------------------------------------------------------------------
 
-	@file writeRecord.c
+	@file readRecord.c
 
-	This file will write a single record into the shared memory message buffers.
+	This file will read a single record from the shared memory message buffers.
 
 -----------------------------------------------------------------------------*/
 
@@ -21,6 +21,7 @@
 #include <locale.h>
 #include <time.h>
 #include <stdbool.h>
+#include <errno.h>
 
 #include "vsi_core_api.h"
 
@@ -37,10 +38,9 @@ Usage: %s options\n\
 \n\
   Option     Meaning       Type     Default   \n\
   ======  ==============  ======  =========== \n\
-	-a    ASCII Body      string      None    \n\
-	-b    Body Data       long    Same as key \n\
 	-d    Domain Value     int        CAN     \n\
 	-k    Key Value        int         0	  \n\
+	-n    Find Newest      N/A       false    \n\
     -h    Help Message     N/A        N/A     \n\
     -?    Help Message     N/A        N/A     \n\
 \n\n\
@@ -55,20 +55,14 @@ Usage: %s options\n\
 
 	@brief The main entry point for this compilation unit.
 
-	This function will insert a single message into the shared memory segment
+	This function will read and remove a single message from the shared memory segment
 	as specified by the user.
 
 	The "domain" will default to "CAN" if not specified by the caller and the
-	"key" value will default to 0.  The body data (8 bytes) will default to
-	the same thing as the key if not specified.
+	"key" value will default to 0.
 
-	Note that the "body" data will be interpreted as a numeric value unless
-	the user has specified the "ascii" option, in which case up to 8 bytes of
-	ascii will be copied from the command line into the data portion of the
-	generated message.
-
-	If the user specifies both the numeric and ASCII forms of body data, the
-	ASCII data will be used.
+	Note that the "body" data will be read as 8 bytes of data and interpreted
+	as a numeric value and as an ASCII string on output.
 
 	@return  0 - This function completed without errors
 	@return !0 - The error code that was encountered
@@ -86,40 +80,24 @@ int main ( int argc, char* const argv[] )
     //
     //	Parse any command line options the user may have supplied.
     //
-	char asciiData[9] = { 0 };
-	unsigned long numericData = 0;
+	char asciiData[9] = { 0 };		// We only copy 8 bytes so it is always
+									// null terminated
 	unsigned long keyValue = 0;
-	domains domainValue = CAN;
+	domain_t domainValue = DOMAIN_CAN;
+	int status = 0;
 	char ch;
-	bool numericDataSupplied = false;
+    bool getNewest = false;
 
-    while ( ( ch = getopt ( argc, argv, "a:b:d:k:h?" ) ) != -1 )
+    while ( ( ch = getopt ( argc, argv, "d:k:nh?" ) ) != -1 )
     {
         switch ( ch )
         {
-		  //
-		  //	Get the "copy" ASCII flag if the user specified it.
-		  //
-		  case 'a':
-		    strncpy ( asciiData, optarg, 8 );
-			LOG ( "ASCII body data[%s] will be used.\n", asciiData );
-			break;
-
-		  //
-		  //	Get the body data from the user.
-		  //
-		  case 'b':
-		    numericData = atol ( optarg );
-			LOG ( "Numeric body data[%'lu] will be used.\n", numericData );
-			numericDataSupplied = true;
-			break;
-
 		  //
 		  //	Get the requested domain value.
 		  //
 		  case 'd':
 		    domainValue = atol ( optarg );
-			LOG ( "Using domain value[%'u]\n", domainValue );
+			LOG ( "Using domain value[%'lu]\n", domainValue );
 			break;
 		  //
 		  //	Get the requested key value.
@@ -127,6 +105,13 @@ int main ( int argc, char* const argv[] )
 		  case 'k':
 		    keyValue = atol ( optarg );
 			LOG ( "Using key value[%'lu]\n", keyValue );
+			break;
+		  //
+		  //	Get the "newest" message flag.
+		  //
+		  case 'n':
+			LOG ( "Fetching the newest signal\n" );
+            getNewest = true;
 			break;
 		  //
 		  //	Display the help message.
@@ -155,34 +140,38 @@ int main ( int argc, char* const argv[] )
 	//	Note that if the shared memory segment does not already exist, this
 	//	call will create it.
 	//
-	vsi_core_handle handle = vsi_core_open();
-	if ( handle == 0 )
+	vsi_core_open ( false );
+
+	//
+	//	Go read this message from the message pool.
+	//
+	LOG ( "  domain: %'lu\n  key...: %'lu\n", domainValue, keyValue );
+
+    unsigned long dataSize = sizeof(asciiData) - 1;
+    if ( getNewest )
+    {
+        status = vsi_core_fetch_newest ( domainValue, keyValue, &dataSize,
+                                         asciiData );
+    }
+    else
+    {
+        status = vsi_core_fetch_wait ( domainValue, keyValue, &dataSize,
+                                       asciiData );
+    }
+	if ( status == 0 )
 	{
-		printf ( "Unable to open the VSI core data store - Aborting\n" );
-		exit ( 255 );
-	}
-	//
-	//	Go insert this message into the message pool.
-	//
-	//	Note that for these tests, all of the messsages in the message
-	//	pool will be inserted in the "CAN" domain.
-	//
-	if ( strlen ( asciiData ) != 0 )
-	{
-		vsi_core_insert ( handle, domainValue, keyValue, 8, &asciiData );
+#ifdef VSI_DEBUG
+        HX_DUMP ( asciiData, dataSize, "  Value: " );
+#endif
 	}
 	else
 	{
-		if ( ! numericDataSupplied )
-		{
-			numericData = keyValue;
-		}
-		vsi_core_insert ( handle, domainValue, keyValue, 8, &numericData );
+		printf ( "----> Error %d[%s] returned\n", status, strerror(status) );
 	}
 	//
 	//	Close our shared memory segment and exit.
 	//
-	vsi_core_close ( handle );
+	vsi_core_close();
 
 	//
 	//	Return a good completion code to the caller.

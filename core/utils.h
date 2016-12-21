@@ -18,17 +18,18 @@
 #define UTILS_H
 
 #include "sharedMemory.h"
-#include "sharedMemoryLocks.h"
+// #include "sharedMemoryLocks.h"
 
 /*! @{ */
 
 //
 //  Declare the dump utility functions.
 //
-void dumpHashBucket ( unsigned int bucketNumber, hashBucket_p hashBucket,
-                      int maxMessages );
+void dumpSignals ( signalList_t* signalList, int maxSignals );
 
-void dumpMessageList ( hashBucket_p hashBucket, int maxMessages );
+void dumpSignalList ( signalList_t* signalList, int maxSignals );
+
+// void dumpAllSignals ( int maxSignals );
 
 void dumpSemaphore ( semaphore_p semaphore );
 
@@ -43,7 +44,12 @@ void dumpSemaphore ( semaphore_p semaphore );
 
 void HexDump ( const char *data, int length, const char *title, int leadingSpaces );
 
+#ifdef VSI_DEBUG
+
 unsigned long getIntervalTime ( void );
+
+#endif
+
 
 #endif		// End of #ifndef UTILS_H
 

@@ -192,10 +192,11 @@ endif
 #    subdirectories that need to be built but no code in the top level
 #    directory.
 #
+# GOALS    = mux
 # SO_GOALS = libsharedLibrary.so
 # AR_GOALS = archiveLibrary.so
 
-SO_GOALS = libvsi-core.so
+GOALS = btreeTests smTests dump insert fetch flush writeRecord readRecord
 
 #
 #    Define the list of alternate source directories.  This is a space or colon
@@ -255,6 +256,15 @@ SO_GOALS = libvsi-core.so
 #
 # OBJS_testJson = testJson.o
 
+OBJS_dump        = dump.o
+OBJS_fetch       = fetch.o
+OBJS_flush       = flush.o
+OBJS_insert      = insert.o
+OBJS_readRecord  = readRecord.o
+OBJS_writeRecord = writeRecord.o
+OBJS_btreeTests  = btreeTests.o
+OBJS_smTests     = smTests.o
+
 #
 #    Define the directory to be used to store object files and "goal" files.
 #    This MUST occur before the include of the global makefile.  This is
@@ -280,8 +290,6 @@ SO_GOALS = libvsi-core.so
 #    directory is built.
 #
 # SUBDIRS += foo bar
-
-SUBDIRS += tests
 
 #
 #    If there are any goals that should be added to the default list of goals
@@ -339,8 +347,6 @@ include $(TOP)/build/master.mk
 #    be specified here.
 #
 
-# $(SUBDIRS): libvsi-core.so
-
 #
 #    Define the compiler/linker optimization level.  If this variable is not
 #    defined, it will default to the the optimization level defined in the
@@ -393,8 +399,14 @@ include $(TOP)/build/master.mk
 # SO_LIBS_testJson += -L../someDirectory -ljunk -lpthreads
 # AR_LIBS_testJson += -L../someDirectory -ljunk -lpthreads
 
-# SO_LIBS += -lpage-manager
-# SO_LIBS_libvsi-core += -lvsi-core -lpage-manager
+LD_LIBS += -lvsi-core -lpthread
+
+# LD_LIBS_dump        += -lvsi-core -lpage-manager
+# LD_LIBS_fetch       += -lvsi-core -lpage-manager
+# LD_LIBS_flush       += -lvsi-core -lpage-manager
+# LD_LIBS_insert      += -lvsi-core -lpage-manager
+# LD_LIBS_readRecord  += -lvsi-core -lpage-manager
+# LD_LIBS_writeRecord += -lvsi-core -lpage-manager
 
 #
 #    Define any files that need to be removed when the "make clean" command is
@@ -441,9 +453,6 @@ include $(TOP)/build/master.mk
 #INSTALL_LIB_FILES       = ""
 #INSTALL_PLAIN_LIB_FILES = ""
 
-INSTALL_LIB_FILES = libvsi-core.so
-INSTALL_PLAIN_INCLUDE_FILES = vsi_core_api.h utils.h btree.h sharedMemory.h \
-						      sharedMemoryLocks.h
 #
 #    Define the following macro if additional dependencies are needed for the
 #    install rule.  All of the goals that have been defined are already
@@ -457,7 +466,3 @@ INSTALL_PLAIN_INCLUDE_FILES = vsi_core_api.h utils.h btree.h sharedMemory.h \
 #
 # INSTALL_DEPS += someOddFile
 
-#
-#	Remove the shared memory segment file on a "make distclean" operation.
-#
-DISTCLEAN_FILES += /var/run/shm/vsi*DataStore
