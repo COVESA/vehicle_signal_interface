@@ -1,11 +1,3 @@
-#
-#   Copyright (C) 2016, Jaguar Land Rover. All Rights Reserved.
-#
-#   This Source Code Form is subject to the terms of the Mozilla Public
-#   License, v. 2.0. If a copy of the MPL was not distributed with this file,
-#   You can obtain one at http://mozilla.org/MPL/2.0/.
-#
-
 #******************************************************************************
 #
 #	M a k e f i l e
@@ -192,10 +184,9 @@ endif
 #    subdirectories that need to be built but no code in the top level
 #    directory.
 #
+# GOALS    = someExecutable
 # SO_GOALS = libsharedLibrary.so
 # AR_GOALS = archiveLibrary.so
-
-SO_GOALS = libvsi-core.so
 
 #
 #    Define the list of alternate source directories.  This is a space or colon
@@ -281,8 +272,6 @@ SO_GOALS = libvsi-core.so
 #
 # SUBDIRS += foo bar
 
-SUBDIRS += tests
-
 #
 #    If there are any goals that should be added to the default list of goals
 #    that gets built when make is invoked with no arguments, specify them in
@@ -339,8 +328,6 @@ include $(TOP)/build/master.mk
 #    be specified here.
 #
 
-# $(SUBDIRS): libvsi-core.so
-
 #
 #    Define the compiler/linker optimization level.  If this variable is not
 #    defined, it will default to the the optimization level defined in the
@@ -393,9 +380,6 @@ include $(TOP)/build/master.mk
 # SO_LIBS_testJson += -L../someDirectory -ljunk -lpthreads
 # AR_LIBS_testJson += -L../someDirectory -ljunk -lpthreads
 
-# SO_LIBS += -lpage-manager
-# SO_LIBS_libvsi-core += -lvsi-core -lpage-manager
-
 #
 #    Define any files that need to be removed when the "make clean" command is
 #    issued.  All of the derived files such as object files and executables
@@ -440,10 +424,8 @@ include $(TOP)/build/master.mk
 #INSTALL_PLAIN_BIN_FILES = ""
 #INSTALL_LIB_FILES       = ""
 #INSTALL_PLAIN_LIB_FILES = ""
+#INSTALL_PLAIN_INCLUDE_FILES = $(wildcard *.h)
 
-INSTALL_LIB_FILES = libvsi-core.so
-INSTALL_PLAIN_INCLUDE_FILES = vsi_core_api.h utils.h btree.h sharedMemory.h \
-						      sharedMemoryLocks.h
 #
 #    Define the following macro if additional dependencies are needed for the
 #    install rule.  All of the goals that have been defined are already
@@ -457,7 +439,3 @@ INSTALL_PLAIN_INCLUDE_FILES = vsi_core_api.h utils.h btree.h sharedMemory.h \
 #
 # INSTALL_DEPS += someOddFile
 
-#
-#	Remove the shared memory segment file on a "make distclean" operation.
-#
-DISTCLEAN_FILES += /var/run/shm/vsi*DataStore

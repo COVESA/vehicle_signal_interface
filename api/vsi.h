@@ -29,9 +29,58 @@
 #ifndef _VSI_H_
 #define _VSI_H_
 
+#undef VSI_DEBUG
+
 #include "vsi_core_api.h"
 #include "vsi_list.h"
-#include "btree.h"
+// #include "btree.h"
+// #include "sharedMemoryManager.h"
+
+
+//
+//  Determine how the various macros will be intrepreted depending on which
+//  options have been enabled.
+//
+#ifdef VSI_DEBUG
+#   ifndef LOG
+#       define LOG printf
+#   endif
+#   ifndef HX_DUMP
+#       define HX_DUMP HEX_DUMP_T
+#   endif
+#   ifndef SEM_DUMP
+#       define SEM_DUMP dumpSemaphore
+#   endif
+#else
+#   ifndef LOG
+#       define LOG(...)
+#   endif
+#   ifndef HX_DUMP
+#       define HX_DUMP(...)
+#   endif
+#   ifndef SEM_DUMP
+#       define SEM_DUMP(...)
+#   endif
+#endif
+
+
+/*!----------------------------------------------------------------------------
+
+    C o n f i g u r a t i o n   S e t t i n g s
+
+	@brief Define the system configuration settings.
+
+	The following definitions should be customized to suit the user's specific
+    environment.
+
+-----------------------------------------------------------------------------*/
+//
+//  Define the name of the VSS input file.  This file will be read during the
+//  initialization of the VSI system.  Note that users may need to supply a
+//  pathname for this file if it is not located in the same directory as that
+//  which the executable is being run from.
+//
+#define VSS_INPUT_FILE "vss_rel_1.vsi"
 
 
 /*!-----------------------------------------------------------------------
@@ -41,14 +90,23 @@
     @brief Define the basic types for the signal data.
 
 ------------------------------------------------------------------------*/
-typedef unsigned int domain_t;
-typedef unsigned int signal_t;
-typedef unsigned int group_t;
+typedef unsigned long domain_t;
+typedef unsigned long signal_t;
+typedef unsigned long group_t;
 
 //
-//  Application handle used to interact with the API.
+//  Application handles used to interact with the API.
+//
+//  Define the overall vehicle signal interface handle.
 //
 typedef void* vsi_handle;
+
+typedef enum
+{
+    VSS = 0,
+    CAN = 1,
+
+}   domains;
 
 
 /*!-----------------------------------------------------------------------
@@ -78,14 +136,15 @@ typedef struct vsi_context
     //  will be added to both of these indices to enable lookups in either
     //  direction.
     //
-    btree* signalNameIndex;
-    btree* signalIdIndex;
+    btree_t signalNameIndex;
+    btree_t signalIdIndex;
+    btree_t privateIdIndex;
 
     //
     //  Define the btree index that will be used to keep track of the groups
     //  in the system.
     //
-    btree* groupIdIndex;
+    btree_t groupIdIndex;
 
 }   vsi_context;
 
@@ -195,12 +254,13 @@ typedef struct vsi_id_name_definition
 {
     domain_t domainId;
     signal_t signalId;
+    signal_t privateId;
     char*    name;
 
 }   vsi_id_name_definition;
 
 
-#define VSI_NAME_ID_BTREE_ORDER ( 100 )
+// #define VSI_NAME_ID_BTREE_ORDER ( 50 )
 
 
 /*!-----------------------------------------------------------------------
@@ -218,12 +278,13 @@ typedef struct vsi_id_name_definition
 typedef struct vsi_signal_group
 {
     group_t  groupId;
+    int      count;
     vsi_list list;
 
 }   vsi_signal_group;
 
 
-#define VSI_GROUP_BTREE_ORDER ( 100 )
+// #define VSI_GROUP_BTREE_ORDER ( 20 )
 
 
 /*!-----------------------------------------------------------------------
@@ -243,12 +304,12 @@ typedef struct vsi_signal_group
     If this function fails for some reason, the returned value will be NULL
     and errno will reflect the error that occurred.
 
-    @param[in] None
+    @param[in] createNew - If "true", create a new empty data store.
 
     @return vsi_handle - The VSI handle object representing this VSI context.
 
 ------------------------------------------------------------------------*/
-vsi_handle vsi_initialize ();
+vsi_handle vsi_initialize ( bool createNew );
 
 
 /*!-----------------------------------------------------------------------
@@ -269,6 +330,30 @@ vsi_handle vsi_initialize ();
 
 ------------------------------------------------------------------------*/
 int vsi_destroy ( vsi_handle handle );
+
+
+/*!----------------------------------------------------------------------------
+
+    v s i _ V S S _ i m p o r t
+
+	@brief Import a VSS file into the VSI data store.
+
+	This function will read the specified file and import the contents of it
+    into the specified VSI environment.
+
+	@param[in] - handle - The VSI context handle
+	@param[in] - fileName - The pathname to the VSS definition file to be read
+
+	@return - Completion code - 0 = Succesful
+                                Anything else is an error code
+
+-----------------------------------------------------------------------------*/
+int vsi_VSS_import ( vsi_handle handle, const char* fileName );
+
+//
+//  Define the maximum size of a VSS definition line in bytes.
+//
+#define MAX_VSS_LINE ( 256 )
 
 
 /*!-----------------------------------------------------------------------
@@ -1082,7 +1167,7 @@ int vsi_name_string_to_id ( vsi_handle  handle,
 
 /*!-----------------------------------------------------------------------
 
-    v s i _ n a m e _ i d _ t o _ s t r i n g
+    v s i _ s i g n a l _ i d _ t o _ s t r i n g
 
     @brief Convert a signal domain and ID to it's ASCII string name.
 
@@ -1115,10 +1200,10 @@ int vsi_name_string_to_id ( vsi_handle  handle,
     @return - status - The return status of the function
 
 ------------------------------------------------------------------------*/
-int vsi_name_id_to_string ( vsi_handle     handle,
-                            const domain_t domainId,
-                            const signal_t signalId,
-                            char**         name );
+int vsi_signal_id_to_string ( vsi_handle     handle,
+                              const domain_t domainId,
+                              const signal_t signalId,
+                              char**         name );
 
 
 /*!-----------------------------------------------------------------------
@@ -1134,6 +1219,7 @@ int vsi_name_id_to_string ( vsi_handle     handle,
     @param[in] handle - Required handle for the API.
     @param[in] domainId - The signal domain ID to be defined.
     @param[in] signalId - The signal ID to be defined.
+    @param[in] privateId - The private signal ID associated with this signal
     @param[in] name - The ASCII name of the signal to be defined.
 
     @return None
@@ -1142,6 +1228,9 @@ int vsi_name_id_to_string ( vsi_handle     handle,
 int vsi_define_signal_name ( vsi_handle     handle,
                              const domain_t domainId,
                              const signal_t signalId,
+                             const signal_t privateId,
                              const char*    name );
+
+void dumpGroups ( vsi_handle handle );
 
 #endif  //  _VSI_H_

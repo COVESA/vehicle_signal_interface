@@ -1,0 +1,119 @@
+#! /usr/local/bin/lua
+
+--[[
+    Copyright (C) 2016, Jaguar Land Rover. All Rights Reserved.
+
+    This Source Code Form is subject to the terms of the Mozilla Public
+    License, v. 2.0. If a copy of the MPL was not distributed with this file,
+    You can obtain one at http://mozilla.org/MPL/2.0/.
+--]]
+
+require ( "liblua_vsi_core" )
+require ( "liblua_vsi_api" )
+
+--[[
+
+function trace (event, line)
+  local s = debug.getinfo(2).short_src
+  print ( "TRACE: " .. s .. ":" .. line )
+end
+
+debug.sethook ( trace, "l" )
+debug.sethook ( print, "l" )
+
+--]]
+
+
+--[[
+        Initialization tests
+--]]
+print ( "\n   Lua API wrapper library - regression tests..." )
+print ( "   =============================================\n" )
+
+handle, statusString = Lua_vsi_initialize ( true )
+print ( "-- Lua_vsi_initialize: ", handle, statusString )
+
+-- status = Lua_vsi_VSS_import ( "vss_rel_1.vsi" )
+-- print ( "-- Lua_vsi_VSS_import: " .. status )
+
+--[[
+        Signal creation tests
+--]]
+print ( "\n   Signal creation tests...\n" )
+status = Lua_vsi_fire_signal ( 1, 1, 48 )
+print ( "-- Lua_vsi_fire_signal numeric: " .. status )
+
+status = Lua_vsi_fire_signal ( "Engine.RPM", 49 )
+print ( "-- Lua_vsi_fire_signal string: " .. status )
+
+status = Lua_vsi_fire_signal ( "Engine.RPM", 50 )
+
+--[[
+        Signal fetching tests
+--]]
+print ( "\n   Signal fetchng tests...\n" )
+status, value, name = Lua_vsi_get_newest_signal ( 1, 1 )
+print ( "-- Lua_vsi_get_newest_signal numeric: ", status, value, name )
+
+status, value, name = Lua_vsi_get_newest_signal ( "Engine.RPM" )
+print ( "-- Lua_vsi_get_newest_signal string: ", status, value, name )
+
+status, value, name = Lua_vsi_get_oldest_signal ( 1, 1 )
+print ( "-- Lua_vsi_get_oldest_signal numeric: ", status, value, name )
+
+status, value, name = Lua_vsi_get_oldest_signal ( "Engine.RPM" )
+print ( "-- Lua_vsi_get_oldest_signal string: ", status, value, name )
+
+--[[
+        Signal flushing tests
+--]]
+print ( "\n   Signal flushing tests...\n" )
+
+os.execute ( "../core/dump" )
+
+status = Lua_vsi_flush_signal ( 1, 1 )
+print ( "-- Lua_vsi_flush_signal by ID: ", status )
+
+os.execute ( "../core/dump" )
+
+status = Lua_vsi_fire_signal ( 1, 1, 51 )
+
+status = Lua_vsi_flush_signal ( "Engine.RPM" )
+print ( "-- Lua_vsi_flush_signal by string: ", status )
+
+os.execute ( "../core/dump" )
+
+--[[
+        Group create/destroy tests
+--]]
+print ( "\n   Group create/destroy tests...\n" )
+
+status = Lua_vsi_create_signal_group ( 55 )
+print ( "-- Lua_vsi_create_signal_group 55 (should pass): ", status )
+
+status = Lua_vsi_create_signal_group ( 55 )
+print ( "-- Lua_vsi_create_signal_group 55 (should fail): ", status )
+
+status = Lua_vsi_delete_signal_group ( 56 )
+print ( "-- Lua_vsi_delete_signal_group 56 (should fail): ", status )
+
+status = Lua_vsi_delete_signal_group ( 55 )
+print ( "-- Lua_vsi_delete_signal_group 55 (should pass): ", status )
+
+print ( "\n-- Creating signal group 5: ", status )
+status = Lua_vsi_create_signal_group ( 5 )
+print ( "\n-- Lua_vsi_create_signal_group: ", status )
+
+status = Lua_vsi_add_signal_to_group ( 1, 1, 5 )
+print ( "-- Lua_vsi_add_signal_to_group by ID: ", status )
+
+status = Lua_vsi_add_signal_to_group ( "Engine.RPM", 5 )
+print ( "-- Lua_vsi_add_signal_to_group by name: ", status )
+
+os.execute ( "../core/dump" )
+
+--[[
+        System close/destroy
+--]]
+print ( "\n   System destroy tests...\n" )
+Lua_vsi_destroy ( handle )

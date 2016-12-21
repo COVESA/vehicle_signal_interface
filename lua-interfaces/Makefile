@@ -192,10 +192,11 @@ endif
 #    subdirectories that need to be built but no code in the top level
 #    directory.
 #
+# GOALS    = mux
 # SO_GOALS = libsharedLibrary.so
 # AR_GOALS = archiveLibrary.so
 
-SO_GOALS = libvsi-core.so
+SO_GOALS = liblua_vsi_core.so liblua_vsi_api.so liblua_vsi.so
 
 #
 #    Define the list of alternate source directories.  This is a space or colon
@@ -255,6 +256,10 @@ SO_GOALS = libvsi-core.so
 #
 # OBJS_testJson = testJson.o
 
+OBJS_liblua_vsi_core = lua_vsi_core.o
+OBJS_liblua_vsi_api  = lua_vsi_api.o
+OBJS_liblua_vsi      = lua_vsi.o lua_vsi_api.o lua_vsi_core.o
+
 #
 #    Define the directory to be used to store object files and "goal" files.
 #    This MUST occur before the include of the global makefile.  This is
@@ -280,8 +285,6 @@ SO_GOALS = libvsi-core.so
 #    directory is built.
 #
 # SUBDIRS += foo bar
-
-SUBDIRS += tests
 
 #
 #    If there are any goals that should be added to the default list of goals
@@ -339,8 +342,6 @@ include $(TOP)/build/master.mk
 #    be specified here.
 #
 
-# $(SUBDIRS): libvsi-core.so
-
 #
 #    Define the compiler/linker optimization level.  If this variable is not
 #    defined, it will default to the the optimization level defined in the
@@ -393,9 +394,6 @@ include $(TOP)/build/master.mk
 # SO_LIBS_testJson += -L../someDirectory -ljunk -lpthreads
 # AR_LIBS_testJson += -L../someDirectory -ljunk -lpthreads
 
-# SO_LIBS += -lpage-manager
-# SO_LIBS_libvsi-core += -lvsi-core -lpage-manager
-
 #
 #    Define any files that need to be removed when the "make clean" command is
 #    issued.  All of the derived files such as object files and executables
@@ -440,10 +438,11 @@ include $(TOP)/build/master.mk
 #INSTALL_PLAIN_BIN_FILES = ""
 #INSTALL_LIB_FILES       = ""
 #INSTALL_PLAIN_LIB_FILES = ""
+#INSTALL_PLAIN_INCLUDE_FILES = $(wildcard *.h)
 
-INSTALL_LIB_FILES = libvsi-core.so
-INSTALL_PLAIN_INCLUDE_FILES = vsi_core_api.h utils.h btree.h sharedMemory.h \
-						      sharedMemoryLocks.h
+INSTALL_LIB_FILES           = liblua_vsi_core.so liblua_vsi_api.so liblua_vsi.so
+INSTALL_PLAIN_INCLUDE_FILES = $(wildcard *.h)
+
 #
 #    Define the following macro if additional dependencies are needed for the
 #    install rule.  All of the goals that have been defined are already
@@ -457,7 +456,3 @@ INSTALL_PLAIN_INCLUDE_FILES = vsi_core_api.h utils.h btree.h sharedMemory.h \
 #
 # INSTALL_DEPS += someOddFile
 
-#
-#	Remove the shared memory segment file on a "make distclean" operation.
-#
-DISTCLEAN_FILES += /var/run/shm/vsi*DataStore

@@ -76,10 +76,9 @@ Usage: %s options\n\
 ------------------------------------------------------------------------*/
 int main ( int argc, char* const argv[] )
 {
-	unsigned long   messagesToStore = 1000000;
-	bool            continuousRun = false;
-	bool            useRandom = false;
-    vsi_core_handle handle = NULL;
+	unsigned long messagesToStore = 1000000;
+	bool          continuousRun = false;
+	bool          useRandom = false;
 
 	//
 	//	The following locale settings will allow the use of the comma
@@ -153,12 +152,8 @@ int main ( int argc, char* const argv[] )
 	//	Note that if the shared memory segment does not already exist, this
 	//	call will create it.
 	//
-	handle = vsi_core_open();
-	if ( handle == 0 )
-	{
-		printf ( "Unable to open the VSI core data store - Aborting\n" );
-		exit ( 255 );
-	}
+	vsi_core_open ( false );
+
 	//
 	//	Define the message that we will use to retrieve records from the
 	//	shared memory segment.
@@ -225,7 +220,7 @@ int main ( int argc, char* const argv[] )
             //  pool will be retrieved from the "CAN" domain.
 			//
             unsigned long messageSize = sizeof(message);
-            status = vsi_core_fetch_wait ( handle, CAN, messageKey,
+            status = vsi_core_fetch_wait ( DOMAIN_CAN, messageKey,
                                            &messageSize, &message );
 			if ( status != 0 )
 			{
@@ -261,7 +256,7 @@ int main ( int argc, char* const argv[] )
 	//
 	//	Close our shared memory segment and exit.
 	//
-	vsi_core_close ( handle );
+	vsi_core_close();
 
 	//
 	//	Return a good completion code to the caller.

@@ -1,3 +1,11 @@
+#
+#   Copyright (C) 2016, Jaguar Land Rover. All Rights Reserved.
+#
+#   This Source Code Form is subject to the terms of the Mozilla Public
+#   License, v. 2.0. If a copy of the MPL was not distributed with this file,
+#   You can obtain one at http://mozilla.org/MPL/2.0/.
+#
+
 # Doxyfile 1.8.11
 
 # This file describes the settings to be used by the documentation system
@@ -771,7 +779,7 @@ WARN_LOGFILE           =
 # spaces. See also FILE_PATTERNS and EXTENSION_MAPPING
 # Note: If this tag is empty the current directory is searched.
 
-INPUT                  = vsi.h
+INPUT                  = .
 
 # This tag can be used to specify the character encoding of the source files
 # that doxygen parses. Internally doxygen uses the UTF-8 encoding. Doxygen uses

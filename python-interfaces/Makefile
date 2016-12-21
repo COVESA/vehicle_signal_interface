@@ -192,10 +192,11 @@ endif
 #    subdirectories that need to be built but no code in the top level
 #    directory.
 #
+# GOALS    = mux
 # SO_GOALS = libsharedLibrary.so
 # AR_GOALS = archiveLibrary.so
 
-SO_GOALS = libvsi-core.so
+SO_GOALS = vsi_py.so
 
 #
 #    Define the list of alternate source directories.  This is a space or colon
@@ -255,6 +256,8 @@ SO_GOALS = libvsi-core.so
 #
 # OBJS_testJson = testJson.o
 
+OBJS_vsi_py = vsi_py.o
+
 #
 #    Define the directory to be used to store object files and "goal" files.
 #    This MUST occur before the include of the global makefile.  This is
@@ -280,8 +283,6 @@ SO_GOALS = libvsi-core.so
 #    directory is built.
 #
 # SUBDIRS += foo bar
-
-SUBDIRS += tests
 
 #
 #    If there are any goals that should be added to the default list of goals
@@ -339,8 +340,6 @@ include $(TOP)/build/master.mk
 #    be specified here.
 #
 
-# $(SUBDIRS): libvsi-core.so
-
 #
 #    Define the compiler/linker optimization level.  If this variable is not
 #    defined, it will default to the the optimization level defined in the
@@ -371,6 +370,8 @@ include $(TOP)/build/master.mk
 #
 # INCLUDE_DIRS += -I../some/path/to/include/files
 
+INCLUDE_DIRS += -I/usr/include/python3.5m
+
 #
 #    Define any additional link flags that need to be used to form the "goal"
 #    files.  By default, all of the "usual" flags will be automatically
@@ -392,9 +393,6 @@ include $(TOP)/build/master.mk
 # LD_LIBS_testJson += -L../someDirectory -ljunk -lpthreads
 # SO_LIBS_testJson += -L../someDirectory -ljunk -lpthreads
 # AR_LIBS_testJson += -L../someDirectory -ljunk -lpthreads
-
-# SO_LIBS += -lpage-manager
-# SO_LIBS_libvsi-core += -lvsi-core -lpage-manager
 
 #
 #    Define any files that need to be removed when the "make clean" command is
@@ -440,10 +438,10 @@ include $(TOP)/build/master.mk
 #INSTALL_PLAIN_BIN_FILES = ""
 #INSTALL_LIB_FILES       = ""
 #INSTALL_PLAIN_LIB_FILES = ""
+#INSTALL_PLAIN_INCLUDE_FILES = $(wildcard *.h)
 
-INSTALL_LIB_FILES = libvsi-core.so
-INSTALL_PLAIN_INCLUDE_FILES = vsi_core_api.h utils.h btree.h sharedMemory.h \
-						      sharedMemoryLocks.h
+INSTALL_LIB_FILES = vsi_py.so
+
 #
 #    Define the following macro if additional dependencies are needed for the
 #    install rule.  All of the goals that have been defined are already
@@ -457,7 +455,3 @@ INSTALL_PLAIN_INCLUDE_FILES = vsi_core_api.h utils.h btree.h sharedMemory.h \
 #
 # INSTALL_DEPS += someOddFile
 
-#
-#	Remove the shared memory segment file on a "make distclean" operation.
-#
-DISTCLEAN_FILES += /var/run/shm/vsi*DataStore
