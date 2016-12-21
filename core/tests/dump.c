@@ -28,10 +28,8 @@
 #include <locale.h>
 
 #include "vsi_core_api.h"
-#include "sharedMemory.h"
 
-#include "trace.h"
-
+extern sharedMemory_t* smControl;
 
 /*! @{ */
 
@@ -55,14 +53,15 @@ Usage: %s options\n\
   Option     Meaning       Type     Default   \n\
   ======  ==============  ======  =========== \n\
     -a    Dump All         bool      false    \n\
-    -b    Bucket Count     int         4      \n\
-    -k    Dump for key     int        N/A     \n\
+r   -d    Dump for domain  int         0      \n\
+    -k    Dump for key     int         0      \n\
+    -l    List Count       int         4      \n\
     -m    Message Count    int         4      \n\
     -h    Help Message     N/A        N/A     \n\
     -?    Help Message     N/A        N/A     \n\
 \n\n\
 ",
-             executable );
+     executable );
 }
 
 
@@ -72,8 +71,8 @@ Usage: %s options\n\
 
 	@brief The main entry point for this compilation unit.
 
-	This function will perform the dump of the shared memory segment data
-	structures according to the parameters that the user has specified.
+	This function will perform the dump of the shared memory segment signal
+	lists according to the parameters that the user has specified.
 
 	@return  0 - This function completed without errors
     @return !0 - The error code that was encountered
@@ -82,8 +81,9 @@ Usage: %s options\n\
 int main ( int argc, char* const argv[] )
 {
 	unsigned long messagesToDump = 4;
-	unsigned long bucketsToDump  = 4;
-    unsigned int  key = 0;
+	unsigned long listsToDump    = 4;
+    unsigned int  domain         = 0;
+    unsigned int  key            = 0;
 
 	//
 	//	The following locale settings will allow the use of the comma
@@ -97,35 +97,42 @@ int main ( int argc, char* const argv[] )
     //
 	char ch;
 
-    while ( ( ch = getopt ( argc, argv, "ab:hk:m:?" ) ) != -1 )
+    while ( ( ch = getopt ( argc, argv, "ad:hk:l:m:?" ) ) != -1 )
     {
         switch ( ch )
         {
           case 'a':
-            LOG ( "Dumping all non-empty buckets.\n" );
-            bucketsToDump = HASH_BUCKET_COUNT;
+            LOG ( "Dumping all -empty lists.\n" );
+            listsToDump = 999999999;
             messagesToDump = 999999999;
 
             break;
 
 		  //
-		  //	Get the requested bucket count.
+		  //	Get the requested domain to dump.
 		  //
-		  case 'b':
-		    bucketsToDump = atol ( optarg );
-			if ( bucketsToDump <= 0 )
-			{
-				LOG ( "Invalid bucket count[%lu] specified.\n", bucketsToDump );
-				usage ( argv[0] );
-				exit (255);
-			}
+		  case 'd':
+		    domain = atol ( optarg );
 			break;
 
 		  //
-		  //	Get the requested message count.
+		  //	Get the requested key to dump.
 		  //
 		  case 'k':
 		    key = atol ( optarg );
+			break;
+
+		  //
+		  //	Get the requested list count.
+		  //
+		  case 'l':
+		    listsToDump = atol ( optarg );
+			if ( listsToDump <= 0 )
+			{
+				LOG ( "Invalid list count[%lu] specified.\n", listsToDump );
+				usage ( argv[0] );
+				exit (255);
+			}
 			break;
 
 		  //
@@ -168,60 +175,58 @@ int main ( int argc, char* const argv[] )
 	//	Note that if the shared memory segment does not already exist, this
 	//	call will create it.
 	//
-	vsi_core_handle handle = vsi_core_open();
-	if ( handle == 0 )
-	{
-		printf ( "Unable to open the VSI core data store - Aborting\n" );
-		exit (255);
-	}
+	vsi_core_open ( false );
+
 	//
 	//	For each of the messages we were asked to dump...
 	//
 	LOG ( "Beginning dump of VSI core data store[%s]...\n",
 	         SHARED_MEMORY_SEGMENT_NAME );
-
-    sharedMemory_p sharedMemory = (sharedMemory_p)handle;
-
     //
     //  If the user did not specify a key, dump starting at the beginning
-    //  of the hash table.
+    //  of the signal list.
     //
     if ( key == 0 )
     {
-        for ( unsigned int i = 0; i < bucketsToDump; i++ )
-        {
-            //
-            //	Go dump the current hash bucket contents.
-            //
-            dumpHashBucket ( i, &sharedMemory->hashBuckets[i], messagesToDump );
-        }
+        //
+        //	Go dump all of the current signals.
+        //
+        dumpAllSignals ( messagesToDump );
     }
     //
-    //  If the user did specify a key, find the hash bucket for that key and
-    //  dump just that hash bucket.
+    //  If the user did specify a key, find the signal list for that key and
+    //  dump just that signal list.
     //
     else
     {
-        //
-		//  Compute the message hash value from the input key.
-		//
-		unsigned long messageHash = sm_getHash ( key );
+        signalList_t  desiredSignal;
+        signalList_t* signalListFound;
 
-		//
-		//  Get the address of the hash bucket that we will need for the input
-		//  key.
-		//
-		hashBucket_p hashBucket = sm_getBucketAddress ( handle, messageHash );
+        desiredSignal.domain = domain;
+        desiredSignal.key    = key;
 
         //
-        //	Go dump the hash bucket that corresponds to the specified key.
+		//  Get the signal list for this domain/key value.
+		//
+		signalListFound = btree_search ( &smControl->signals, &desiredSignal );
+
+		//
+		//  If the domain/key was not found, issue an error message.
+		//
+		if ( signalListFound == NULL )
+        {
+            printf ( "Error: No signal list defined for %d/%d\n", domain, key );
+            return 255;
+        }
         //
-        dumpHashBucket ( key, hashBucket, messagesToDump );
+        //	If we found the requested signal list, go dump it.
+        //
+        dumpSignalList ( signalListFound, messagesToDump );
     }
 	//
 	//	Close our shared memory segment and exit.
 	//
-	vsi_core_close ( handle );
+	vsi_core_close();
 
 	//
 	//	Return a good completion code to the caller.

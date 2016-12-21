@@ -1,0 +1,37 @@
+#! /usr/local/bin/lua
+
+--[[
+    Copyright (C) 2016, Jaguar Land Rover. All Rights Reserved.
+
+    This Source Code Form is subject to the terms of the Mozilla Public
+    License, v. 2.0. If a copy of the MPL was not distributed with this file,
+    You can obtain one at http://mozilla.org/MPL/2.0/.
+--]]
+
+require ( "liblua_vsi_core" )
+require ( "os" )
+
+print ( "\nLua wrapper - Flush test...\n" )
+
+handle, statusString = Lua_vsiCoreOpen()
+print ( handle, statusString )
+
+print ( "Make sure the core data store is empty..." )
+os.execute ( "../core/dump" )
+
+print ( "Add 3 records to 0,2 with values of 111, 112, 113" )
+os.execute ( "../core/writeRecord -d 0 -k 2 -b 111" )
+os.execute ( "../core/writeRecord -d 0 -k 2 -b 112" )
+os.execute ( "../core/writeRecord -d 0 -k 2 -b 113" )
+
+print ( "Flush all signal 0,2 records from the VSI core" );
+status = Lua_vsiCoreFlushSignal ( 0, 2 );
+
+print ( "Received status: " .. status )
+
+print ( "Make sure the core data store is empty..." )
+os.execute ( "../core/dump" )
+
+
+Lua_vsiCoreClose ( handle )
+

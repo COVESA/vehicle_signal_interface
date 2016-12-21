@@ -73,10 +73,9 @@ Usage: %s options\n\
 ------------------------------------------------------------------------*/
 int main ( int argc, char* const argv[] )
 {
-	unsigned long   messagesToStore = 1000000;
-	bool            continuousRun = false;
-	bool            useRandom = false;
-    vsi_core_handle handle = NULL;
+	unsigned long messagesToStore = 1000000;
+	bool          continuousRun = false;
+	bool          useRandom = false;
 
 	//
 	//	The following locale settings will allow the use of the comma
@@ -151,12 +150,8 @@ int main ( int argc, char* const argv[] )
 	//	Note that if the shared memory segment does not already exist, this
 	//	call will create it.
 	//
-	handle = vsi_core_open();
-	if ( handle == 0 )
-	{
-		printf ( "Unable to open the VSI core data store - Aborting\n" );
-		exit ( 255 );
-	}
+	vsi_core_open ( false );
+
 	//
 	//	Define the message that we will use to insert records into the shared
 	//	memory segment.
@@ -214,7 +209,7 @@ int main ( int argc, char* const argv[] )
 			}
 			else
 			{
-				messageKey = i;
+				messageKey = i % 1024;
 			}
 			//
 			//	Go insert this message into the message pool.
@@ -222,7 +217,7 @@ int main ( int argc, char* const argv[] )
 			//	Note that for these tests, all of the messsages in the message
 			//	pool will be inserted in the "CAN" domain.
 			//
-			vsi_core_insert ( handle, CAN, messageKey, sizeof(message), &i );
+			vsi_core_insert ( DOMAIN_CAN, messageKey, sizeof(message), &i );
 		}
 		clock_gettime(CLOCK_REALTIME, &stopTime);
 
@@ -252,7 +247,7 @@ int main ( int argc, char* const argv[] )
 	//
 	//	Close our shared memory segment and exit.
 	//
-	vsi_core_close ( handle );
+	vsi_core_close();
 
 	//
 	//	Return a good completion code to the caller.

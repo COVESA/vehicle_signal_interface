@@ -30,10 +30,60 @@
 
 /*! @{ */
 
+//
+//  Declare the local static functions.
+//
+static void vsi_core_close_user ( void );
+static void vsi_core_close_sys  ( void );
+
+static sharedMemory_t* vsi_core_open_user ( bool createNew );
+static sysMemory_t*    vsi_core_open_sys  ( bool createNew );
+
+
+/*!----------------------------------------------------------------------------
+
+    v s i _ c o r e _ o p e n
+
+	@brief Open the shared memory segments.
+
+	This function will
+
+	@param[in]
+	@param[out]
+	@param[in,out]
+
+	@return None
+
+-----------------------------------------------------------------------------*/
+void vsi_core_open ( bool createNew )
+{
+    sysControl = vsi_core_open_sys ( createNew );
+    if ( sysControl == 0 )
+    {
+        printf ( "Error: Unable to create the system shared memory segment - "
+                 "aborting\n" );
+        exit ( 255 );
+    }
+
+    smControl = vsi_core_open_user ( createNew );
+    if ( smControl == 0 )
+    {
+        printf ( "Error: Unable to create the user shared memory segment - "
+                 "aborting\n" );
+        exit ( 255 );
+    }
+
+    LOG ( "VSI core data store has been mapped into memory\n" );
+
+    return;
+}
+
 
 /*!-----------------------------------------------------------------------
 
-    v s i _ c o r e _ o p e n
+    v s i _ c o r e _ o p e n _ u s e r
+
+    TODO: Verify text...
 
     @brief Open the shared memory segment.
 
@@ -41,6 +91,18 @@
     If the shared memory segment pseudo-file does not exist or is empty, a new
     shared memory segment will be initialized with all of the appropriate
     parameters and values set.
+
+    If the "createNew" argument is supplied as "true" then the shared memory
+    segment file will be deleted before being recreated, thereby creating a
+    brand new empty data store.  If this flag is not "true" then the existing
+    (if there is one) data store will simply be mapped in and opened.
+
+    If another thread or process has the same data store open when this
+    function is called with "createNew", the current connections will not be
+    affected and a new data store instance will be created for this call.
+    Once the last thread/process that has the old instance open closes that
+    instance, the old instance will be completely removed from the file system
+    and no longer accessible.
 
     Note that the base address of the shared memory segment will vary and
     cannot be guaranteed to be the same from one invocation to another.  All
@@ -51,14 +113,23 @@
     the base address of the shared memory segment to any offset that is
     desired.
 
+    @param[in] createNew - The "create a new DB flag"
+
     @return A handle to the shared memory segement that was opened.
 
             On error, a null pointer is returned and errno will be set to
             indicate the error that was encountered.
 
 ------------------------------------------------------------------------*/
-vsi_core_handle vsi_core_open ( void )
+static sharedMemory_t* vsi_core_open_user ( bool createNew )
 {
+    //
+    //  If the caller wants us to create a brand new empty data store...
+    //
+    if ( createNew )
+    {
+        unlink ( SHARED_MEMORY_SEGMENT_NAME );
+    }
     //
     //  Open the shared memory segment file and verify that it opened
     //  properly.
@@ -74,8 +145,9 @@ vsi_core_handle vsi_core_open ( void )
     //
     //  Go get the size of the shared memory segment.
     //
-    int status;
+    int         status;
     struct stat stats;
+
     status = fstat ( fd, &stats );
     if ( status == -1 )
     {
@@ -84,11 +156,6 @@ vsi_core_handle vsi_core_open ( void )
         (void) close ( fd );
         return 0;
     }
-    //
-    //  If the shared memory segment was just created, go initialize it.
-    //
-    vsi_core_handle vsiCore = 0;
-
     if ( stats.st_size <= 0 )
     {
         LOG ( "VSI core data store[%s]\n", SHARED_MEMORY_SEGMENT_NAME );
@@ -97,8 +164,8 @@ vsi_core_handle vsi_core_open ( void )
         //
         //  Go initialize the shared memory segment.
         //
-        vsiCore = sm_initialize ( fd, TOTAL_SHARED_MEMORY_SIZE );
-        if ( vsiCore == 0 )
+        smControl = sm_initialize ( fd, INITIAL_SHARED_MEMORY_SIZE );
+        if ( smControl == 0 )
         {
             printf ( "Unable to initialize the VSI core data store[%s] errno: "
                      "%u[%m].\n", SHARED_MEMORY_SEGMENT_NAME, errno );
@@ -115,16 +182,117 @@ vsi_core_handle vsi_core_open ( void )
         //
         //  Map the shared memory file into virtual memory.
         //
-        vsiCore = mmap ( NULL, sizeof(sharedMemory_t), PROT_READ|PROT_WRITE,
-                         MAP_SHARED, fd, 0 );
-        if ( vsiCore == MAP_FAILED )
+        smControl = mmap ( NULL, stats.st_size, PROT_READ|PROT_WRITE,
+                           MAP_SHARED, fd, 0 );
+        if ( smControl == MAP_FAILED )
         {
             printf ( "Unable to map the VSI core data store. errno: %u[%m].\n",
                      errno );
             return 0;
         }
     }
-    LOG ( "VSI core data store has been mapped into memory\n" );
+    //
+    //  Close the shared memory pseudo file as we don't need it any more.
+    //
+    (void) close ( fd );
+
+    //
+    //  Return the address of the memory mapped shared memory segment to the
+    //  caller.
+    //
+    return smControl;
+}
+
+
+
+/*!----------------------------------------------------------------------------
+
+    TODO: Finish header!
+
+    v s i _ c o r e _ o p e n _ s y s
+
+	@brief
+
+	This function will
+
+	@param[in]
+	@param[out]
+	@param[in,out]
+
+	@return None
+
+-----------------------------------------------------------------------------*/
+static sysMemory_t* vsi_core_open_sys ( bool createNew )
+{
+    //
+    //  If the caller wants us to create a brand new empty data store...
+    //
+    if ( createNew )
+    {
+        unlink ( SYS_SHARED_MEMORY_SEGMENT_NAME );
+    }
+    //
+    //  Open the shared memory segment file and verify that it opened
+    //  properly.
+    //
+    int fd = 0;
+    fd = open ( SYS_SHARED_MEMORY_SEGMENT_NAME, O_RDWR|O_CREAT, 0666);
+    if (fd < 0)
+    {
+        printf ( "Unable to open the VSI system data store[%s] errno: %u[%m].\n",
+                 SYS_SHARED_MEMORY_SEGMENT_NAME, errno );
+        return 0;
+    }
+    //
+    //  Go get the size of the shared memory segment.
+    //
+    int         status;
+    struct stat stats;
+
+    status = fstat ( fd, &stats );
+    if ( status == -1 )
+    {
+        printf ( "Unable to get the size of the VSI system data store[%s] errno: "
+                 "%u[%m].\n", SYS_SHARED_MEMORY_SEGMENT_NAME, errno );
+        (void) close ( fd );
+        return 0;
+    }
+    if ( stats.st_size <= 0 )
+    {
+        LOG ( "VSI system data store[%s]\n", SYS_SHARED_MEMORY_SEGMENT_NAME );
+        LOG ( "   is uninitialized - Initializing it...\n" );
+
+        //
+        //  Go initialize the shared memory segment.
+        //
+        sysControl = sm_initialize_sys ( fd, SYS_INITIAL_SHARED_MEMORY_SIZE );
+        if ( sysControl == 0 )
+        {
+            printf ( "Unable to initialize the VSI system data store[%s] errno: "
+                     "%u[%m].\n", SYS_SHARED_MEMORY_SEGMENT_NAME, errno );
+            (void) close ( fd );
+            return 0;
+        }
+    }
+    //
+    //  If the shared memory segment has already been initialized then just
+    //  map it into our address space.
+    //
+    else
+    {
+        //
+        //  Map the shared memory file into virtual memory.
+        //
+        sysControl = mmap ( NULL, stats.st_size, PROT_READ|PROT_WRITE,
+                           MAP_SHARED, fd, 0 );
+        if ( sysControl == MAP_FAILED )
+        {
+            printf ( "Unable to map the VSI system data store. errno: %u[%m].\n",
+                     errno );
+            return 0;
+        }
+    }
+    LOG ( "VSI system data store has been mapped into memory\n" );
 
     //
     //  Close the shared memory pseudo file as we don't need it any more.
@@ -135,13 +303,13 @@ vsi_core_handle vsi_core_open ( void )
     //  Return the address of the memory mapped shared memory segment to the
     //  caller.
     //
-    return (vsi_core_handle)vsiCore;
+    return sysControl;
 }
 
 
 /*!-----------------------------------------------------------------------
 
-    v s i C o r e C l o s e
+    v s i _ c o r e _ c l o s e
 
     @brief Close the shared memory segment.
 
@@ -155,9 +323,28 @@ vsi_core_handle vsi_core_open ( void )
     @return None
 
 ------------------------------------------------------------------------*/
-void vsi_core_close ( vsi_core_handle handle )
+void vsi_core_close ( void )
 {
-    (void) munmap ( handle, TOTAL_SHARED_MEMORY_SIZE );
+    //
+    //  TODO: This crashes the system on exit - the call returns 0...
+    //
+    // (void) munmap ( smControl, smControl->sharedMemorySegmentSize );
+    vsi_core_close_user();
+    vsi_core_close_sys();
+
+    return;
+}
+
+
+static void vsi_core_close_user ( void )
+{
+    return;
+}
+
+
+static void vsi_core_close_sys ( void )
+{
+    return;
 }
 
 
@@ -187,7 +374,6 @@ void vsi_core_close ( vsi_core_handle handle )
     specifies the number of bytes that will be read from the user's pointer
     and copied into the shared memory segment.
 
-    @param[in] handle - The handle to the VSI core data store.
     @param[in] domain - The domain associated with this message.
     @param[in] key - The key value associated with this message.
     @param[in] newMessageSize - The size of the new message in bytes.
@@ -196,14 +382,13 @@ void vsi_core_close ( vsi_core_handle handle )
     @return None
 
 ------------------------------------------------------------------------*/
-void vsi_core_insert ( vsi_core_handle handle, domains domain,
-                       offset_t key, unsigned long newMessageSize,
+void vsi_core_insert ( domain_t domain, offset_t key, unsigned long newMessageSize,
                        void* body )
 {
     //
     //  Go insert this key into the core data store.
     //
-    sm_insert ( handle, domain, key, newMessageSize, body );
+    sm_insert ( domain, key, newMessageSize, body );
 
     //
     //  Return to the caller.
@@ -241,34 +426,37 @@ void vsi_core_insert ( vsi_core_handle handle, domains domain,
     @return not 0 on error which will be an errno value.
 
 ------------------------------------------------------------------------*/
-int vsi_core_fetch_wait ( vsi_core_handle handle, domains domain,
-                          offset_t key, unsigned long* bodySize,
+int vsi_core_fetch_wait ( domain_t domain,
+                          offset_t key,
+                          unsigned long* bodySize,
                           void* body )
 {
-    return sm_fetch ( handle, domain, key, bodySize, body, true );
+    return sm_fetch ( domain, key, bodySize, body, true );
 }
 
 
-int vsi_core_fetch ( vsi_core_handle handle, domains domain,
-                     offset_t key, unsigned long* bodySize,
+int vsi_core_fetch ( domain_t domain,
+                     offset_t key,
+                     unsigned long* bodySize,
                      void* body )
 {
-    return sm_fetch ( handle, domain, key, bodySize, body, false );
+    return sm_fetch ( domain, key, bodySize, body, false );
 }
 
 
-int vsi_core_fetch_newest ( vsi_core_handle handle, domains domain,
-                            offset_t key, unsigned long* bodySize,
+int vsi_core_fetch_newest ( domain_t domain,
+                            offset_t key,
+                            unsigned long* bodySize,
                             void* body )
 {
-    return sm_fetch_newest ( handle, domain, key, bodySize, body, false );
+    return sm_fetch_newest ( domain, key, bodySize, body, true );
 }
 
 
-int vsi_core_flush_signal ( vsi_core_handle handle, domains domain,
+int vsi_core_flush_signal ( domain_t domain,
                             offset_t key )
 {
-    return sm_flush_signal ( handle, domain, key );
+    return sm_flush_signal ( domain, key );
 }
 
 
