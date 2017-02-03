@@ -706,6 +706,7 @@ int main ( int argc, char *argv[] )
         size = rand() % MAX_MEMORY_CHUNK_SIZE;
         ptr = sm_malloc ( size );
         ptrs[i] = ptr;
+        memset ( ptr, i, size );
         printf ( "----> Allocated block %d of %d bytes at %p[0x%lx]\n",
                  i, size, ptr, toOffset(ptr) );
     }

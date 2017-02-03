@@ -186,7 +186,7 @@ endif
 #
 # GOALS    = someExecutable
 # SO_GOALS = libsharedLibrary.so
-# AR_GOALS = archiveLibrary.so
+# AR_GOALS = archiveLibrary.a
 
 #
 #    Define the list of alternate source directories.  This is a space or colon
@@ -312,7 +312,7 @@ include $(TOP)/build/master.mk
 #    3 will be built before target1 is built.
 #
 #    One common case of this is when a directory defines both a library and
-#    and executable that is linked with that library.  In a case like this, be
+#    executable that is linked with that library.  In a case like this, be
 #    sure to do something like:
 #
 #        executable: library
@@ -387,6 +387,14 @@ include $(TOP)/build/master.mk
 #    If there are additional files the user wishes removed, specify them here.
 #
 # CLEAN_FILES += someFile someOtherFile *.qt
+
+#
+#    Define any files that need to be removed when the "make distclean"
+#    command is issued.  This command will remove everything that "make clean"
+#    does in addition to all of the generated files that "make clean" does not
+#    remove and any files explicitly listed below.
+#
+# DISTCLEAN_FILES += /some/odd/file/to/remove
 
 #
 #    This rule will install the goal executables and libraries into the top

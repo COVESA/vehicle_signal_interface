@@ -23,13 +23,25 @@
 
 
 #ifdef VSI_DEBUG
-#    define LOG printf
-#    define HX_DUMP HexDump
-#    define SEM_DUMP semaphoreDump
+#    ifndef LOG
+#        define LOG printf
+#    endif
+#    ifndef HX_DUMP
+#        define HX_DUMP HexDump
+#    endif
+#    ifndef SEM_DUMP
+#        define SEM_DUMP semaphoreDump
+#    endif
 #else
-#    define HX_DUMP(...)
-#    define LOG(...)
-#    define SEM_DUMP(...)
+#    ifndef LOG
+#        define LOG(...)
+#    endif
+#    ifndef HX_DUMP
+#        define HX_DUMP(...)
+#    endif
+#    ifndef SEM_DUMP
+#        define SEM_DUMP(...)
+#    endif
 #endif
 
 
