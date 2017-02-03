@@ -16,41 +16,9 @@
     TODO: Change the iterator api to allocate iterators only when needed,
     otherwise, reuse an existing iterator.
 
-    Calculating B-tree sizes:
-    ------------------------
-    TODO: Clean this up after moving it here...
-    The record count parameter should be an odd number (otherwise the B-tree
-    algorithm here does not work properly!).  If the user specifies an even
-    count, it will be incremented by one here.
-
-    The layout of each btree node is defined as:
-
-      nodeSize = nodeHeaderSize + dataOffsetSize*(2*t-1) + linkOffsetSize*(2*t)
-
-    or in more concrete terms, using "sO" for "sizeof(offset_t)":
-
-      nodeSize = sizeof(bt_node_t) + sO * (2t - 1) + sO * (2t)
-
-      nodeSize = sizeof(bt_node_t) + sO * 2t - sO + sO * 2t
-
-      nodeSize = sizeof(bt_node_t) + sO * 4t - sO
-
-    solving this equation for t gives:
-
-      t = ( nodeSize - sizeof(bt_node_t) + sO ) / 4 * sO
-
-    "sO" in our case is 8, the size of the node header is 48 and the maximum
-    node size is 4096 so this calculation reduces to:
-
-      t = ( 4096 - 48 + 8 ) / 32
-
-      t = 126.75 or truncated: 126
-
-    The rest of the values are then:
-
-      minimum keys       = t - 1  = 125
-      maximum keys       = 2t - 1 = 251
-      maximum child refs = 2t     = 252
+    Much of the code (the algorithms at least) and terminology used in this
+    code was derived from the chapter on B-trees in "Introduction to
+    Algorithms" by Thomas H. Cormen.
 
 -----------------------------------------------------------------------------*/
 
@@ -86,7 +54,7 @@ typedef enum
 
 //
 //  Define the btree position definition structure.  This structure contains
-//  all the information needed to uniquely define a position in the tree.
+//  all the information needed to uniquely define a position within the tree.
 //
 typedef struct
 {
@@ -136,7 +104,7 @@ static bt_node_t* merge_siblings ( btree_t* btree,
                                    bt_node_t* parent,
                                    unsigned int index );
 
-void btree_traverse_node ( btree_t*     btree,
+static void btree_traverse_node ( btree_t*     btree,
                            bt_node_t*   subtree,
                            traverseFunc traverseFunction );
 
@@ -357,13 +325,13 @@ static offset_t* getDataRecord ( btree_t*   btree,
                                  int        index )
 {
 #ifdef BTREE_VERBOSE
-    BLOG ( "====> In getDataRecord macro...\n" );
-    BLOG ( "====> node: %p, index: %u\n", node, index );
-    BLOG ( "====>   address of: %p\n", cvtToAddr(btree,node->dataRecords));
-    BLOG ( "====>   indexing..: %lx\n",
-          ((offset_t*)cvtToAddr(btree,node->dataRecords))[index] );
-    BLOG ( "====>   address of: %p\n",
-          toAddress(((offset_t*)cvtToAddr(btree,node->dataRecords))[index]) );
+    // BLOG ( "====> In getDataRecord macro...\n" );
+    // BLOG ( "====> node: %p, index: %u\n", node, index );
+    // BLOG ( "====>   address of: %p\n", cvtToAddr(btree,node->dataRecords));
+    // BLOG ( "====>   indexing..: %lx\n",
+    //       ((offset_t*)cvtToAddr(btree,node->dataRecords))[index] );
+    // BLOG ( "====>   address of: %p\n",
+    //       toAddress(((offset_t*)cvtToAddr(btree,node->dataRecords))[index]) );
 #endif
     return toAddress(((offset_t*)cvtToAddr(btree,node->dataRecords))[index]);
 }
@@ -632,14 +600,13 @@ void btree_initialize ( btree_t*     btree,
     functions, the btree thus created cannot be used in a shared memory
     segment to exchange data with other processes or threads.
 
-    @param[in] compareFunction - The comparison function for this btree
-    @param[in] allocFunction - The memory allocation function for this btree
-    @param[in] freeFunction - The memory deallocation function for this btree
+    @param[in] maxRecordsPerNode - The maximum number of records per node
+    @param[in] numberOfKeys - The number of fields in the key
+    @param[in] keyNindex - The index into the record of each key field
 
     @return The pointer to an empty B-tree.
             NULL if an error occurs.
 
-    TODO: Fix this for the new btree data structure.
 -----------------------------------------------------------------------------*/
 btree_t* btree_create ( unsigned int maxRecordsPerNode,
                         unsigned int numberOfKeys,
@@ -667,16 +634,8 @@ btree_t* btree_create ( unsigned int maxRecordsPerNode,
         return NULL;
 #endif
     }
-    //
-    //  Set the type of B-tree this is (user vs. system).
-    //
-    btree->type = TYPE_USER;
-
-    //
-    //  Go initialze the new btree data structure.
-    //
-    btree_initialize ( btree, maxRecordsPerNode, numberOfKeys,
-                       key1index, key2index, key3index, key4index );
+    btree_create_in_place ( btree, maxRecordsPerNode, numberOfKeys, key1index,
+                            key2index, key3index, key4index );
     //
     //  Return the pointer to the btree to the caller.
     //
@@ -699,13 +658,10 @@ btree_t* btree_create ( unsigned int maxRecordsPerNode,
     return any value (since the btree_t object already exists as an input
     argument.
 
-    TODO: merge this with the one above!
-    TODO: Fix this for the new btree data structure.
-
     @param[in] btree - The address of the btree_t data object to be populated
-    @param[in] compareFunction - The comparison function for this btree
-    @param[in] allocFunction - The memory allocation function for this btree
-    @param[in] freeFunction - The memory deallocation function for this btree
+    @param[in] maxRecordsPerNode - The maximum number of records per node
+    @param[in] numberOfKeys - The number of fields in the key
+    @param[in] keyNindex - The index into the record of each key field
 
     @return None
 
@@ -803,9 +759,11 @@ static void init_node_header ( btree_t* btree,
     //
     //  Initialize the whole node structure to zeroes.
     //
-    // TODO:
-    // memset ( node, 0, btree->nodeSize );
+#ifdef BTREE_DEBUG
     memset ( node, 'N', btree->nodeSize );
+#else
+    memset ( node, 0, btree->nodeSize );
+#endif
 
     //
     //  Set the number of records in this node to zero.
@@ -925,7 +883,11 @@ static void free_btree_node ( btree_t*   btree,
     //  Go erase everything in this chunk of memory (for safety/security
     //  sake).
     //
+#ifdef BTREE_DEBUG
     memset ( node, 0x55, btree->nodeSize );
+#else
+    memset ( node, 0, btree->nodeSize );
+#endif
 
     //
     //  Go return this block of memory to the memory pool.
@@ -1089,11 +1051,8 @@ static void btree_split_child ( btree_t*     btree,
     parent->keysInUse++;
 
     //
-    //  If validation mode is enabled, go validate that this btree is still
-    //  correctly constructed.
+    //  Return to the caller.
     //
-    // VALIDATE_BTREE ( btree, 200, true, 0, 200 );
-
     return;
 }
 
@@ -1158,10 +1117,11 @@ insert:
         //  (working backwards from the end) until we get to the point where
         //  the new data will go.
         //
-//        while ( i >= 0 &&
-//                ( btree_compare_function ( btree, data,
-//                                           cvtToAddr(btree, *src) ) < 0 ) )
-        while ( i >= 0 && ( btree_compare_function ( btree, data, toAddress ( *src ) ) < 0 ) )
+        //  TODO: Make this a block move operation.
+        //
+        while ( i >= 0 &&
+                ( btree_compare_function ( btree, data,
+                                           toAddress ( *src ) ) < 0 ) )
         {
             BLOG ( "  Copying - i: %d, src: 0x%p, dst: 0x%p\n", i, src, dst );
 
@@ -1550,6 +1510,8 @@ static bt_node_t* merge_siblings ( btree_t*     btree,
         //  child records we just moved so they now point to the new leftChild
         //  node.
         //
+        //  TODO: Make this a block move operation.
+        //
         newParent = cvtToOffset ( btree, leftChild );
         for ( int i = 0; i <= rightChild->keysInUse; ++i )
         {
@@ -1689,10 +1651,6 @@ static void move_key ( btree_t* btree, bt_node_t* node, unsigned int index,
     else
     {
         //
-        //  TODO: This case has NOT been tested yet!
-        //
-
-        //
         //  Move the data records and child pointers all one position to the
         //  right (high end) of the node to make room for a new data record at
         //  index 0.
@@ -1726,14 +1684,22 @@ static void move_key ( btree_t* btree, bt_node_t* node, unsigned int index,
     }
 }
 
-/**
-*   Used to delete a key from the B-tree node
-*   @param btree The btree
-*   @param node The node from which the key is to be deleted
-*   @param key The key to be deleted
-*   @return 0 on success -1 on error
-*/
 
+/*!----------------------------------------------------------------------------
+
+    d e l e t e _ k e y _ f r o m _ n o d e
+
+	@brief Delete the key at the specified position in the specified node.
+
+	This function will delete the key at the specified position in the
+    specified node.
+
+	@param[in] btree - The btree to operate on
+	@param[in] nodePosition - The node and index to operate on
+
+	@return Status code
+
+-----------------------------------------------------------------------------*/
 static int delete_key_from_node ( btree_t* btree, nodePosition* nodePosition )
 {
     bt_node_t*   node  = nodePosition->node;
@@ -3367,9 +3333,6 @@ endExit:
     record in the btree.  Note that "next" is defined by the user's supplied
     comparison operator for this btree.
 
-    TODO: This function needs to be cleaned up.  It was patched several times
-    to make it work and left in a bit of a mess.
-
 	@param[in,out] iter - The iterator to be updated
 
 	@return None
@@ -3665,9 +3628,6 @@ nextExit:
     the starting point in the btree and proceed to move to the "next lower"
     record in the btree.  Note that "next" is defined by the user's supplied
     comparison operator for this btree.
-
-    TODO: This function needs to be cleaned up.  It was patched several times
-    to make it work and left in a bit of a mess.
 
 	@param[in,out] iter - The iterator to be updated
 
@@ -4124,8 +4084,6 @@ static int btree_compare_function ( btree_t* btree, void* data1, void* data2 )
 }
 
 
-#ifdef BTREE_DEBUG
-
 static void btree_print_function ( btree_t* btree, void* data )
 {
     offset_t* ptr = data;
@@ -4152,21 +4110,11 @@ static void btree_print_function ( btree_t* btree, void* data )
         printf ( "%'lu[%lx] ", key, key );
     }
     //
-    //  Print the trailing new line on the output.
-    //
-    // printf ( "\n" );
-
-    //
     //  Return to the caller.
     //
     return;
 }
 
-
-/*
-    Used to print the B-trees and their nodes in a user friendly readable
-    format.
-*/
 
 //
 //  This is a helper function that will generate a relatively small integer
@@ -4212,16 +4160,11 @@ static void printFunction ( char* leader, void* data )
         char*         name;
     };
 
-    // BLOG ( "In printFunction with user data %p\n", data );
-
     if ( data == NULL )
     {
         printf ( "%s(nil)\n", leader );
         return;
     }
-    //printf ( "%sdomainId: %u, signalId: %u, name[%s]\n", leader,
-    //         userDataPtr->domainId, userDataPtr->signalId, userDataPtr->name );
-    // btree_print_function ( "", data );
     return;
 }
 
@@ -4257,22 +4200,22 @@ static void print_single_node ( btree_t* btree, bt_node_t* node,
 {
     offset_t offset = cvtToOffset ( btree, node );
 
-    BLOG ( "\n  Node[%p:%lx:%ld]\n",     node, offset, blockId ( offset ) );
+    printf ( "\n  Node[%p:%lx:%ld]\n",     node, offset, blockId(offset) );
 
     offset = node->next;
-    BLOG ( "    next.......: %lx:%ld\n", offset, blockId ( offset ) );
+    printf ( "    next.......: %lx:%ld\n", offset, blockId(offset) );
 
     offset = node->parent;
-    BLOG ( "    parent.....: %lx:%ld\n", offset, blockId ( offset ) );
-    BLOG ( "    leaf.......: %s\n",      isLeaf ( node ) ? "Yes" : "No" );
-    BLOG ( "    keysInUse..: %d\n",      node->keysInUse );
-    BLOG ( "    level......: %d\n",      node->level );
+    printf ( "    parent.....: %lx:%ld\n", offset, blockId(offset) );
+    printf ( "    leaf.......: %s\n",      isLeaf ( node ) ? "Yes" : "No" );
+    printf ( "    keysInUse..: %d\n",      node->keysInUse );
+    printf ( "    level......: %d\n",      node->level );
 
     offset = node->dataRecords;
-    BLOG ( "    dataRecords: %lx:%ld\n", offset, blockId ( offset ) );
+    printf ( "    dataRecords: %lx:%ld\n", offset, blockId(offset) );
 
     offset = node->children;
-    BLOG ( "    children...: %lx:%ld\n", offset, blockId ( offset ) );
+    printf ( "    children...: %lx:%ld\n", offset, blockId(offset) );
 
     DUMP_TL ( node, sizeof(bt_node_t), "\n   ", 4 );
 
@@ -4281,35 +4224,48 @@ static void print_single_node ( btree_t* btree, bt_node_t* node,
     offset_t lChildOffset;
     offset_t rChildOffset;
 
+    //
+    //  For each record in this node...
+    //
     for ( int i = 0; i < node->keysInUse; ++i )
     {
+        //
+        //  If this is an interior node, print the left and right children of
+        //  each record.
+        //
         if ( ! isLeaf ( node ) )
         {
             lChild = getLeftChild  ( btree, node, i );
             rChild = getRightChild ( btree, node, i );
 
-            if ( btree->type == TYPE_USER )
-            {
-                lChildOffset = toOffset ( lChild );
-                rChildOffset = toOffset ( rChild );
-            }
-            else
-            {
-                lChildOffset = cvtToOffset ( btree, lChild );
-                rChildOffset = cvtToOffset ( btree, rChild );
-            }
-            BLOG ( "      index: %d, left[%lx:%ld], right[%lx:%ld], ", i,
-                   lChildOffset, blockId ( lChildOffset ),
-                   rChildOffset, blockId ( rChildOffset ) );
+            lChildOffset = cvtToOffset ( btree, lChild );
+            rChildOffset = cvtToOffset ( btree, rChild );
+
+            printf ( "      index: %d, left[%lx:%ld], right[%lx:%ld], ", i,
+                     lChildOffset, blockId ( lChildOffset ),
+                     rChildOffset, blockId ( rChildOffset ) );
         }
+        //
+        //  If this is a leaf node, just print some leading blanks that will
+        //  preceed the key/value pairs that will be printed on this line
+        //  later.
+        //
         else
         {
-            BLOG ( "      " );
+            printf ( "      " );
         }
+        //
+        //  If the caller supplied a callback function to print the keys and
+        //  values, call his function.
+        //
         if ( printCB != NULL )
         {
             printCB ( "", getDataRecord ( btree, node, i ) );
         }
+        //
+        //  If the caller did not supply a callback function, use the builtin
+        //  function that just prints the raw key/value data.
+        //
         else
         {
             //
@@ -4329,7 +4285,6 @@ static void print_single_node ( btree_t* btree, bt_node_t* node,
     }
     fflush ( stdout );
 }
-#endif      // ifdef BTREE_DEBUG
 
 
 static void btree_print_header ( btree_t* btree )
@@ -4369,7 +4324,6 @@ static void btree_print_header ( btree_t* btree )
 
 void print_subtree ( btree_t* btree, bt_node_t* node, printFunc printCB )
 {
-#ifdef BTREE_DEBUG
     int i = 0;
     unsigned int current_level;
 
@@ -4410,7 +4364,6 @@ void print_subtree ( btree_t* btree, bt_node_t* node, printFunc printCB )
         head = cvtToAddr ( btree, headOffset );
     }
     BLOG ( "\n" );
-#endif      // ifdef BTREE_DEBUG
 }
 
 

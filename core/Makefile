@@ -323,7 +323,7 @@ include $(TOP)/build/master.mk
 #    3 will be built before target1 is built.
 #
 #    One common case of this is when a directory defines both a library and
-#    and executable that is linked with that library.  In a case like this, be
+#    executable that is linked with that library.  In a case like this, be
 #    sure to do something like:
 #
 #        executable: library
@@ -338,8 +338,6 @@ include $(TOP)/build/master.mk
 #    on the first try then you definitely have some dependencies that need to
 #    be specified here.
 #
-
-# $(SUBDIRS): libvsi-core.so
 
 #
 #    Define the compiler/linker optimization level.  If this variable is not
@@ -393,9 +391,6 @@ include $(TOP)/build/master.mk
 # SO_LIBS_testJson += -L../someDirectory -ljunk -lpthreads
 # AR_LIBS_testJson += -L../someDirectory -ljunk -lpthreads
 
-# SO_LIBS += -lpage-manager
-# SO_LIBS_libvsi-core += -lvsi-core -lpage-manager
-
 #
 #    Define any files that need to be removed when the "make clean" command is
 #    issued.  All of the derived files such as object files and executables
@@ -403,6 +398,14 @@ include $(TOP)/build/master.mk
 #    If there are additional files the user wishes removed, specify them here.
 #
 # CLEAN_FILES += someFile someOtherFile *.qt
+
+#
+#	 Define any files that need to be removed when the "make distclean"
+#	 command is issued.  This command will remove everything that "make clean"
+#	 does in addition to all of the generated files that "make clean" does not
+#	 remove and any files explicitly listed below.
+#
+DISTCLEAN_FILES += /var/run/shm/vsi*DataStore
 
 #
 #    This rule will install the goal executables and libraries into the top
@@ -456,8 +459,3 @@ INSTALL_PLAIN_INCLUDE_FILES = vsi_core_api.h utils.h btree.h sharedMemory.h \
 #    not try to run before the file it is going to use has finished building.
 #
 # INSTALL_DEPS += someOddFile
-
-#
-#	Remove the shared memory segment file on a "make distclean" operation.
-#
-DISTCLEAN_FILES += /var/run/shm/vsi*DataStore

@@ -73,3 +73,12 @@ in some dummy data being returned or a warning message that the function has
 not yet been implemented.
 
 As always, any and all feedback is welcome.
+
+## Known Issues
+
+There has been a request to add "extern C" to the header files to allow them
+to be used with C++ builds.
+
+The comparison function needs to be enhanced to define a more flexible
+comparison type.  The immediate need is for a "string" type to allow string
+keys.
