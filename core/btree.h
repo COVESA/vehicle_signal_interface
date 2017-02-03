@@ -14,6 +14,9 @@
 	This file defines the data structures and configuration data for the
     shareed memory btree code.
 
+    TODO: Generalize the key definition to include string types.
+    TODO: Invalidate iterators if the tree structure changes.
+
 -----------------------------------------------------------------------------*/
 
 #ifndef _BTREE_SM_H_
@@ -41,7 +44,7 @@
 //               validation functions during the tests to ensure that the
 //               integrity of the btree has been maintained.
 //
-#define BTREE_DEBUG
+#undef BTREE_DEBUG
 #undef BTREE_VERBOSE
 #undef BTREE_VALIDATE
 
@@ -100,25 +103,31 @@
 //  storing it persistently in a disk file and multiple tasks and/or threads
 //  can simultaneously open that shared memory segment without having problems
 //  caused by the fact that the beginning of the share memory segment can be
-//  located at a different address in memory for all of them.
+//  located at a different logical address in memory for all of them.
 //
 //  To make our life easier in the btree library, we will modify the btree
 //  algorithm a bit so that each of the tree nodes is the same size.  In this
-//  implementation, I have chosen to use the size of a memory page because
-//  this is the unit of allocation for shared memory segments.  A shared
-//  memory segment is always a integral number of memory pages in size,
-//  regardless of the size the user actually specified.  If the user specifies
-//  a size that is not an integral number of memory pages, the shared memory
-//  allocator will round up the requested size to be an integral number of
-//  memory pages.
+//  implementation, the size of each node is specified by giving the maximum
+//  number of records that each node can contain.
 //
-//  Using the physical memory page size also facilitates dynamically resizing
-//  the share memory segment.  To make the shared memory segment larger
-//  involves just mucking around with some of the memory management unit
-//  tables and no data has to be copied in order to make that happen.  The new
-//  pages are just tacked onto the end of the existing segment in the MMU and
-//  everyone is happy.  This makes resizing the shared memory segment very
-//  fast and easy.
+//  The number of records in each node will determine how wide and deep each
+//  level of the B-tree is.  The larger the nodes, the wider and less deep the
+//  resulting tree will be.  The maximum number of records stored at each
+//  level of the tree increases exponentially with the depth of the tree.  So
+//  for example, a tree that contains a maximum of N records in a node will
+//  have up to N total records in the first level of the tree, N**2 maximum
+//  records in the 2nd level, N**3 records in the 3rd level, etc.  So you can
+//  see that the size of each level grows exponentially.
+//
+//  The Cormen algorithms are designed to work most efficiently when the
+//  maximum number of records in a node is an odd number so if the user
+//  specifies and even number, we will increment the value by 1 to make it an
+//  odd number.
+//
+//  This implementation of the B-tree algorithm does not store actual data
+//  records in the tree.  It stores a pointer (actually an offset) to the
+//  user's data structure.  This makes all accesses to the B-trees the same
+//  for any user defined data structure and index keys.  More on this later.
 //
 //  Since pointers cannot be stored anywhere, we get around this limitation by
 //  storing offsets from the beginning of the shared memory segment.  Then the
@@ -126,82 +135,45 @@
 //  simply taking the offset value and adding it to the base address of the
 //  shared memory segment in it's particular address space.
 //
-//  The size of a system memory page can be gotten with a call to
-//  sysconf(_SC_PAGE_SIZE).  Rather than hard coding the size, we will fetch
-//  it at initialization time and work with that value to compute the rest of
-//  the btree parameters that will be required.  The places where one would
-//  normally expect a pointer (such as the child nodes of a given node) will
-//  be given as an offset_t type which is an unsigned long value.
+//  The places where one would normally expect a pointer (such as the child
+//  nodes of a given node) will be given as an offset_t type which is an
+//  unsigned long value.
 //
-//  Cormen defines a value that he calls "t" in his equations and refers to as
-//  the "minimum degree" of the btree which determines the size of the btree
-//  nodes as follows:
+//  In our case, both the dataOffsetSize and the linkOffsetSize are the same
+//  size, which is the size of a "void*" type or 8 bytes on our 64-bit Linux
+//  systems.  We use "sO" as the "sizeof(offset_t)".
 //
-//    MAX and MIN are the maximum and minumum number of keys that can be
-//    contained in a node and t is Cormen's minimum degree variable.  Then:
+//  The size of a node is then given by:
 //
-//    MAX = 2t - 1
+//    nodeSize = nodeHeaderSize + dataOffsetSize*(N) + linkOffsetSize*(N+1)
 //
-//    and the maximum number of child references is then 2t.
+//    nodeSize = nodeHeaderSize + N * sO + N * sO + sO
 //
-//    Then the size of a node is given by:
+//    nodeSize = nodeHeaderSize + 2N * sO + sO
 //
-//    nodeSize = nodeHeaderSize + dataOffsetSize*(2*t-1) + linkOffsetSize*(2*t)
+//  Cormen defines a value that he calls "t" in his equations and refers to it
+//  as the "minimum degree" of the btree defined as:
 //
-//  In our case, both the dataOffsetSize and the linkOffsetSize are the same,
-//  which is the size of a "void*" type or 8 bytes on our 64-bit Linux
-//  systems.  In the initial iteration of this code, the nodeHeaderSize is 32
-//  bytes.  Note that there is always one more child link than there are data
-//  records in a node.  That's an artifact of how the btree algorithm
-//  operates.
+//    t = ( N + 1 ) / 2
 //
-//  So now to make things a bit more concrete, lets assume that our memory
-//  page size is 4K (which it is on our development systems).
+//  The rest of the B-tree values are then:
 //
-//  Substituting all the numbers that we know...
-//
-//    4096 = 32 + 8 * (2 * t - 1) + 8 * (2 * t)
-//    4096 = 32 + 16 * t - 8      + 16 * t
-//    4096 = 32 + 32 * t - 8
-//    4096 = 24 + 32 * t
-//
-//  Solving this equation for t gives:
-//
-//    t = ( 4096 - 24 ) / 32
-//    t = 127.25
-//
-//  Ignoring the fractional part which will represent some unused space at the
-//  end of each node, we get:
-//
-//    t = 127
-//    MAX = 253
-//    MIN = 126
-//    maxChildReferences = 2t = 254
+//    minimum keys       = t - 1
+//    maximum keys       = 2t - 1
+//    maximum child refs = 2t
 //
 //  Note that this calculation needs to take into account any alignment that
 //  might take place inside the structure.  The beginning of the structure
 //  will always be on a memory page boundary so no alignment takes place
 //  there.
 //
-//  Note also that with this calculation there is 16 bytes of space left
-//  unused in each btree node:
+//  When new B-tree nodes are allocated as the tree grows, there is also logic
+//  employed that ensures that each node will begin on an 8 byte boundary to
+//  prevent problems with data alignment in the structures.  This can result
+//  in the nodes becoming somewhat larger than the above calculation would
+//  predict.
 //
-//    ( MAX + maxChildrenReferences ) * sizeof(void*)
-//    ( 253 + 254 ) * 8 = 4080
-//
-//  It would seem possible to add one additional key and pointer to each node
-//  to completely fill each node but there is an algorithmic constraint that
-//  is not explicitly explained in Cormen's book that each node must contain
-//  and odd number of keys in order for the node coalescing logic to work
-//  properly.  Adding the extra key and pointer would violate that constraint
-//  so we'll have to live with a bit of unused space in each node.
-//
-//  The original code for this library contained a variable named "order"
-//  which is actually Cormen's "t" minimum degree variable.  I've renamed it
-//  in this implementation to "minDegree" to eliminate some confusion,
-//  especially since some other authors refer to "order" with a different
-//  meaning altogether.
-//
+
 
 //
 //  Define the btree "offset" type that will be used in place of all of the
@@ -209,17 +181,24 @@
 //
 typedef unsigned long offset_t;
 
+//
+//  Define the callback function types used by the btree code.  These are used
+//  when the "btree_traverse" and "btree_print" functions are called
+//  respectively.  If the user supplies them, the first argument is the string
+//  that the user should output before the record data is displayed, and the
+//  second argument is the address of the user's data record for the user's
+//  callback function to print in a nice single line format (one record per
+//  line).
+//
+typedef void (*traverseFunc) ( char* leader, void* dataPtr );
+
+typedef void (*printFunc)    ( char* leader, void* dataPtr );
+
 
 //
-//  Define the callback function types used by the btree code.
-//
-typedef void (*traverseFunc) ( char*, void* );
-
-typedef void (*printFunc)    ( char*, void* );
-
-
-//
-//  Define the flags for the btree "type".
+//  Define the flags for the B-tree "type".  The "system" type of B-tree is
+//  only used by the shared memory memory management functions.  All other
+//  B-trees are "user" type B-trees.
 //
 #define TYPE_USER   ( 0 )
 #define TYPE_SYSTEM ( 1 )
@@ -358,20 +337,6 @@ extern void*    btree_search   ( btree_t* btree, void* key );
 extern void     btree_traverse ( btree_t* btree, traverseFunc traverseCB );
 
 extern void     btree_print    ( btree_t* btree, printFunc printCB );
-
-//
-//  The following functions have default implementations but the user should
-//  implement them if he does not want the default supplied function to be
-//  called.  The user should define these as the format of their "userData" is
-//  probably not the same as that used in the default implementation.
-//
-//  If the user defines his own version of these functions, he can supply them
-//  directly to the btree member functions that require them as arguments.
-//  Doing so will allow the user to use any function name he wishes when he
-//  implements this functionality.
-//
-// extern void printFunction    ( char* leader, void* userData );
-// extern void traverseFunction ( void* userData );
 
 //
 //  Define the btree iterator functions.

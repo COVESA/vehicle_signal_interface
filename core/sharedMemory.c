@@ -801,6 +801,14 @@ void* sm_malloc ( size_t size )
         availableChunk->marker      = SM_IN_USE_MARKER;
         availableChunk->segmentSize = neededSize;
     }
+    //
+    //  If there is no need to split the piece that we found, just mark it as
+    //  "in use".
+    //
+    else
+    {
+        availableChunk->marker = SM_IN_USE_MARKER;
+    }
 
 mallocEnd:
 
