@@ -25,14 +25,22 @@ static PyMethodDef VsiMethods[] =
 };
 
 
-static struct PyModuleDef vsi_py = {
-   PyModuleDef_HEAD_INIT,
-   "vsi_py",    /* name of module */
-   NULL,        /* module documentation, may be NULL */
-   -1,          /* size of per-interpreter state of the module,
-                   or -1 if the module keeps state in global variables. */
-   VsiMethods
-};
+// Handle Python 3 and Python 2
+#if PY_MAJOR_VERSION >= 3
+    #define MOD_ERROR_VAL NULL
+    #define MOD_SUCCESS_VAL(val) val
+    #define MOD_INIT(name) PyMODINIT_FUNC PyInit_##name(void)
+    #define MOD_DEF(ob, name, doc, methods) \
+        static struct PyModuleDef moduledef = { \
+        PyModuleDef_HEAD_INIT, name, doc, -1, methods, }; \
+        ob = PyModule_Create(&moduledef);
+#else
+    #define MOD_ERROR_VAL
+    #define MOD_SUCCESS_VAL(val)
+    #define MOD_INIT(name) PyMODINIT_FUNC init##name(void)
+    #define MOD_DEF(ob, name, doc, methods) \
+        ob = Py_InitModule3(name, methods, doc);
+#endif
 
 
 /*!----------------------------------------------------------------------------
@@ -50,17 +58,17 @@ static struct PyModuleDef vsi_py = {
            ~0 - Success
 
 -----------------------------------------------------------------------------*/
-PyMODINIT_FUNC PyInit_vsi_py ( void )
+MOD_INIT(vsi_py)
 {
     PyObject* m;
 
     //
     //  Go create the vsi_py module object.
     //
-    m = PyModule_Create ( &vsi_py );
+    MOD_DEF(m, "vsi_py", NULL, VsiMethods)
     if ( m == NULL )
     {
-        return NULL;
+        return MOD_ERROR_VAL;
     }
     //
     //  Create the "error" object for our module and add it to the module
@@ -81,9 +89,9 @@ PyMODINIT_FUNC PyInit_vsi_py ( void )
     {
         LOG ( "Error: Unable to initialize VSI\n" );
         PyErr_Format ( PyExc_SystemError, "Unable to initialize VSI\n" );
-        return NULL;
+        return MOD_ERROR_VAL;
     }
-    return m;
+    return MOD_SUCCESS_VAL(m);
 }
 
 
