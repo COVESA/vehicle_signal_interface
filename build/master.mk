@@ -645,15 +645,16 @@ $(SUBDIRS): $(GOAL_LIST)
 #
 .PHONY: subdirs $(SUBDIRS)
 subdirs: $(SUBDIRS)
-
 $(SUBDIRS):
 	curdir=$(subst $(TOP)/,,$(CURDIR)/$@); \
 	$(DIR_ECHO) "===> [$(MAKELEVEL)] Moving into $$curdir ..."; \
-	$(MAKE) MAKEFLAGS=$(MAKEFLAGS) -C $@ $(MAKECMDGOALS); \
+	cd $@; \
+	$(MAKE) MAKEFLAGS=$(MAKEFLAGS) $(MAKECMDGOALS); \
 	if [ $$? -ne 0 ]; \
 	then \
 	    exit 255; \
 	fi; \
+	cd ..; \
 	$(DIR_ECHO) "<=== [$(MAKELEVEL)] Moving out of $$curdir"
 
 #
