@@ -193,7 +193,7 @@ endif
 #    directory.
 #
 # SO_GOALS = libsharedLibrary.so
-# AR_GOALS = archiveLibrary.so
+# AR_GOALS = archiveLibrary.a
 
 SO_GOALS = libvsi-core.so
 
