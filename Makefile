@@ -194,7 +194,7 @@ endif
 #
 # GOALS    = mux
 # SO_GOALS = libsharedLibrary.so
-# AR_GOALS = archiveLibrary.so
+# AR_GOALS = archiveLibrary.a
 
 #
 #    Define the list of alternate source directories.  This is a space or colon

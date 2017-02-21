@@ -194,7 +194,7 @@ endif
 #
 # GOALS    = mux
 # SO_GOALS = libsharedLibrary.so
-# AR_GOALS = archiveLibrary.so
+# AR_GOALS = archiveLibrary.a
 
 SO_GOALS = libvsi-api.so
 
