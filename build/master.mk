@@ -1038,7 +1038,7 @@ $(OBJ_DIR)%.o : %.c | $(DEPS_DIR) $(OBJ_DIR)
 	    then \
 		echo ''; \
 		echo "*** WARNING - See log file $(OBJ_DIR)$*.log" \
-		     "- First 20 lines:" > /dev/tty; \
+		     "- First 20 lines:"; \
 	        head -n 20 $(OBJ_DIR)$*.log; \
 		echo ''; \
 	    else \
@@ -1047,7 +1047,7 @@ $(OBJ_DIR)%.o : %.c | $(DEPS_DIR) $(OBJ_DIR)
         else \
 	    echo ''; \
 	    echo "*** ERROR - See log file $(OBJ_DIR)$*.log" \
-		 "- First 20 lines:" > /dev/tty; \
+		 "- First 20 lines:"; \
 	    head -n 20 $(OBJ_DIR)$*.log; \
 	    echo ''; \
 	    exit 1; \
@@ -1074,7 +1074,7 @@ $(OBJ_DIR)%.o : %.cpp | $(DEPS_DIR) $(OBJ_DIR)
 	    then \
 		echo ''; \
 		echo "*** WARNING - See log file $(OBJ_DIR)$*.log" \
-		     "- First 20 lines:" > /dev/tty; \
+		     "- First 20 lines:"; \
 	        head -n 20 $(OBJ_DIR)$*.log; \
 		echo ''; \
 	    else \
@@ -1083,7 +1083,7 @@ $(OBJ_DIR)%.o : %.cpp | $(DEPS_DIR) $(OBJ_DIR)
         else \
 	    echo ''; \
 	    echo "*** ERROR - See log file $(OBJ_DIR)$*.log" \
-		 "- First 20 lines:" > /dev/tty; \
+		 "- First 20 lines:"; \
 	    head -n 20 $(OBJ_DIR)$*.log; \
 	    echo ''; \
 	    exit 1; \
@@ -1103,7 +1103,7 @@ $(OBJ_DIR)%.o : %.cxx | $(DEPS_DIR) $(OBJ_DIR)
 	    then \
 		echo ''; \
 		echo "*** WARNING - See log file $(OBJ_DIR)$*.log" \
-		     "- First 20 lines:" > /dev/tty; \
+		     "- First 20 lines:"; \
 	        head -n 20 $(OBJ_DIR)$*.log; \
 		echo ''; \
 	    else \
@@ -1112,7 +1112,7 @@ $(OBJ_DIR)%.o : %.cxx | $(DEPS_DIR) $(OBJ_DIR)
         else \
 	    echo ''; \
 	    echo "*** ERROR - See log file $(OBJ_DIR)$*.log" \
-		 "- First 20 lines:" > /dev/tty; \
+		 "- First 20 lines:"; \
 	    head -n 20 $(OBJ_DIR)$*.log; \
 	    echo ''; \
 	    exit 1; \
