@@ -196,7 +196,7 @@ endif
 # SO_GOALS = libsharedLibrary.so
 # AR_GOALS = archiveLibrary.so
 
-SO_GOALS = vsi_py.so
+SO_GOALS = libpy_vsi.so
 
 #
 #    Define the list of alternate source directories.  This is a space or colon
@@ -256,7 +256,7 @@ SO_GOALS = vsi_py.so
 #
 # OBJS_testJson = testJson.o
 
-OBJS_vsi_py = vsi_py.o
+OBJS_libpy_vsi = vsi_py.o
 
 #
 #    Define the directory to be used to store object files and "goal" files.
@@ -384,7 +384,7 @@ ifndef PYTHON_VERSION
 	endif
 endif
 
-INCLUDE_DIRS += -I/usr/include/python${PYTHON_VERSION}
+INCLUDE_DIRS += -I=/usr/include/python${PYTHON_VERSION}
 
 #
 #    Define any additional link flags that need to be used to form the "goal"
@@ -454,7 +454,7 @@ INCLUDE_DIRS += -I/usr/include/python${PYTHON_VERSION}
 #INSTALL_PLAIN_LIB_FILES = ""
 #INSTALL_PLAIN_INCLUDE_FILES = $(wildcard *.h)
 
-INSTALL_LIB_FILES = vsi_py.so
+INSTALL_LIB_FILES = libpy_vsi.so
 
 #
 #    Define the following macro if additional dependencies are needed for the

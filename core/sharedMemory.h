@@ -202,8 +202,8 @@ typedef struct memoryChunk_t
 //
 //  Define the constants used with the memoryChunk structure.
 //
-static const unsigned long SM_IN_USE_MARKER  = 0xdeadbeefdeadbeef;
-static const unsigned long SM_FREE_MARKER    = 0xfceefceefceefcee;
+static const unsigned long SM_IN_USE_MARKER  = (unsigned long)0xdeadbeefdeadbeef;
+static const unsigned long SM_FREE_MARKER    = (unsigned long)0xfceefceefceefcee;
 static const unsigned long CHUNK_HEADER_SIZE = sizeof(memoryChunk_t);
 static const unsigned long SPLIT_THRESHOLD   = 16;
 
