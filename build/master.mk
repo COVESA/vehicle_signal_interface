@@ -544,29 +544,29 @@ endif
 #
 #    Define the flags and commands to compile a C file.
 #
-CC              = gcc
+CC              ?= gcc
 CC_OPTIMIZATION = $(OPTIMIZATION)
 CC_INCLUDES     = $(COMMON_INCLUDES)
 CC_OPTS        += -Wall
-CC_FLAGS       += $(CC_OPTIMIZATION) $(CC_INCLUDES) $(CC_OPTS) $(DEFINES)
+override CC_FLAGS       += $(CC_OPTIMIZATION) $(CC_INCLUDES) $(CC_OPTS) $(DEFINES)
 CC_CMD          = $(CC) $(CC_FLAGS)
 
 #
 #    Define the flags and commands to compile a C++ file.
 #
-CXX              = g++
+CXX              ?= g++
 CXX_OPTIMIZATION = $(OPTIMIZATION)
 CXX_INCLUDES     = $(COMMON_INCLUDES)
 CXX_OPTS        += -Wall
-CXX_FLAGS       += $(CXX_OPTIMIZATION) $(CXX_INCLUDES) $(CXX_OPTS) $(DEFINES)
+override CXX_FLAGS       += $(CXX_OPTIMIZATION) $(CXX_INCLUDES) $(CXX_OPTS) $(DEFINES)
 CXX_CMD          = $(CXX) $(CXX_FLAGS)
 
 #
 #    Define the flags and commands to link C++ files.
 #
-LD               = gcc
+LD               ?= gcc
 LD_OPTIMIZATION  = $(OPTIMIZATION)
-LD_FLAGS         = $(LD_OPTIMIZATION)
+override LD_FLAGS += $(LD_OPTIMIZATION)
 LD_LIB_DIRS     += -L. -L..
 LD_LIB_DIRS     += -L$(TOP_LIBRARY)
 
@@ -578,8 +578,8 @@ LD_LIBS += -lc
 LD_OPTS  = $(LD_FLAGS) $(LD_LIB_DIRS)
 LD_CMD	 = $(LD) $(LD_OPTS)
 
-SO_CMD   = $(LD_CMD) -dm -dy -shared -fPIC
-AR_CMD   = ar
+SO_CMD   = $(LD_CMD) -shared -fPIC
+AR_CMD   ?= ar
 
 #
 #    If the user has not disabled the automatic installation feature, add the
@@ -1038,7 +1038,7 @@ $(OBJ_DIR)%.o : %.c | $(DEPS_DIR) $(OBJ_DIR)
 	    then \
 		echo ''; \
 		echo "*** WARNING - See log file $(OBJ_DIR)$*.log" \
-		     "- First 20 lines:" > /dev/tty; \
+		     "- First 20 lines:"; \
 	        head -n 20 $(OBJ_DIR)$*.log; \
 		echo ''; \
 	    else \
@@ -1047,7 +1047,7 @@ $(OBJ_DIR)%.o : %.c | $(DEPS_DIR) $(OBJ_DIR)
         else \
 	    echo ''; \
 	    echo "*** ERROR - See log file $(OBJ_DIR)$*.log" \
-		 "- First 20 lines:" > /dev/tty; \
+		 "- First 20 lines:"; \
 	    head -n 20 $(OBJ_DIR)$*.log; \
 	    echo ''; \
 	    exit 1; \
@@ -1074,7 +1074,7 @@ $(OBJ_DIR)%.o : %.cpp | $(DEPS_DIR) $(OBJ_DIR)
 	    then \
 		echo ''; \
 		echo "*** WARNING - See log file $(OBJ_DIR)$*.log" \
-		     "- First 20 lines:" > /dev/tty; \
+		     "- First 20 lines:"; \
 	        head -n 20 $(OBJ_DIR)$*.log; \
 		echo ''; \
 	    else \
@@ -1083,7 +1083,7 @@ $(OBJ_DIR)%.o : %.cpp | $(DEPS_DIR) $(OBJ_DIR)
         else \
 	    echo ''; \
 	    echo "*** ERROR - See log file $(OBJ_DIR)$*.log" \
-		 "- First 20 lines:" > /dev/tty; \
+		 "- First 20 lines:"; \
 	    head -n 20 $(OBJ_DIR)$*.log; \
 	    echo ''; \
 	    exit 1; \
@@ -1103,7 +1103,7 @@ $(OBJ_DIR)%.o : %.cxx | $(DEPS_DIR) $(OBJ_DIR)
 	    then \
 		echo ''; \
 		echo "*** WARNING - See log file $(OBJ_DIR)$*.log" \
-		     "- First 20 lines:" > /dev/tty; \
+		     "- First 20 lines:"; \
 	        head -n 20 $(OBJ_DIR)$*.log; \
 		echo ''; \
 	    else \
@@ -1112,7 +1112,7 @@ $(OBJ_DIR)%.o : %.cxx | $(DEPS_DIR) $(OBJ_DIR)
         else \
 	    echo ''; \
 	    echo "*** ERROR - See log file $(OBJ_DIR)$*.log" \
-		 "- First 20 lines:" > /dev/tty; \
+		 "- First 20 lines:"; \
 	    head -n 20 $(OBJ_DIR)$*.log; \
 	    echo ''; \
 	    exit 1; \

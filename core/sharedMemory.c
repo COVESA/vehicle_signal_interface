@@ -711,7 +711,7 @@ void* sm_malloc ( size_t size )
     //
     if ( ! sysControl->systemInitialized )
     {
-        printf ( "Error: sm_malloc called before init finished for size: [%lu]\n",
+        printf ( "Error: sm_malloc called before init finished for size: [%zu]\n",
                  size );
         exit ( 255 );
     }
@@ -746,7 +746,7 @@ void* sm_malloc ( size_t size )
     //
     if ( btree_iter_at_end ( iter ) )
     {
-        printf ( "Error: No memory block of size %lu is available! Aborting\n",
+        printf ( "Error: No memory block of size %zu is available! Aborting\n",
                  size );
         goto mallocEnd;
     }
