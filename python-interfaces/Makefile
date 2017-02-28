@@ -370,7 +370,9 @@ include $(TOP)/build/master.mk
 #
 # INCLUDE_DIRS += -I../some/path/to/include/files
 
-# Make this work for Python 2 and Python 3
+#
+# Add a define so that we can compile this for Python 2 and Python 3
+#
 ifndef PYTHON_VERSION
 	python_version_full := $(wordlist 2,4,$(subst ., ,$(shell python --version 2>&1)))
 	python_version_major := $(word 1,${python_version_full})
@@ -384,7 +386,7 @@ ifndef PYTHON_VERSION
 	endif
 endif
 
-INCLUDE_DIRS += -I=/usr/include/python${PYTHON_VERSION}
+DEFINES += -DPYTHON_VERSION=$(PYTHON_VERSION)
 
 #
 #    Define any additional link flags that need to be used to form the "goal"

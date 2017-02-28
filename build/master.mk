@@ -544,6 +544,7 @@ endif
 #
 #    Define the flags and commands to compile a C file.
 #
+undefine CC
 CC              ?= gcc
 CC_OPTIMIZATION = $(OPTIMIZATION)
 CC_INCLUDES     = $(COMMON_INCLUDES)
@@ -554,6 +555,7 @@ CC_CMD          = $(CC) $(CC_FLAGS)
 #
 #    Define the flags and commands to compile a C++ file.
 #
+undefine CXX
 CXX              ?= g++
 CXX_OPTIMIZATION = $(OPTIMIZATION)
 CXX_INCLUDES     = $(COMMON_INCLUDES)
@@ -564,6 +566,7 @@ CXX_CMD          = $(CXX) $(CXX_FLAGS)
 #
 #    Define the flags and commands to link C++ files.
 #
+undefine LD
 LD               ?= gcc
 LD_OPTIMIZATION  = $(OPTIMIZATION)
 override LD_FLAGS += $(LD_OPTIMIZATION)
