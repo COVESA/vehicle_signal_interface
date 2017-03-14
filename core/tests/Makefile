@@ -194,7 +194,7 @@ endif
 #
 # GOALS    = mux
 # SO_GOALS = libsharedLibrary.so
-# AR_GOALS = archiveLibrary.so
+# AR_GOALS = archiveLibrary.a
 
 GOALS = btreeTests smTests dump insert fetch flush writeRecord readRecord
 

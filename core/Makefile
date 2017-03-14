@@ -115,7 +115,7 @@
 #    should normally not be defined.  An explanation of what each does can be
 #    found in the master makefile (master.mk).
 #
-# NO_PARALLEL_BUILDS = 1
+NO_PARALLEL_BUILDS = 1
 # TRACE_COMMANDS = 1
 # TRACE_RULES = 1
 # NO_DIR_OUTPUT = 1
@@ -284,6 +284,13 @@ SO_GOALS = libvsi-core.so
 SUBDIRS += tests
 
 #
+#	 Specify the core library as a prerequisite for building in all of the
+#	 subdirectories.  This will ensure that the library gets built before any
+#	 of the subdirectories do.
+#
+# $(SUBDIRS): libvsi-core.so
+
+#
 #    If there are any goals that should be added to the default list of goals
 #    that gets built when make is invoked with no arguments, specify them in
 #    the following variable.  If this is used, the user must also add the rule
@@ -338,6 +345,12 @@ include $(TOP)/build/master.mk
 #    on the first try then you definitely have some dependencies that need to
 #    be specified here.
 #
+
+#
+#   Define a dependency of the core library for all of the subdirectories
+#   here.  The library must be created before we can build the subdirectories.
+#
+# $(SUBDIRS): $(SO_GOALS)
 
 #
 #    Define the compiler/linker optimization level.  If this variable is not

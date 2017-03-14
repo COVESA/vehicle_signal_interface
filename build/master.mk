@@ -2,14 +2,11 @@
 #
 #	m a s t e r . m k
 #
-#    Copyright (C) 2007 Mies Ventures, Inc. All rights reserved.
+#    Copyright (C) 2016, Jaguar Land Rover. All Rights Reserved.
 #
-#    The information contained herein is confidential and proprietary to Mies
-#    Ventures, Inc., and is considered a trade secret as defined in section
-#    499C of the California Penal Code. Use of this information by anyone
-#    other than authorized employees of Mies Ventures is granted only under a
-#    written non-disclosure agreement expressly prescribing the scope and
-#    manner of such use.
+#    This Source Code Form is subject to the terms of the Mozilla Public
+#    License, v. 2.0. If a copy of the MPL was not distributed with this file,
+#    You can obtain one at http://mozilla.org/MPL/2.0/.
 #
 #
 #    This is the master makefile.  It contains all of the commands and
@@ -488,17 +485,24 @@ INSTALL_PLAIN_LIB     = $(INSTALL_PLAIN_CMD) $(TOP_LIBRARY)
 INSTALL_INCLUDE       = $(INSTALL_CMD) $(TOP_INCLUDE)
 INSTALL_PLAIN_INCLUDE = $(INSTALL_PLAIN_CMD) $(TOP_INCLUDE)
 
+INSTALL_CONFIG        = $(INSTALL_PLAIN_CMD) $(TOP_CONFIG)
+
 #
 #    Define the files that the "clean" rule will delete.
 #
-# CLEAN_FILES = *$(VERSION_FILE).* \
-# 	      $(OBJ_DIR)*$(VERSION_FILE).* \
-#
 CLEAN_FILES = $(ALL_GOALS) \
-				$(ALL_OBJS) \
-				$(OBJ_DIR)*.log \
-				*.d \
-				*~
+			  $(ALL_OBJS) \
+			  $(OBJ_DIR)*.log \
+			  *.d \
+			  *~
+#
+#	If versioning is enabled, clean up the versioning files as well.
+#
+ifdef ENABLE_VERSIONING
+
+	CLEAN_FILES += *$(VERSION_FILE).* \
+				   $(OBJ_DIR)*$(VERSION_FILE).*
+endif
 
 #
 #    Figure out if this is a 64 bit platform.
@@ -515,19 +519,7 @@ PLATFORM := $(shell uname -i)
 #    flags are needed for each type of operation, the individual optimization
 #    flags defined below can be set as needed.
 #
-OPTIMIZATION = -g
-
-COMMON_INCLUDES = $(INCLUDE_DIRS)
-
-#
-#    Defines needed for building the executables
-#
-#   DEFINE             PURPOSE
-#-----------------------------------------------------------------------
-# _FILE_OFFSET_BITS=64 Needed by all that want stat(2) to not fail with
-#                      EOVERFLOW
-#
-DEFINES=-D_FILE_OFFSET_BITS=64
+OPTIMIZATION ?= -g
 
 #
 #    Set the appropriate flags for C and C++ compilations in 64 and 32 bit
@@ -536,6 +528,11 @@ DEFINES=-D_FILE_OFFSET_BITS=64
 ifeq "$(PLATFORM)" "x86_64"
     CC_OPTS  := -fPIC
     CXX_OPTS := -fPIC
+
+	#
+	#    Needed by all that want stat(2) to not fail with EOVERFLOW.
+	#
+	DEFINES  += -D_FILE_OFFSET_BITS=64
 else
     CC_OPTS  :=
     CXX_OPTS :=
@@ -544,42 +541,42 @@ endif
 #
 #    Define the flags and commands to compile a C file.
 #
-CC              ?= gcc
-CC_OPTIMIZATION = $(OPTIMIZATION)
-CC_INCLUDES     = $(COMMON_INCLUDES)
-CC_OPTS        += -Wall
-override CC_FLAGS       += $(CC_OPTIMIZATION) $(CC_INCLUDES) $(CC_OPTS) $(DEFINES)
-CC_CMD          = $(CC) $(CC_FLAGS)
+CC_COMPILER       ?= gcc
+CC_OPTIMIZATION   ?= $(OPTIMIZATION)
+CC_INCLUDES       ?= $(INCLUDE_DIRS)
+CC_OPTS           += -Wall -std=gnu99
+override CC_FLAGS += $(CC_OPTS) $(CC_OPTIMIZATION) $(DEFINES) $(CC_INCLUDES)
+CC_CMD             = $(CC_COMPILER) $(CC_FLAGS)
 
 #
 #    Define the flags and commands to compile a C++ file.
 #
-CXX              ?= g++
-CXX_OPTIMIZATION = $(OPTIMIZATION)
-CXX_INCLUDES     = $(COMMON_INCLUDES)
-CXX_OPTS        += -Wall
-override CXX_FLAGS       += $(CXX_OPTIMIZATION) $(CXX_INCLUDES) $(CXX_OPTS) $(DEFINES)
-CXX_CMD          = $(CXX) $(CXX_FLAGS)
+CXX_COMPILER       ?= g++
+CXX_OPTIMIZATION   ?= $(OPTIMIZATION)
+CXX_INCLUDES       ?= $(INCLUDE_DIRS)
+CXX_OPTS           += -Wall
+override CXX_FLAGS += $(CXX_OPTS) $(CXX_OPTIMIZATION) $(DEFINES) $(CXX_INCLUDES)
+CXX_CMD             = $(CXX_COMPILER) $(CXX_FLAGS)
 
 #
 #    Define the flags and commands to link C++ files.
 #
-LD               ?= gcc
-LD_OPTIMIZATION  = $(OPTIMIZATION)
+LD_LINKER         ?= gcc
+LD_OPTIMIZATION   ?= $(OPTIMIZATION)
 override LD_FLAGS += $(LD_OPTIMIZATION)
-LD_LIB_DIRS     += -L. -L..
-LD_LIB_DIRS     += -L$(TOP_LIBRARY)
+LD_LIB_DIRS       += -L. -L..
+LD_LIB_DIRS       += -L$(TOP_LIBRARY)
 
 ifneq "$(OBJ_DIR)" ""
     LD_LIB_DIRS += -L$(OBJ_DIR)
 endif
 
 LD_LIBS += -lc
-LD_OPTS  = $(LD_FLAGS) $(LD_LIB_DIRS)
-LD_CMD	 = $(LD) $(LD_OPTS)
+LD_OPTS ?= $(LD_FLAGS) $(LD_LIB_DIRS)
+LD_CMD	?= $(LD_LINKER) $(LD_OPTS) $(LD_LIBS)
 
-SO_CMD   = $(LD_CMD) -shared -fPIC
-AR_CMD   ?= ar
+SO_CMD  ?= $(LD_CMD) -shared -fPIC
+AR_CMD  ?= ar
 
 #
 #    If the user has not disabled the automatic installation feature, add the
@@ -594,7 +591,7 @@ ifndef NO_AUTO_INSTALL
 endif
 
 ifndef NO_AUTO_SUBDIRS
-    AUTO_SUBDIRS = subdirs
+	AUTO_SUBDIRS = $(SUBDIRS)
 endif
 
 #
@@ -628,10 +625,9 @@ DIRS_NEEDED = $(strip $(TOP_LEVEL_DIRS) $(OBJ_DIR) $(DEPS_DIR))
 
 ALL_TARGETS = $(filter-out ./ .,$(DIRS_NEEDED) $(GOAL_LIST) $(AUTO_SUBDIRS))
 
+
 .PHONY: all
 all: $(ALL_TARGETS)
-
-$(SUBDIRS): $(GOAL_LIST)
 
 #
 #    The following targets will build all of the directories specified as
@@ -643,18 +639,16 @@ $(SUBDIRS): $(GOAL_LIST)
 #    removed.  That makes all the displayed directories relative paths from
 #    the "TOP" which is much less cluttered and easier to read.
 #
-.PHONY: subdirs $(SUBDIRS)
-subdirs: $(SUBDIRS)
+.PHONY: $(SUBDIRS)
 $(SUBDIRS):
-	curdir=$(subst $(TOP)/,,$(CURDIR)/$@); \
+	@curdir=$(subst $(TOP)/,,$(CURDIR)/$@); \
 	$(DIR_ECHO) "===> [$(MAKELEVEL)] Moving into $$curdir ..."; \
-	cd $@; \
-	$(MAKE) MAKEFLAGS=$(MAKEFLAGS) $(MAKECMDGOALS); \
+	targets=$(filter-out $(SUBDIRS), $(MAKECMDGOALS)); \
+	$(MAKE) MAKEFLAGS=$(MAKEFLAGS) -C $@ $$targets; \
 	if [ $$? -ne 0 ]; \
 	then \
 	    exit 255; \
 	fi; \
-	cd ..; \
 	$(DIR_ECHO) "<=== [$(MAKELEVEL)] Moving out of $$curdir"
 
 #
@@ -914,22 +908,31 @@ install: $(SO_GOALS) $(AR_GOALS) $(GOALS) $(DEFAULT_GOALS) $(INSTALL_DEPS)
 #
 .PHONY: clean
 clean: DIR_ECHO := ":"
-clean: cleanProlog subdirs cleanEpilog
-	@$(DIR_ECHO) "Removing all generated files"; \
-	 rm -rf $(CLEAN_FILES)
-
+clean: cleanProlog cleanWork cleanEpilog
 
 .PHONY: cleanProlog
 cleanProlog:
-	@if [ "$(MAKELEVEL)" -eq 0 ]; \
+	@if [ $(MAKELEVEL) -eq 0 ]; \
 	then \
 	    echo -n "Removing all generated files... "; \
-	fi
+	fi; \
+	rm -rf $(CLEAN_FILES)
+
+
+.PHONY: cleanWork
+cleanWork:
+	 @-if [ -n "$(SUBDIRS)" ]; \
+	 then \
+		 for dir in $(SUBDIRS); \
+		 do \
+			 $(MAKE) MAKEFLAGS=$(MAKEFLAGS) -C $$dir $(MAKECMDGOALS); \
+		 done; \
+	 fi;
 
 
 .PHONY: cleanEpilog
 cleanEpilog:
-	@if [ "$(MAKELEVEL)" -eq 0 ]; \
+	@if [ $(MAKELEVEL) -eq 0 ]; \
 	then \
 	    echo "Finished"; \
 	fi
@@ -948,7 +951,7 @@ cleanEpilog:
 #
 .PHONY: distclean
 distclean: DIR_ECHO := ":"
-distclean: cleanProlog clean cleanEpilog
+distclean: clean
 	@-if [ "$(DEPS_DIR)" != "." ]; \
 	then \
 	    rm -rf $(DEPS_DIR); \
@@ -1180,7 +1183,7 @@ dumpFlags:
 	echo "       MAKEFLAGS: $(MAKEFLAGS)"; \
 	echo "    MAKECMDGOALS: $(MAKECMDGOALS)"; \
 	echo ""; \
-	echo "     C: $(CC_CMD)"; \
+	echo "    CC: $(CC_CMD)"; \
 	echo "   C++: $(CXX_CMD)"; \
 	echo "    LD: $(LD_CMD)"; \
 	echo "    SO: $(SO_CMD)"; \
