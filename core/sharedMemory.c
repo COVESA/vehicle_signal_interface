@@ -40,10 +40,11 @@ struct sysMemory_t*    sysControl = 0;
 
 
 //
-//  Define the size of the shared memory control block.
+//  Define the size of the shared memory control block, making sure they are
+//  multiples of 8 (for memory alignment).
 //
-static const unsigned int smSize  = sizeof(sharedMemory_t);
-static const unsigned int sysSize = sizeof(sysMemory_t);
+static const unsigned int smSize  = ( sizeof(sharedMemory_t) + 7 ) & 0xfffffff8;
+static const unsigned int sysSize = ( sizeof(sysMemory_t)    + 7 ) & 0xfffffff8;
 
 //
 //  Declare the local functions.

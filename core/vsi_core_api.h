@@ -50,7 +50,7 @@
 
 /*!-----------------------------------------------------------------------
 
-    v s i C o r e H a n d l e
+    v s i _ c o r e _ h a n d l e
 
     @brief  Define the handle to the VSI core data.
 
