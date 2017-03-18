@@ -9,9 +9,9 @@
 
 /*!----------------------------------------------------------------------------
 
-	@file smmTests.c
+    @file smmTests.c
 
-	This file contains the code to perform some stand-alone tests of the
+    This file contains the code to perform some stand-alone tests of the
     shared memory manager module.
 
 -----------------------------------------------------------------------------*/
@@ -30,7 +30,7 @@
 
 
 //
-//	Define the usage message function.
+//  Define the usage message function.
 //
 static void usage ( const char* executable )
 {
@@ -54,35 +54,35 @@ Usage: %s options\n\
 
 /*!-----------------------------------------------------------------------
 
-	m a i n
+    m a i n
 
-	@brief The main entry point for this compilation unit.
+    @brief The main entry point for this compilation unit.
 
-	This function will perform the dump of the shared memory segment data
-	structures according to the parameters that the user has specified.
+    This function will perform the dump of the shared memory segment data
+    structures according to the parameters that the user has specified.
 
-	@return  0 - This function completed without errors
+    @return  0 - This function completed without errors
     @return !0 - The error code that was encountered
 
 ------------------------------------------------------------------------*/
 int main ( int argc, char* const argv[] )
 {
-	unsigned long messagesToDump = 4;
-	unsigned long listsToDump    = 4;
-	// unsigned long domain         = 0;
-	// unsigned long key            = 0;
-
-	//
-	//	The following locale settings will allow the use of the comma
-	//	"thousands" separator format specifier to be used.  e.g. "10000"
-	//	will print as "10,000" (using the %'u spec.).
-	//
-	setlocale ( LC_ALL, "");
+    unsigned long messagesToDump = 4;
+    unsigned long listsToDump    = 4;
+    // unsigned long domain         = 0;
+    // unsigned long key            = 0;
 
     //
-    //	Parse any command line options the user may have supplied.
+    //  The following locale settings will allow the use of the comma
+    //  "thousands" separator format specifier to be used.  e.g. "10000"
+    //  will print as "10,000" (using the %'u spec.).
     //
-	char ch;
+    setlocale ( LC_ALL, "");
+
+    //
+    //  Parse any command line options the user may have supplied.
+    //
+    char ch;
 
     while ( ( ch = getopt ( argc, argv, "ab:d:hk:m:?" ) ) != -1 )
     {
@@ -95,45 +95,45 @@ int main ( int argc, char* const argv[] )
 
             break;
 
-		  //
-		  //	Get the requested list count.
-		  //
-		  case 'b':
-		    listsToDump = atol ( optarg );
-			if ( listsToDump <= 0 )
-			{
-				printf ( "Invalid list count[%lu] specified.\n", listsToDump );
-				usage ( argv[0] );
-				exit (255);
-			}
-			break;
+          //
+          //  Get the requested list count.
+          //
+          case 'b':
+            listsToDump = atol ( optarg );
+            if ( listsToDump <= 0 )
+            {
+                printf ( "Invalid list count[%lu] specified.\n", listsToDump );
+                usage ( argv[0] );
+                exit (255);
+            }
+            break;
 
-		  //
-		  //	Get the requested domain value.
-		  //
-		  case 'd':
-		    // domain = atol ( optarg );
-			break;
+          //
+          //  Get the requested domain value.
+          //
+          case 'd':
+            // domain = atol ( optarg );
+            break;
 
-		  //
-		  //	Get the requested key value.
-		  //
-		  case 'k':
-		    // key = atol ( optarg );
-			break;
+          //
+          //  Get the requested key value.
+          //
+          case 'k':
+            // key = atol ( optarg );
+            break;
 
-		  //
-		  //	Get the requested message count.
-		  //
-		  case 'm':
-		    messagesToDump = atol ( optarg );
-			if ( messagesToDump <= 0 )
-			{
-				printf ( "Invalid message count[%lu] specified.\n", messagesToDump );
-				usage ( argv[0] );
-				exit (255);
-			}
-			break;
+          //
+          //  Get the requested message count.
+          //
+          case 'm':
+            messagesToDump = atol ( optarg );
+            if ( messagesToDump <= 0 )
+            {
+                printf ( "Invalid message count[%lu] specified.\n", messagesToDump );
+                usage ( argv[0] );
+                exit (255);
+            }
+            break;
 
           //
           //    Display the help message.
@@ -146,10 +146,10 @@ int main ( int argc, char* const argv[] )
         }
     }
     //
-	//	If the user supplied any arguments other than the buffer size value,
-	//	they are not valid arguments so complain and quit.
+    //  If the user supplied any arguments other than the buffer size value,
+    //  they are not valid arguments so complain and quit.
     //
-	argc -= optind;
+    argc -= optind;
     if ( argc != 0 )
     {
         printf ( "Invalid parameters[s] encountered: %s\n", argv[argc] );
@@ -216,9 +216,9 @@ int main ( int argc, char* const argv[] )
     printf ( "\nAfter all of the frees...\n" );
     dumpSM();
 
-	//
-	//	Return a good completion code to the caller.
-	//
+    //
+    //  Return a good completion code to the caller.
+    //
     return 0;
 }
 

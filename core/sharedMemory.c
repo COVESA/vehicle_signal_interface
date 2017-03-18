@@ -8,11 +8,11 @@
 
 /*!----------------------------------------------------------------------------
 
-	@file sharedMemory.c
+    @file sharedMemory.c
 
-	This file contains the functions that manipulate the shared memory segment
-	data structures.  Most of the major functions defined in the VSI are
-	defined here.
+    This file contains the functions that manipulate the shared memory segment
+    data structures.  Most of the major functions defined in the VSI are
+    defined here.
 
 -----------------------------------------------------------------------------*/
 
@@ -70,7 +70,7 @@ static inline void semaphoreCleanupHandler ( void* arg )
 
 /*!-----------------------------------------------------------------------
 
-	S M _ L O C K
+    S M _ L O C K
 
     @brief Acquire the shared memory control structure lock.
 
@@ -96,7 +96,7 @@ static inline void semaphoreCleanupHandler ( void* arg )
 
 /*!-----------------------------------------------------------------------
 
-	S M _ U N L O C K
+    S M _ U N L O C K
 
     @brief Release the shared memory control structure lock.
 
@@ -115,13 +115,13 @@ static inline void semaphoreCleanupHandler ( void* arg )
 
     d e l e t e M e m o r y C h u n k
 
-	@brief Delete a chunk of memory from both indices.
+    @brief Delete a chunk of memory from both indices.
 
-	This function will delete a chunk of memory from both indices.
+    This function will delete a chunk of memory from both indices.
 
-	@param[in] - The header of the memory chunk to delete.
+    @param[in] - The header of the memory chunk to delete.
 
-	@return  0 = Success
+    @return  0 = Success
             ~0 = Failure (errno value)
 
 ------------------------------------------------------------------------*/
@@ -156,13 +156,13 @@ static int deleteMemoryChunk ( memoryChunk_t* chunk )
 
     i n s e r t M e m o r y C h u n k
 
-	@brief Insert a chunk of memory from both indices.
+    @brief Insert a chunk of memory from both indices.
 
-	This function will insert a chunk of memory from both indices.
+    This function will insert a chunk of memory from both indices.
 
-	@param[in] - The header of the memory chunk to insert
+    @param[in] - The header of the memory chunk to insert
 
-	@return  0 = Success
+    @return  0 = Success
             ~0 = Failure (errno value)
 
 ------------------------------------------------------------------------*/
@@ -197,51 +197,51 @@ static int insertMemoryChunk ( memoryChunk_t* chunk )
 
     s m _ i n i t i a l i z e
 
-	@brief Initialize the data structures in a new shared memory segment.
+    @brief Initialize the data structures in a new shared memory segment.
 
-	The specified file (referenced by the supplied file descriptor) will be
-	mapped into virtual memory and the size of the file adjusted to match the
-	desired size of the shared memory segment.
+    The specified file (referenced by the supplied file descriptor) will be
+    mapped into virtual memory and the size of the file adjusted to match the
+    desired size of the shared memory segment.
 
-	This function will set up all of the data structures in the shared memory
-	segment for use.  This function should be called after a brand new shared
-	memory segment has been created and opened on disk.  This function should
-	not be called on an existing shared memory segment that contains data as
-	all of that data will be deleted by this function.
+    This function will set up all of the data structures in the shared memory
+    segment for use.  This function should be called after a brand new shared
+    memory segment has been created and opened on disk.  This function should
+    not be called on an existing shared memory segment that contains data as
+    all of that data will be deleted by this function.
 
-	@param[in] fd - The file descriptor of the file associated with this
-			   shared memory segment.
+    @param[in] fd - The file descriptor of the file associated with this
+    shared memory segment.
 
-	@param[in] sharedMemorySegmentSize - The size of the shared memory
-			   segment in bytes.
+    @param[in] sharedMemorySegmentSize - The size of the shared memory
+    segment in bytes.
 
-	@return The new memory address of where the shared memory segment begins.
-	        On error, a null pointer is returned and errno will be set to
-			indicate the error that was encountered.
+    @return The new memory address of where the shared memory segment begins.
+            On error, a null pointer is returned and errno will be set to
+            indicate the error that was encountered.
 
 ------------------------------------------------------------------------*/
 sharedMemory_p sm_initialize ( int fd, size_t sharedMemorySegmentSize )
 {
-	int            status;
-	sharedMemory_p sharedMemory;
+    int            status;
+    sharedMemory_p sharedMemory;
 
     LOG ( "Initializing user shared memory - fd[%d], Size[%'lu]\n", fd,
           sharedMemorySegmentSize );
-	//
-	//	Map the shared memory file into virtual memory.
-	//
-	sharedMemory = mmap ( NULL, INITIAL_SHARED_MEMORY_SIZE,
-                          PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0 );
-	if ( sharedMemory == MAP_FAILED )
-	{
-		printf ( "Unable to map the user shared memory segment. errno: %u[%m].\n",
-				 errno );
-		return 0;
-	}
     //
-	//	Make the pseudo-file for the shared memory segment the size of the
-	//	shared memory segment.  Note that this will destroy any existing data
-	//	if the segment already exists.
+    //  Map the shared memory file into virtual memory.
+    //
+    sharedMemory = mmap ( NULL, INITIAL_SHARED_MEMORY_SIZE,
+                          PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0 );
+    if ( sharedMemory == MAP_FAILED )
+    {
+        printf ( "Unable to map the user shared memory segment. errno: %u[%m].\n",
+                 errno );
+        return 0;
+    }
+    //
+    //  Make the pseudo-file for the shared memory segment the size of the
+    //  shared memory segment.  Note that this will destroy any existing data
+    //  if the segment already exists.
     //
     status = ftruncate ( fd, INITIAL_SHARED_MEMORY_SIZE );
     if (status != 0)
@@ -250,11 +250,11 @@ sharedMemory_p sm_initialize ( int fd, size_t sharedMemorySegmentSize )
                  "errno: %u[%m].\n", INITIAL_SHARED_MEMORY_SIZE, errno );
         return 0;
     }
-	//
-	//	Set all of the data in this shared memory segment to zero.
-	//
-	// TODO: (void)memset ( sharedMemory, 0, sharedMemorySegmentSize );
-	(void)memset ( sharedMemory, 0xaa, sharedMemorySegmentSize );
+    //
+    //  Set all of the data in this shared memory segment to zero.
+    //
+    // TODO: (void)memset ( sharedMemory, 0, sharedMemorySegmentSize );
+    (void)memset ( sharedMemory, 0xaa, sharedMemorySegmentSize );
 
     //
     //  Initialize our global pointer to the shared memory segment.
@@ -272,11 +272,11 @@ sharedMemory_p sm_initialize ( int fd, size_t sharedMemorySegmentSize )
     sharedMemory->currentSize             = sharedMemorySegmentSize - smSize;
     sharedMemory->systemInitialized       = 0;
 
-	//
-	//	Create the mutex attribute initializer that we can use to initialize
-	//	all of the mutexes in the B-trees.
     //
-	pthread_mutexattr_t* mutexAttributes = &sharedMemory->masterMutexAttributes;
+    //  Create the mutex attribute initializer that we can use to initialize
+    //  all of the mutexes in the B-trees.
+    //
+    pthread_mutexattr_t* mutexAttributes = &sharedMemory->masterMutexAttributes;
 
     status =  pthread_mutexattr_init ( mutexAttributes );
     if ( status != 0 )
@@ -289,7 +289,7 @@ sharedMemory_p sm_initialize ( int fd, size_t sharedMemorySegmentSize )
     // Set this mutex to be a process shared mutex.
     //
     status = pthread_mutexattr_setpshared ( mutexAttributes,
-											PTHREAD_PROCESS_SHARED );
+                                            PTHREAD_PROCESS_SHARED );
     if ( status != 0 )
     {
         printf ( "Unable to set shared mutex attribute - errno: %u[%m].\n",
@@ -300,37 +300,37 @@ sharedMemory_p sm_initialize ( int fd, size_t sharedMemorySegmentSize )
     // Set this mutex to be a recursive mutex.
     //
     status = pthread_mutexattr_settype ( mutexAttributes,
-										 PTHREAD_MUTEX_RECURSIVE );
+                                         PTHREAD_MUTEX_RECURSIVE );
     if ( status != 0 )
     {
         printf ( "Unable to set recursive mutex attribute - errno: %u[%m].\n",
                  status );
         return 0;
     }
-	//
-	//	Create the condition variable initializer that we can use to
-	//	initialize all of the condition variables in the B-trees.
-	//
-	pthread_condattr_t* conditionVariableAttributes =
+    //
+    //  Create the condition variable initializer that we can use to
+    //  initialize all of the condition variables in the B-trees.
+    //
+    pthread_condattr_t* conditionVariableAttributes =
         &sharedMemory->masterCvAttributes;
 
-	status = pthread_condattr_init ( conditionVariableAttributes );
+    status = pthread_condattr_init ( conditionVariableAttributes );
 
     if ( status != 0 )
     {
         printf ( "Unable to initialize condition variable attributes - "
-			     "errno: %u[%m].\n", status );
+                 "errno: %u[%m].\n", status );
         return 0;
     }
-	//
-	//	Set this condition variable to be shared between processes.
-	//
-	status = pthread_condattr_setpshared ( conditionVariableAttributes,
-										   PTHREAD_PROCESS_SHARED );
+    //
+    //  Set this condition variable to be shared between processes.
+    //
+    status = pthread_condattr_setpshared ( conditionVariableAttributes,
+                                           PTHREAD_PROCESS_SHARED );
     if ( status != 0 )
     {
         printf ( "Unable to set shared condition variable attributes - "
-				 "errno: %u[%m].\n", status );
+                 "errno: %u[%m].\n", status );
         return 0;
     }
     //
@@ -390,10 +390,10 @@ sharedMemory_p sm_initialize ( int fd, size_t sharedMemorySegmentSize )
     dumpSM();
 #endif
 
-	//
-	//	Return the address of the shared memory segment to the caller.
-	//
-	return sharedMemory;
+    //
+    //  Return the address of the shared memory segment to the caller.
+    //
+    return sharedMemory;
 }
 
 
@@ -402,51 +402,51 @@ sharedMemory_p sm_initialize ( int fd, size_t sharedMemorySegmentSize )
 TODO: FIX!
     s m _ i n i t i a l i z e _ s y s
 
-	@brief Initialize the data structures in a new shared memory segment.
+    @brief Initialize the data structures in a new shared memory segment.
 
-	The specified file (referenced by the supplied file descriptor) will be
-	mapped into virtual memory and the size of the file adjusted to match the
-	desired size of the shared memory segment.
+    The specified file (referenced by the supplied file descriptor) will be
+    mapped into virtual memory and the size of the file adjusted to match the
+    desired size of the shared memory segment.
 
-	This function will set up all of the data structures in the shared memory
-	segment for use.  This function should be called after a brand new shared
-	memory segment has been created and opened on disk.  This function should
-	not be called on an existing shared memory segment that contains data as
-	all of that data will be deleted by this function.
+    This function will set up all of the data structures in the shared memory
+    segment for use.  This function should be called after a brand new shared
+    memory segment has been created and opened on disk.  This function should
+    not be called on an existing shared memory segment that contains data as
+    all of that data will be deleted by this function.
 
-	@param[in] fd - The file descriptor of the file associated with this
-			   shared memory segment.
+    @param[in] fd - The file descriptor of the file associated with this
+                    shared memory segment.
 
-	@param[in] sharedMemorySegmentSize - The size of the shared memory
-			   segment in bytes.
+    @param[in] sharedMemorySegmentSize - The size of the shared segment in
+               bytes.
 
-	@return The new memory address of where the shared memory segment begins.
-	        On error, a null pointer is returned and errno will be set to
-			indicate the error that was encountered.
+    @return The new memory address of where the shared memory segment begins.
+            On error, a null pointer is returned and errno will be set to
+            indicate the error that was encountered.
 
 ------------------------------------------------------------------------*/
 sysMemory_p sm_initialize_sys ( int fd, size_t sharedMemorySegmentSize )
 {
-	int         status;
-	sysMemory_p sharedMemory;
+    int         status;
+    sysMemory_p sharedMemory;
 
     LOG ( "Initializing system shared memory - fd[%d], Size[%'lu]\n", fd,
           sharedMemorySegmentSize );
-	//
-	//	Map the shared memory file into virtual memory.
-	//
-	sharedMemory = mmap ( NULL, SYS_INITIAL_SHARED_MEMORY_SIZE,
-                          PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0 );
-	if ( sharedMemory == MAP_FAILED )
-	{
-		printf ( "Unable to map the system shared memory segment. errno: %u[%m].\n",
-				 errno );
-		return 0;
-	}
     //
-	//	Make the pseudo-file for the shared memory segment the size of the
-	//	shared memory segment.  Note that this will destroy any existing data
-	//	if the segment already exists.
+    //  Map the shared memory file into virtual memory.
+    //
+    sharedMemory = mmap ( NULL, SYS_INITIAL_SHARED_MEMORY_SIZE,
+                          PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0 );
+    if ( sharedMemory == MAP_FAILED )
+    {
+        printf ( "Unable to map the system shared memory segment. errno: %u[%m].\n",
+                 errno );
+        return 0;
+    }
+    //
+    //  Make the pseudo-file for the shared memory segment the size of the
+    //  shared memory segment.  Note that this will destroy any existing data
+    //  if the segment already exists.
     //
     status = ftruncate ( fd, SYS_INITIAL_SHARED_MEMORY_SIZE );
     if (status != 0)
@@ -456,11 +456,11 @@ sysMemory_p sm_initialize_sys ( int fd, size_t sharedMemorySegmentSize )
                   errno );
         return 0;
     }
-	//
-	//	Set all of the data in this shared memory segment to zero.
-	//
-	// TODO: (void)memset ( sharedMemory, 0, sharedMemorySegmentSize );
-	(void)memset ( sharedMemory, 0xbb, sharedMemorySegmentSize );
+    //
+    //  Set all of the data in this shared memory segment to zero.
+    //
+    // TODO: (void)memset ( sharedMemory, 0, sharedMemorySegmentSize );
+    (void)memset ( sharedMemory, 0xbb, sharedMemorySegmentSize );
 
     //
     //  Initialize our global pointer to the shared memory segment.
@@ -478,11 +478,11 @@ sysMemory_p sm_initialize_sys ( int fd, size_t sharedMemorySegmentSize )
     sharedMemory->currentSize             = sharedMemorySegmentSize - sysSize;
     sharedMemory->systemInitialized       = 0;
 
-	//
-	//	Create the mutex attribute initializer that we can use to initialize
-	//	all of the mutexes in the B-trees.
     //
-	pthread_mutexattr_t* mutexAttributes = &sharedMemory->masterMutexAttributes;
+    //  Create the mutex attribute initializer that we can use to initialize
+    //  all of the mutexes in the B-trees.
+    //
+    pthread_mutexattr_t* mutexAttributes = &sharedMemory->masterMutexAttributes;
 
     status =  pthread_mutexattr_init ( mutexAttributes );
     if ( status != 0 )
@@ -495,7 +495,7 @@ sysMemory_p sm_initialize_sys ( int fd, size_t sharedMemorySegmentSize )
     // Set this mutex to be a process shared mutex.
     //
     status = pthread_mutexattr_setpshared ( mutexAttributes,
-											PTHREAD_PROCESS_SHARED );
+                                            PTHREAD_PROCESS_SHARED );
     if ( status != 0 )
     {
         printf ( "Unable to set system shared mutex attribute - errno: %u[%m].\n",
@@ -506,7 +506,7 @@ sysMemory_p sm_initialize_sys ( int fd, size_t sharedMemorySegmentSize )
     // Set this mutex to be a recursive mutex.
     //
     status = pthread_mutexattr_settype ( mutexAttributes,
-										 PTHREAD_MUTEX_RECURSIVE );
+                                         PTHREAD_MUTEX_RECURSIVE );
     if ( status != 0 )
     {
         printf ( "Unable to set system recursive mutex attribute - errno: %u[%m].\n",
@@ -530,24 +530,24 @@ sysMemory_p sm_initialize_sys ( int fd, size_t sharedMemorySegmentSize )
     //  We do this by creating a singly linked list of blocks using the blocks
     //  themselves containing the offset to the next block.
     //
-	//  Now compute the size of each node in the system B-trees...
+    //  Now compute the size of each node in the system B-trees...
     //
     //  If the user specified an even number of records, increment it to be an
     //  odd number.  The btree algorithm here only operates correctly if the
     //  record count is odd.
-	//
+    //
     unsigned int maxRecordsPerNode = SYS_RECORD_COUNT;
 
-	if ( ( maxRecordsPerNode & 1 ) == 0 )
-	{
-		maxRecordsPerNode++;
-	}
-	//
-	//  Compute the node size as the btree node header size plus the size of
-	//  the record offset area plus the link offfset area.
-	//
+    if ( ( maxRecordsPerNode & 1 ) == 0 )
+    {
+        maxRecordsPerNode++;
+    }
+    //
+    //  Compute the node size as the btree node header size plus the size of
+    //  the record offset area plus the link offfset area.
+    //
     unsigned int nodeSize = sN + ( maxRecordsPerNode * sO ) +
-					        ( ( maxRecordsPerNode + 1 ) * sO );
+                            ( ( maxRecordsPerNode + 1 ) * sO );
     //
     //  Round up the node size to the next multiple of 8 bytes to maintain
     //  long int alignment in the structures.
@@ -649,10 +649,10 @@ sysMemory_p sm_initialize_sys ( int fd, size_t sharedMemorySegmentSize )
     //
     LOG ( "\n===== System shared memory is Initialized at %p =====\n\n",
           sharedMemory );
-	//
-	//	Return the address of the shared memory segment to the caller.
-	//
-	return sharedMemory;
+    //
+    //  Return the address of the shared memory segment to the caller.
+    //
+    return sharedMemory;
 }
 
 
@@ -660,7 +660,7 @@ sysMemory_p sm_initialize_sys ( int fd, size_t sharedMemorySegmentSize )
 
     s m _ m a l l o c
 
-	@brief Allocate a chunk of shared memory for a user.
+    @brief Allocate a chunk of shared memory for a user.
 
     This function will allocate a chunk of shared memory of the specified size
     (in bytes).  If no memory is available of the specified size, a NULL
@@ -670,9 +670,9 @@ sysMemory_p sm_initialize_sys ( int fd, size_t sharedMemorySegmentSize )
     This function operates identically to the system "malloc" function and can
     be used the same way.
 
-	@param[in] size - The size in bytes of the memory desired.
+    @param[in] size - The size in bytes of the memory desired.
 
-	@return The address of the allocated memory chunk.
+    @return The address of the allocated memory chunk.
             NULL if the request could not be honored.
 
 -----------------------------------------------------------------------------*/
@@ -850,15 +850,15 @@ mallocEnd:
 
     s m _ m a l l o c _ s y s
 
-	@brief
+    @brief
 
-	This function will
+    This function will
 
-	@param[in]
-	@param[out]
-	@param[in,out]
+    @param[in]
+    @param[out]
+    @param[in,out]
 
-	@return None
+    @return None
 
 -----------------------------------------------------------------------------*/
 void* sm_malloc_sys ( size_t size )
@@ -889,7 +889,7 @@ void* sm_malloc_sys ( size_t size )
 
     s m _ f r e e
 
-	@brief Deallocate a chunk of shared memory.
+    @brief Deallocate a chunk of shared memory.
 
     This function will deallocate the specified chunk of shared memory
     supplied by the caller.  If the supplied chunk of memory is not a valid
@@ -905,9 +905,9 @@ void* sm_malloc_sys ( size_t size )
     This function operates identically to the system "free" function and can
     be used the same way.
 
-	@param[in] allocatedMemory - The address of the chunk of shared memory to free.
+    @param[in] allocatedMemory - The address of the chunk of shared memory to free.
 
-	@return None
+    @return None
 
 -----------------------------------------------------------------------------*/
 void sm_free ( void* userMemory )
@@ -1071,15 +1071,15 @@ void sm_free ( void* userMemory )
 
     s m _ f r e e _ s y s
 
-	@brief
+    @brief
 
-	This function will
+    This function will
 
-	@param[in]
-	@param[out]
-	@param[in,out]
+    @param[in]
+    @param[out]
+    @param[in,out]
 
-	@return None
+    @return None
 
 ------------------------------------------------------------------------*/
 void sm_free_sys ( void* memoryBlock )
@@ -1098,7 +1098,7 @@ void sm_free_sys ( void* memoryBlock )
 
     M e m o r y   A l l o c a t i o n   D e b u g   F u n c t i o n s
 
-	The following functions are designed for debugging purposes and will
+    The following functions are designed for debugging purposes and will
     normally not be included in production builds.
 
 -----------------------------------------------------------------------------*/
@@ -1217,17 +1217,17 @@ void dumpSM ( void )
 
     f i n d S i g n a l L i s t
 
-	@brief Find the the signal list for a domain and key value.
+    @brief Find the the signal list for a domain and key value.
 
-	This function will search the signals btree for a match to the domain and
+    This function will search the signals btree for a match to the domain and
     id value supplied.  If a match is found, the address of the signal list
     control block will be returned to the caller.  If no match is found, a
     null pointer will be returned.
 
-	@param[in] - domain - The domain of the signal list to find
-	@param[in] - key - The id of the signal list to find
+    @param[in] - domain - The domain of the signal list to find
+    @param[in] - key - The id of the signal list to find
 
-	@return If successful, the address of the signal list control block
+    @return If successful, the address of the signal list control block
             If not found, a NULL
 
 -----------------------------------------------------------------------------*/
@@ -1268,7 +1268,7 @@ signalList_t* findSignalList ( domain_t domain, vsiKey_t key )
     @param[in] body - The address of the body of the new message.
 
     @return 0 if successful
-		    Otherwise the error code
+            Otherwise the error code
 
 ------------------------------------------------------------------------*/
 int sm_insert ( domain_t domain, vsiKey_t key, unsigned long newMessageSize,
@@ -1453,24 +1453,24 @@ insertExit:
 
     s m _ r e m o v e S i g n a l
 
-	@brief Remove the oldest signal from the signal list.
+    @brief Remove the oldest signal from the signal list.
 
     This function will remove the signal at the beginning of the specified
     signal list.
 
-	WARNING: This function assumes that the signal list mutex has been
-	acquired before this function is called.
+    WARNING: This function assumes that the signal list mutex has been
+    acquired before this function is called.
 
-	@param[in] signalList - The address of the signal list to operate on.
+    @param[in] signalList - The address of the signal list to operate on.
 
-	@return 0 - Message successfully removed.
+    @return 0 - Message successfully removed.
 
 ------------------------------------------------------------------------*/
 int sm_removeSignal ( signalList_p signalList )
 {
-	signalData_t* signal;
+    signalData_t* signal;
 
-	LOG ( "%'lu  Removing signal...\n", getIntervalTime() );
+    LOG ( "%'lu  Removing signal...\n", getIntervalTime() );
 
     //
     //  If this signal list is empty, just return without doing anything.
@@ -1479,15 +1479,15 @@ int sm_removeSignal ( signalList_p signalList )
     {
         return 0;
     }
-	//
-	//	Grab the first signal on the given signalList control block.
-	//
-	signal = toAddress ( signalList->head );
+    //
+    //  Grab the first signal on the given signalList control block.
+    //
+    signal = toAddress ( signalList->head );
 
     //
-    //	If there is only one message in the current list then the head and
-    //	tail offsets will be the same and we should just set both of them to
-    //	the "empty" list state.
+    //  If there is only one message in the current list then the head and
+    //  tail offsets will be the same and we should just set both of them to
+    //  the "empty" list state.
     //
     if ( signalList->currentSignalCount == 1 )
     {
@@ -1495,35 +1495,35 @@ int sm_removeSignal ( signalList_p signalList )
         signalList->tail = END_OF_LIST_MARKER;
     }
     //
-    //	Otherwise, just make the head offset be the offset of the next signal
-    //	after the one we are removing.
+    //  Otherwise, just make the head offset be the offset of the next signal
+    //  after the one we are removing.
     //
     else
     {
         signalList->head = signal->nextMessageOffset;
     }
-	//
-	//	Decrement the count of the number of signals in this list and the
-    //	total amount of space occupied by those signals.
-	//
-	--signalList->currentSignalCount;
+    //
+    //  Decrement the count of the number of signals in this list and the
+    //  total amount of space occupied by those signals.
+    //
+    --signalList->currentSignalCount;
     signalList->totalSignalSize -= signal->messageSize;
 
-	//
-	//	Decrement the count of the number of signals in the list within the
-	//	semaphore.
-	//
-	--signalList->semaphore.messageCount;
+    //
+    //  Decrement the count of the number of signals in the list within the
+    //  semaphore.
+    //
+    --signalList->semaphore.messageCount;
 
     //
     //  Free up the shared memory occupied by this signal data structure.
     //
     sm_free ( signal );
 
-	//
-	//	Return a good completion code to the caller.
-	//
-	return 0;
+    //
+    //  Return a good completion code to the caller.
+    //
+    return 0;
 }
 
 
@@ -1907,7 +1907,7 @@ int sm_flush_signal ( domain_t domain, vsiKey_t key )
 
     S i g n a l   D e b u g   F u n c t i o n s
 
-	The following functions are designed for debugging purposes and will
+    The following functions are designed for debugging purposes and will
     normally not be included in production builds.
 
 -----------------------------------------------------------------------------*/

@@ -9,9 +9,9 @@
 
 /*!----------------------------------------------------------------------------
 
-	@file      btree.h
+    @file      btree.h
 
-	This file defines the data structures and configuration data for the
+    This file defines the data structures and configuration data for the
     shareed memory btree code.
 
     TODO: Generalize the key definition to include string types.

@@ -180,7 +180,7 @@ static int Lua_vsi_destroy ( lua_State* L )
 
     L u a _ v s i _ V S S _ i m p o r t
 
-	@brief Import a VSS file into the VSI data store.
+    @brief Import a VSS file into the VSI data store.
 
     Lua Interface:
 
@@ -193,17 +193,17 @@ static int Lua_vsi_destroy ( lua_State* L )
         Return values:
             Completion code (number)
 
-	This function will read the specified file and import the contents of it
+    This function will read the specified file and import the contents of it
     into the specified VSI environment.
 
     VSI API C Interface:
 
         int vsi_VSS_import ( vsi_handle handle, const char* fileName );
 
-	@param[in] - handle - The VSI context handle
-	@param[in] - fileName - The pathname to the VSS definition file to be read
+    @param[in] - handle - The VSI context handle
+    @param[in] - fileName - The pathname to the VSS definition file to be read
 
-	@return - Completion code - 0 = Succesful
+    @return - Completion code - 0 = Succesful
                                 Anything else is an error code
 
 -----------------------------------------------------------------------------*/
@@ -2022,9 +2022,9 @@ static int Lua_vsi_name_string_to_id ( lua_State* L )
 
     VSI API C Interface:
 
-		int vsi_signal_id_to_string ( const domain_t domainId,
-									  const signal_t signalId,
-									  char**         name );
+        int vsi_signal_id_to_string ( const domain_t domainId,
+                                      const signal_t signalId,
+                                      char**         name );
 
     @param[in] - domainId - The signal domain ID to be converted.
     @param[in] - signalId - The signal ID to be converted.
@@ -2057,7 +2057,7 @@ static int Lua_vsi_signal_id_to_string ( lua_State* L )
 
 /*!-----------------------------------------------------------------------
 
-	L u a _ v s i _ d e f i n e _ s i g n a l _ n a m e
+    L u a _ v s i _ d e f i n e _ s i g n a l _ n a m e
 
     @brief Define new signal Id/Name definition record.
 
@@ -2079,10 +2079,10 @@ static int Lua_vsi_signal_id_to_string ( lua_State* L )
 
     VSI API C Interface:
 
-		int vsi_define_signal_name ( const domain_t domainId,
-									 const signal_t signalId,
-									 const signal_t privateId,
-									 const char*    name );
+        int vsi_define_signal_name ( const domain_t domainId,
+                                     const signal_t signalId,
+                                     const signal_t privateId,
+                                     const char*    name );
 
     @param[in] domainId - The signal domain ID to be defined.
     @param[in] signalId - The signal ID to be defined.
@@ -2109,9 +2109,9 @@ static int Lua_vsi_define_signal_name ( lua_State* L )
 
     l u a o p e n _ l i b l u a _ v s i _ a p i
 
-	@brief Register the Lua functions we have implemented here.
+    @brief Register the Lua functions we have implemented here.
 
-	This function will make calls to Lua to register the names of all of the
+    This function will make calls to Lua to register the names of all of the
     functions that have been implemented in this library.
 
 ------------------------------------------------------------------------*/
