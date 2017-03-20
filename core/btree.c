@@ -9,9 +9,9 @@
 
 /*!----------------------------------------------------------------------------
 
-	@file btree.c
+    @file btree.c
 
-	This file implements the shared memory capable btree data structure code.
+    This file implements the shared memory capable btree data structure code.
 
     TODO: Change the iterator api to allocate iterators only when needed,
     otherwise, reuse an existing iterator.
@@ -105,8 +105,8 @@ static bt_node_t* merge_siblings ( btree_t* btree,
                                    unsigned int index );
 
 static void btree_traverse_node ( btree_t*     btree,
-                           bt_node_t*   subtree,
-                           traverseFunc traverseFunction );
+                                  bt_node_t*   subtree,
+                                  traverseFunc traverseFunction );
 
 static int btree_compare_function ( btree_t* btree,
                                     void* data1,
@@ -153,9 +153,9 @@ inline static bool isLeaf ( bt_node_t* node )
 
 
 //
-//	Define the local functions that convert node offsets to addresses and vice
-//	versa.  Some of these are defined as static functions to give the compiler
-//	the option of inlining them if it wants.
+//  Define the local functions that convert node offsets to addresses and vice
+//  versa.  Some of these are defined as static functions to give the compiler
+//  the option of inlining them if it wants.
 //
 inline static void* cvtToAddr ( btree_t* btree,
                                 offset_t offset )
@@ -498,15 +498,15 @@ static void mutexCleanupHandler ( void* arg )
 
     b t r e e _ i n i t i a l i z e
 
-	@brief Initialize all of the btree parameters.
+    @brief Initialize all of the btree parameters.
 
     This function will initialize all of the parameters that we will use to
     build any of the btrees the user wants to define.  This only needs to be
     done once since the parameters are the same of every node of each btree.
 
-	@param[in] - handle - The base address of the shared memory segment.
+    @param[in] - handle - The base address of the shared memory segment.
 
-	@return  0 - Everything was created without error.
+    @return  0 - Everything was created without error.
             !0 - There was an error in the process.
 
 -----------------------------------------------------------------------------*/
@@ -586,9 +586,9 @@ void btree_initialize ( btree_t*     btree,
 
     b t r e e _ c r e a t e
 
-	@brief Create a new btree instance.
+    @brief Create a new btree instance.
 
-	This function is used to create a btree with just an empty root node.
+    This function is used to create a btree with just an empty root node.
     Once this function is called, the btree is ready to use.
 
     All of the arguments are callback functions that will be used to
@@ -647,9 +647,9 @@ btree_t* btree_create ( unsigned int maxRecordsPerNode,
 
     b t r e e _ c r e a t e _ i n _ p l a c e
 
-	@brief Create a new B-tree instance.
+    @brief Create a new B-tree instance.
 
-	This function will create a new B-tree instance for those cases in which
+    This function will create a new B-tree instance for those cases in which
     the caller wants to supply the btree_t data structure.  This function is
     identical to the "btree_create" function above except for who allocates
     the storage for the B-tree data.
@@ -698,15 +698,15 @@ void btree_create_in_place ( btree_t*     btree,
 
     b t r e e _ c r e a t e _ s y s
 
-	@brief
+    @brief
 
-	This function will
+    This function will
 
-	@param[in]
-	@param[out]
-	@param[in,out]
+    @param[in]
+    @param[out]
+    @param[in,out]
 
-	@return None
+    @return None
 
 -----------------------------------------------------------------------------*/
 btree_t* btree_create_sys ( btree_t*     btree,
@@ -740,15 +740,15 @@ btree_t* btree_create_sys ( btree_t*     btree,
 
     i n i t _ n o d e _ h e a d e r
 
-	@brief Initialize a B-tree node header.
+    @brief Initialize a B-tree node header.
 
-	This function will
+    This function will
 
-	@param[in]
-	@param[out]
-	@param[in,out]
+    @param[in]
+    @param[out]
+    @param[in,out]
 
-	@return None
+    @return None
 
 -----------------------------------------------------------------------------*/
 static void init_node_header ( btree_t* btree,
@@ -808,13 +808,13 @@ static void init_node_header ( btree_t* btree,
 
     a l l o c a t e _ b t r e e _ n o d e
 
-	@brief Allocate a new btree node.
+    @brief Allocate a new btree node.
 
-	This function will allocate a new btree node structure and initialize it.
+    This function will allocate a new btree node structure and initialize it.
 
-	@param[in] btree - The address of the btree being extended.
+    @param[in] btree - The address of the btree being extended.
 
-	@return The address of the newly allocated btree node structure.
+    @return The address of the newly allocated btree node structure.
             NULL if there was an error allocating the node.
 
 -----------------------------------------------------------------------------*/
@@ -863,15 +863,15 @@ static bt_node_t* allocate_btree_node ( btree_t* btree )
 
     f r e e _ b t r e e _ n o d e
 
-	@brief Deallocate an existing btree node strructure.
+    @brief Deallocate an existing btree node strructure.
 
-	This function will deallocate the memory used by an existing btree node
+    This function will deallocate the memory used by an existing btree node
     data structure.
 
-	@param[in] btree - The address of the btree control structure.
-	@param[in] node - The address of the btree node to be deallocated.
+    @param[in] btree - The address of the btree control structure.
+    @param[in] node - The address of the btree node to be deallocated.
 
-	@return None
+    @return None
 
 -----------------------------------------------------------------------------*/
 static void free_btree_node ( btree_t*   btree,
@@ -911,9 +911,9 @@ static void free_btree_node ( btree_t*   btree,
 
     b t r e e _ s p l i t _ c h i l d
 
-	@brief Split a child node.
+    @brief Split a child node.
 
-	This function will split the specified child node into 2 nodes and move
+    This function will split the specified child node into 2 nodes and move
     the data at the "index" position in the original node up to the parent
     node (at the appropriate place).
 
@@ -925,12 +925,12 @@ static void free_btree_node ( btree_t*   btree,
     node from past the midpoint to the end of the node will be moved into the
     new child node starting at index 0.
 
-	@param[in] btree - The btree to operate on
-	@param[in] parent - The address of the parent node
-	@param[in] index - The index position in the parent to insert the new record
-	@param[in] child - The address of the child node to be split
+    @param[in] btree - The btree to operate on
+    @param[in] parent - The address of the parent node
+    @param[in] index - The index position in the parent to insert the new record
+    @param[in] child - The address of the child node to be split
 
-	@return None
+    @return None
 
 -----------------------------------------------------------------------------*/
 static void btree_split_child ( btree_t*     btree,
@@ -938,7 +938,7 @@ static void btree_split_child ( btree_t*     btree,
                                 unsigned int index,
                                 bt_node_t*   child )
 {
-	int          i;
+    int          i;
     unsigned int min       = btree->min;
     unsigned int minDegree = btree->minDegree;
     bt_node_t*   newChild  = 0;
@@ -993,7 +993,7 @@ static void btree_split_child ( btree_t*     btree,
             //  point to the new child rather than the old child from which it
             //  was moved.
             //
-			getLeftChild ( btree, newChild, i )->parent =
+            getLeftChild ( btree, newChild, i )->parent =
                 cvtToOffset ( btree, newChild );
         }
     }
@@ -1061,9 +1061,9 @@ static void btree_split_child ( btree_t*     btree,
 
     b t r e e _ i n s e r t _ n o n f u l l
 
-	@brief Insert a record into a non-full node.
+    @brief Insert a record into a non-full node.
 
-	This function will insert a record into a non-full node.
+    This function will insert a record into a non-full node.
 
     TODO: We could make the node search more efficient by implementing a
     binary search instead of the linear one.  For small tree orders, the
@@ -1071,10 +1071,10 @@ static void btree_split_child ( btree_t*     btree,
     binary search will win.
 
     @param[in] btree - The btree to operate on
-	@param[in] parent - The address of the parent node
-	@param[in] data - The address of the data to be inserted
+    @param[in] parent - The address of the parent node
+    @param[in] data - The address of the data to be inserted
 
-	@return None
+    @return None
 
 -----------------------------------------------------------------------------*/
 static void btree_insert_nonfull ( btree_t*   btree,
@@ -1196,14 +1196,14 @@ insert:
 
     b t r e e _ i n s e r t
 
-	@brief Insert a new data record into the btree.
+    @brief Insert a new data record into the btree.
 
-	This function will insert a new data record into the specified btree.
+    This function will insert a new data record into the specified btree.
 
     @param[in] btree - The btree to operate on
-	@param[in] data - The address of the data to be inserted
+    @param[in] data - The address of the data to be inserted
 
-	@return Always 0!  TODO: Fix this?
+    @return Always 0!  TODO: Fix this?
 
 -----------------------------------------------------------------------------*/
 int btree_insert ( btree_t* btree, void* data )
@@ -1313,15 +1313,15 @@ int btree_insert ( btree_t* btree, void* data )
 
     g e t _ m a x _ k e y _ p o s
 
-	@brief Used to get the position of the maximum key within the subtree.
+    @brief Used to get the position of the maximum key within the subtree.
 
-	This function will find the position of the maximum key within the
+    This function will find the position of the maximum key within the
     subtree.
 
     @param[in] btree - The btree to operate on
-	@param[in] subtree - The address of the root node of the subtree to search.
+    @param[in] subtree - The address of the root node of the subtree to search.
 
-	@return nodePosition - The position of the maximum data value in the subtree.
+    @return nodePosition - The position of the maximum data value in the subtree.
                            If the returned node value is zero, this tree is
                            empty.
 
@@ -1371,15 +1371,15 @@ static nodePosition get_max_key_pos ( btree_t*   btree,
 
     g e t _ m i n _ k e y _ p o s
 
-	@brief Used to get the position of the minimum key within the subtree.
+    @brief Used to get the position of the minimum key within the subtree.
 
-	This function will find the position of the minimum key within the
+    This function will find the position of the minimum key within the
     subtree.
 
     @param[in] btree - The btree to operate on
-	@param[in] subtree - The address of the root node of the subtree to search.
+    @param[in] subtree - The address of the root node of the subtree to search.
 
-	@return nodePosition - The position of the minimum data value in the subtree.
+    @return nodePosition - The position of the minimum data value in the subtree.
                            If the returned node value is zero, the btree is
                            empty.
 
@@ -1432,7 +1432,7 @@ static nodePosition get_min_key_pos ( btree_t*   btree,
 
     m e r g e _ s i b l i n g s
 
-	@brief Merge 2 child nodes into one.
+    @brief Merge 2 child nodes into one.
 
     This function will merge the 2 child nodes of the record defined by the
     parent node and index values into a single node.  The left child of the
@@ -1444,15 +1444,15 @@ static nodePosition get_min_key_pos ( btree_t*   btree,
 
     This function makes some assumptions:
 
-        The left and right children both have min records.
-        The parent has at least one record.
+    The left and right children both have min records.
+    The parent has at least one record.
 
-	@param[in] btree - The btree to operate on
-	@param[in] parent - The address of the parent node
-	@param[in] index - The index in the parent node whose children are being
+    @param[in] btree - The btree to operate on
+    @param[in] parent - The address of the parent node
+    @param[in] index - The index in the parent node whose children are being
                        merged.
 
-	@return The address of the new merged node.
+    @return The address of the new merged node.
 
 -----------------------------------------------------------------------------*/
 static bt_node_t* merge_siblings ( btree_t*     btree,
@@ -1572,18 +1572,18 @@ static bt_node_t* merge_siblings ( btree_t*     btree,
 
     m o v e _ k e y
 
-	@brief Move a record between the left and right siblings of the specified
+    @brief Move a record between the left and right siblings of the specified
     node.
 
     This function will move a record between the left and right siblings of
     the specified node.
 
-	@param[in] btree - The address of the btree to operate on
-	@param[in] node - The address of the node to move the key out of
-	@param[in] index - The position of the key within the node to be moved
-	@param[in] pos - The left/right indicator for the destination child
+    @param[in] btree - The address of the btree to operate on
+    @param[in] node - The address of the node to move the key out of
+    @param[in] index - The position of the key within the node to be moved
+    @param[in] pos - The left/right indicator for the destination child
 
-	@return None
+    @return None
 
 -----------------------------------------------------------------------------*/
 static void move_key ( btree_t* btree, bt_node_t* node, unsigned int index,
@@ -1689,15 +1689,15 @@ static void move_key ( btree_t* btree, bt_node_t* node, unsigned int index,
 
     d e l e t e _ k e y _ f r o m _ n o d e
 
-	@brief Delete the key at the specified position in the specified node.
+    @brief Delete the key at the specified position in the specified node.
 
-	This function will delete the key at the specified position in the
+    This function will delete the key at the specified position in the
     specified node.
 
-	@param[in] btree - The btree to operate on
-	@param[in] nodePosition - The node and index to operate on
+    @param[in] btree - The btree to operate on
+    @param[in] nodePosition - The node and index to operate on
 
-	@return Status code
+    @return Status code
 
 -----------------------------------------------------------------------------*/
 static int delete_key_from_node ( btree_t* btree, nodePosition* nodePosition )
@@ -2363,17 +2363,17 @@ void* btree_search ( btree_t* btree, void* key )
 
     b t r e e _ g e t _ m a x
 
-	@brief Get the maximum user data value in the btree.
+    @brief Get the maximum user data value in the btree.
 
-	This function will return a pointer to the user data record contained in
+    This function will return a pointer to the user data record contained in
     the largest value in the btree.  The "largest" is defined according to
     the user supplied comparison function.
 
     If the btree is empty, a null pointer will be returned.
 
-	@param[in] btree - The address of the btree to search
+    @param[in] btree - The address of the btree to search
 
-	@return The address of the maximum value in the btree.
+    @return The address of the maximum value in the btree.
 
 -----------------------------------------------------------------------------*/
 void* btree_get_max ( btree_t* btree )
@@ -2411,17 +2411,17 @@ void* btree_get_max ( btree_t* btree )
 
     b t r e e _ g e t _ m i n
 
-	@brief Get the minimum user data value in the btree.
+    @brief Get the minimum user data value in the btree.
 
-	This function will return a pointer to the user data record contained in
+    This function will return a pointer to the user data record contained in
     the smallest value in the btree.  The "smallest" is defined according to
     the user supplied comparison function.
 
     If the btree is empty, a null pointer will be returned.
 
-	@param[in] btree - The address of the btree to search
+    @param[in] btree - The address of the btree to search
 
-	@return The address of the minimum value in the btree.
+    @return The address of the minimum value in the btree.
 
 -----------------------------------------------------------------------------*/
 void* btree_get_min ( btree_t* btree )
@@ -2564,21 +2564,21 @@ void btree_traverse ( btree_t* btree, traverseFunc traverseCB )
 
     B t r e e   I t e r a t i o n   F u n c t i o n s
 
-	This section contains the implementation of the btree iterator functions.
+    This section contains the implementation of the btree iterator functions.
 
-	Example usage (assuming the btree is populated with "userData" records):
+    Example usage (assuming the btree is populated with "userData" records):
 
-		userData record = { 12, "" };
+    userData record = { 12, "" };
 
-		btree_iter iter = btree_find ( &record );
+    btree_iter iter = btree_find ( &record );
 
-		while ( ! btree_iter_at_end ( iter ) )
-		{
-            userData* returnedData = btree_iter_data ( iter );
-			...
-			btree_iter_next ( iter );
-		}
-		btree_iter_cleanup ( iter );
+    while ( ! btree_iter_at_end ( iter ) )
+    {
+        userData* returnedData = btree_iter_data ( iter );
+        ...
+        btree_iter_next ( iter );
+    }
+    btree_iter_cleanup ( iter );
 
     The above example will find all of the records in the btree beginning with
     { 12, "" } to the end of the btree.
@@ -2590,20 +2590,20 @@ void btree_traverse ( btree_t* btree, traverseFunc traverseCB )
 
     b t r e e _ i t e r a t o r _ n e w
 
-	@brief Allocate and initialize a new iterator object.
+    @brief Allocate and initialize a new iterator object.
 
-	This function will allocate memory for a new iterator object and
+    This function will allocate memory for a new iterator object and
     initialize the fields in that object appropriately.
 
     Note: The memory for this iterator is allocated with malloc rather than
     the shared memory allocator because it will live in the user's address
     space and is never seen by another process.
 
-	@param[in] btree - The address of the btree object to be operated on.
-	@param[in] key - The address of the user's data object to be found in the
+    @param[in] btree - The address of the btree object to be operated on.
+    @param[in] key - The address of the user's data object to be found in the
                      tree.
 
-	@return The btree_iter object
+    @return The btree_iter object
 
 -----------------------------------------------------------------------------*/
 static btree_iter btree_iterator_new ( btree_t* btree, void* key )
@@ -2637,9 +2637,9 @@ static btree_iter btree_iterator_new ( btree_t* btree, void* key )
 
 /*!----------------------------------------------------------------------------
 
-	b t r e e _ f i n d
+    b t r e e _ f i n d
 
-	@brief Position an iterator at the specified key location.
+    @brief Position an iterator at the specified key location.
 
     The btree_find function is similar to the btree_search function except
     that it will find the smallest key that is greater than or equal to the
@@ -2657,11 +2657,11 @@ static btree_iter btree_iterator_new ( btree_t* btree, void* key )
     with it by calling the btree_iter_cleanup function.  If this is not done,
     there will be a memory leak in the user's program.
 
-	@param[in] btree - The address of the btree object to be operated on.
-	@param[in] key - The address of the user's data object to be found in the
+    @param[in] btree - The address of the btree object to be operated on.
+    @param[in] key - The address of the user's data object to be found in the
                      tree.
 
-	@return A btree_iter object
+    @return A btree_iter object
 
 -----------------------------------------------------------------------------*/
 btree_iter btree_find ( btree_t* btree, void* key )
@@ -2895,9 +2895,9 @@ findExit:
 
 /*!----------------------------------------------------------------------------
 
-	b t r e e _ r f i n d
+    b t r e e _ r f i n d
 
-	@brief Position an iterator at the specified key location.
+    @brief Position an iterator at the specified key location.
 
     The btree_rfind function is similar to the btree_search function except
     that it will find the largest key that is less than or equal to the
@@ -2915,11 +2915,11 @@ findExit:
     with it by calling the btree_iter_cleanup function.  If this is not done,
     there will be a memory leak in the user's program.
 
-	@param[in] btree - The address of the btree object to be operated on.
-	@param[in] key - The address of the user's data object to be found in the
+    @param[in] btree - The address of the btree object to be operated on.
+    @param[in] key - The address of the user's data object to be found in the
                      tree.
 
-	@return A btree_iter object
+    @return A btree_iter object
 
 -----------------------------------------------------------------------------*/
 btree_iter btree_rfind ( btree_t* btree, void* key )
@@ -3160,9 +3160,9 @@ rfindExit:
 
     b t r e e _ i t e r _ b e g i n
 
-	@brief Create an iterator positioned at the beginning of the btree.
+    @brief Create an iterator positioned at the beginning of the btree.
 
-	This function will find the smallest record currently defined in the
+    This function will find the smallest record currently defined in the
     specified btree and return an iterator to that record.  If the btree is
     empty, an iterator will be returned but it will be empty.  This iterator
     can be compared to the iter->end() iterator to determine if it empty.
@@ -3170,9 +3170,9 @@ rfindExit:
     This function will return a new iterator object which the user MUST
     destroy (via btree_iter_cleanup()) when he is finished with it.
 
-	@param[in] btree - The address of the btree object to be operated on.
+    @param[in] btree - The address of the btree object to be operated on.
 
-	@return A btree_iter object
+    @return A btree_iter object
 
 -----------------------------------------------------------------------------*/
 btree_iter btree_iter_begin ( btree_t* btree )
@@ -3246,17 +3246,17 @@ beginExit:
 
     b t r e e _ i t e r _ e n d
 
-	@brief Create an iterator positioned past the last record of the btree.
+    @brief Create an iterator positioned past the last record of the btree.
 
-	This function will create a new iterator and set it to indicate that is is
+    This function will create a new iterator and set it to indicate that is is
     an "end" iterator.
 
     This function will return a new iterator object which the user MUST
     destroy (via btree_iter_cleanup()) when he is finished with it.
 
-	@param[in] btree - The address of the btree object to be operated on.
+    @param[in] btree - The address of the btree object to be operated on.
 
-	@return A btree_iter object
+    @return A btree_iter object
 
 -----------------------------------------------------------------------------*/
 btree_iter btree_iter_end ( btree_t* btree )
@@ -3323,7 +3323,7 @@ endExit:
 
     b t r e e _ i t e r _ n e x t
 
-	@brief Get the "next" position in the btree.
+    @brief Get the "next" position in the btree.
 
     This function will position the specified iterator to the next higher key
     value in the btree from the current position.
@@ -3333,9 +3333,9 @@ endExit:
     record in the btree.  Note that "next" is defined by the user's supplied
     comparison operator for this btree.
 
-	@param[in,out] iter - The iterator to be updated
+    @param[in,out] iter - The iterator to be updated
 
-	@return None
+    @return None
 
 -----------------------------------------------------------------------------*/
 void btree_iter_next ( btree_iter iter )
@@ -3619,7 +3619,7 @@ nextExit:
 
     b t r e e _ i t e r _ p r e v i o u s
 
-	@brief Get the "previous" position in the btree.
+    @brief Get the "previous" position in the btree.
 
     This function will position the specified iterator to the next lower key
     value in the btree from the current position.
@@ -3629,9 +3629,9 @@ nextExit:
     record in the btree.  Note that "next" is defined by the user's supplied
     comparison operator for this btree.
 
-	@param[in,out] iter - The iterator to be updated
+    @param[in,out] iter - The iterator to be updated
 
-	@return None
+    @return None
 
 -----------------------------------------------------------------------------*/
 void btree_iter_previous ( btree_iter iter )
@@ -3889,15 +3889,15 @@ previousExit:
 
     b t r e e _ i t e r _ c m p
 
-	@brief Compare 2 iterators.
+    @brief Compare 2 iterators.
 
-	This function will compare the data records using the user supplied
+    This function will compare the data records using the user supplied
     comparison function of the two supplied iterators.
 
-	@param[in] iter1 - The first position to be tested.
-	@param[in] iter2 - The second position to be tested.
+    @param[in] iter1 - The first position to be tested.
+    @param[in] iter2 - The second position to be tested.
 
-	@return < 0  - iter2 is greater than iter1.
+    @return < 0  - iter2 is greater than iter1.
             == 0 - The iterators are identical.
             > 0  - iter2 is less than iter1.
 
@@ -3914,9 +3914,9 @@ int btree_iter_cmp ( btree_iter iter1, btree_iter iter2 )
 
     b t r e e _ i t e r _ a t _ e n d
 
-	@brief Determine if this iterator is at the "end" condition.
+    @brief Determine if this iterator is at the "end" condition.
 
-	This function will determine if the input iterator is currently positioned
+    This function will determine if the input iterator is currently positioned
     at the "end" of the btree and return a "true" if it is.  Note that this
     can be used for the reverse iterator as well but in this case, the "end"
     condition is beyond the lowest value of the btree rather beyond the
@@ -3925,9 +3925,9 @@ int btree_iter_cmp ( btree_iter iter1, btree_iter iter2 )
     In this context, the term "at end" means "at the end of the iterator"
     rather than "at the end of the btree".
 
-	@param[in] iter - The iterator to be tested.
+    @param[in] iter - The iterator to be tested.
 
-	@return true  - The iterator is at the "end" of the btree.
+    @return true  - The iterator is at the "end" of the btree.
             false - The iterator is not at the "end" of the btree.
 
 -----------------------------------------------------------------------------*/
@@ -3941,9 +3941,9 @@ bool btree_iter_at_end ( btree_iter iter )
 
     b t r e e _ i t e r _ d a t a
 
-	@brief Return the user data pointer at the current position.
+    @brief Return the user data pointer at the current position.
 
-	This function will return the pointer to the user data structure that is
+    This function will return the pointer to the user data structure that is
     stored in the btree at the current iterator position.  The user data
     structure address is the "value" portion of the key/value pairs that are
     stored in the btree.
@@ -3952,9 +3952,9 @@ bool btree_iter_at_end ( btree_iter iter )
     using one of the positioning functions like btree_iter_find or a call to
     btree_iter_next, etc.
 
-	@param[in] iter - The current btree iterator.
+    @param[in] iter - The current btree iterator.
 
-	@return The address of the user data at the current iterator position.
+    @return The address of the user data at the current iterator position.
             NULL if the iterator has not been initialized.
 
 -----------------------------------------------------------------------------*/
@@ -3978,7 +3978,7 @@ void* btree_iter_data ( btree_iter iter )
 
     b t r e e _ i t e r _ c l e a n u p
 
-	@brief Release all resources held by an iterator.
+    @brief Release all resources held by an iterator.
 
     This function will clean up the specified iterator and release any
     resources being used by this iterator.  This function MUST be called when
@@ -3991,9 +3991,9 @@ void* btree_iter_data ( btree_iter iter )
     Note: Iterators are allocated with the system malloc function so they get
     freed with "free" rather than the shared memory deallocator.
 
-	@param[in] iter - The current btree iterator.
+    @param[in] iter - The current btree iterator.
 
-	@return None
+    @return None
 
 -----------------------------------------------------------------------------*/
 void btree_iter_cleanup ( btree_iter iter )
@@ -4028,19 +4028,19 @@ void btree_iter_cleanup ( btree_iter iter )
 
     b t r e e _ c o m p a r e _ f u n c t i o n
 
-	@brief Compare 2 user defined data structures.
+    @brief Compare 2 user defined data structures.
 
-	This function will compare 2 user defined data structures by looping
+    This function will compare 2 user defined data structures by looping
     through the defined "keys" for this btree and comparing the "offset_t"
     value at all of the specified key indices.  Logically this is "data1 -
     data2" where we compare all of the fields that make up the "key" in both
     data structures.
 
-	@param[in] btree - The address of the btree to be compared.
-	@param[in] data1 - The address of the first user structure to compare.
-	@param[in] data2 - The address of the second user structutre to compare.
+    @param[in] btree - The address of the btree to be compared.
+    @param[in] data1 - The address of the first user structure to compare.
+    @param[in] data2 - The address of the second user structutre to compare.
 
-	@return The result of comparing the two data structures.
+    @return The result of comparing the two data structures.
 
 -----------------------------------------------------------------------------*/
 static int btree_compare_function ( btree_t* btree, void* data1, void* data2 )
@@ -4138,10 +4138,10 @@ static offset_t blockId ( offset_t node )
 
 
 //
-//	Define the default function that will print the user data stored in the
-//	B-tree.  This is defined as a "weak" function so that this implementation
-//	will only be used if the user does not supply his own version of this
-//	function.
+//  Define the default function that will print the user data stored in the
+//  B-tree.  This is defined as a "weak" function so that this implementation
+//  will only be used if the user does not supply his own version of this
+//  function.
 //
 //  Note that since this function makes explicit assumptions about the format
 //  of the user data stored in the B-tree, it really should always be
@@ -4170,10 +4170,10 @@ static void printFunction ( char* leader, void* data )
 
 
 //
-//	Define the default function that will be called with a pointer to user
-//	data stored in the B-tree for each item stored in the B-tree.  This is
-//	defined as a "weak" function so that this implementation will only be used
-//	if the user does not supply his own version of this function.
+//  Define the default function that will be called with a pointer to user
+//  data stored in the B-tree for each item stored in the B-tree.  This is
+//  defined as a "weak" function so that this implementation will only be used
+//  if the user does not supply his own version of this function.
 //
 //  Note that since this function makes explicit assumptions about the format
 //  of the user data stored in the B-tree, it really should always be

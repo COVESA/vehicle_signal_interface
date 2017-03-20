@@ -20,17 +20,17 @@
 
     v s i _ l i s t _ i n i t i a l i z e
 
-	@brief Initialize a new list data structure.
+    @brief Initialize a new list data structure.
 
-	This function will initialize a new list data structure by initializing
+    This function will initialize a new list data structure by initializing
     all of the fields in the structure and initializing the list mutex lock.
 
     This function should be called when a new list is created before any data
     is inserted into the list.
 
-	@param[in] list - The address of the list structure to initialize
+    @param[in] list - The address of the list structure to initialize
 
-	@return status - 0: Success
+    @return status - 0: Success
                     ~0: An error code
 
 ------------------------------------------------------------------------*/
@@ -59,16 +59,16 @@ int vsi_list_initialize ( vsi_list* list )
 
     v s i _ l i s t _ i n s e r t
 
-	@brief Insert a new data record into the specified list.
+    @brief Insert a new data record into the specified list.
 
-	This function will create a new list entry record, initialize it, put the
+    This function will create a new list entry record, initialize it, put the
     specified pointer into it, and then insert this new record at the tail of
     the specified list.
 
-	@param[in] list - The address of the list to insert into
-	@param[in] record - The address of the data record to insert into the list.
+    @param[in] list - The address of the list to insert into
+    @param[in] record - The address of the data record to insert into the list.
 
-	@return status - 0: Success
+    @return status - 0: Success
                     ~0: An error code
 
 ------------------------------------------------------------------------*/
@@ -146,16 +146,16 @@ int vsi_list_insert ( vsi_list* list, void* record )
 
     v s i _ l i s t _ r e m o v e
 
-	@brief Remove the specified record from the specified list
+    @brief Remove the specified record from the specified list
 
-	This function will find the specifield data record in the specified list,
+    This function will find the specifield data record in the specified list,
     remove that record from the list and update the list count.
 
-	@param[in] list - The address of the list to insert into
-	@param[in] record - The address of the data record to be removed from the
-                        list.
+    @param[in] list - The address of the list to insert into
+    @param[in] record - The address of the data record to be removed from the
+    list.
 
-	@return status - 0: Success
+    @return status - 0: Success
                     ~0: An error code
 
 ------------------------------------------------------------------------*/
@@ -248,7 +248,7 @@ int vsi_list_remove ( vsi_list* list, void* record )
 
     v s i _ l i s t _ r e m o v e _ h e a d
 
-	@brief Remove a data record from the specified list.
+    @brief Remove a data record from the specified list.
 
     This function will find the specified data record in the specified list
     and remove that record from the list.  The removed data pointer will be
@@ -257,10 +257,10 @@ int vsi_list_remove ( vsi_list* list, void* record )
     Note that if the specified list is empty then a NULL pointer will be
     returned to the caller.
 
-	@param[in] list - The address of the list to search
-	@param[in] record - The address of where to store the removed record
+    @param[in] list - The address of the list to search
+    @param[in] record - The address of where to store the removed record
 
-	@return status - 0: Success
+    @return status - 0: Success
                     ~0: An error code
 
 ------------------------------------------------------------------------*/

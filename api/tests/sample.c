@@ -40,8 +40,8 @@ void printFunction ( char* leader, void* data )
     vsi_id_name_definition* userDataPtr = data;
 
     printf ( "%sUserData: domainId: %lu, signalId: %lu, privateId: %lu, name[%s]\n",
-			 leader, userDataPtr->domainId, userDataPtr->signalId,
-			 userDataPtr->privateId, userDataPtr->name );
+             leader, userDataPtr->domainId, userDataPtr->signalId,
+             userDataPtr->privateId, userDataPtr->name );
 }
 
 
@@ -81,10 +81,10 @@ static int storeSignal ( vsi_result* result, domain_t domain_id,
 
     m a i n
 
-	This function will test much of the functionality of the VSI API
+    This function will test much of the functionality of the VSI API
     functions.
 
-	@param[in] None
+    @param[in] None
 
 ------------------------------------------------------------------------*/
 int main()

@@ -30,9 +30,9 @@
 
     l u a o p e n _ l i b l u a _ v s i
 
-	@brief Register the Lua functions we have implemented here.
+    @brief Register the Lua functions we have implemented here.
 
-	This function will make calls to Lua to register the names of all of the
+    This function will make calls to Lua to register the names of all of the
     functions that have been implemented in this library.
 
 ------------------------------------------------------------------------*/

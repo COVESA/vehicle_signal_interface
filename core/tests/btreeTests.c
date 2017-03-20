@@ -9,9 +9,9 @@
 
 /*!----------------------------------------------------------------------------
 
-	@file      btreeTests.c
+    @file      btreeTests.c
 
-	This file contains some fairly extensive tests of the shared memory btree
+    This file contains some fairly extensive tests of the shared memory btree
     code.
 
 -----------------------------------------------------------------------------*/

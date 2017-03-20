@@ -11,24 +11,24 @@
     @file sharedMemory.h
 
     This file contains the declarations of the shared memory segment constants
-	and data structures and should be included in all files that need to
-	operate on the shared memory segment structures.
+    and data structures and should be included in all files that need to
+    operate on the shared memory segment structures.
 
-	The beginning of this file contains some constants that can be used to
-	customize various characteristics of the data store.
+    The beginning of this file contains some constants that can be used to
+    customize various characteristics of the data store.
 
-	WARNING!!!: All references (and pointers) to data in the shared memory
-	segment are performed by using the byte index into the shared memory
-	segment.  All of these references need to be relocatable references so
-	this will work in multiple processes that have their shared memory
-	segments mapped to different base addresses.
+    WARNING!!!: All references (and pointers) to data in the shared memory
+    segment are performed by using the byte index into the shared memory
+    segment.  All of these references need to be relocatable references so
+    this will work in multiple processes that have their shared memory
+    segments mapped to different base addresses.
 
-	Some of the constructs and functions defined here are designed to make
-	porting to C++ as easy as possible so there are things here that look
-	decidedly like C++ member functions for example.  There is no need for
-	inheritance so that's not present (along with it's associated virtual
-	function table) but I do wish that I could use function overloading in
-	several places... Oh well!
+    Some of the constructs and functions defined here are designed to make
+    porting to C++ as easy as possible so there are things here that look
+    decidedly like C++ member functions for example.  There is no need for
+    inheritance so that's not present (along with it's associated virtual
+    function table) but I do wish that I could use function overloading in
+    several places... Oh well!
 
 -----------------------------------------------------------------------------*/
 
@@ -74,7 +74,7 @@
 
 
 //
-//	Define the global constants and variables.
+//  Define the global constants and variables.
 //
 //  Note that the shared memory size will always be allocated (by the kernel)
 //  in units of whole memory pages.  Most modern system have 4K byte memory
@@ -149,8 +149,8 @@ extern struct sysMemory_t*    sysControl;
 
 
 //
-//	Define the type to be used for all of the offset references inside the
-//	shared memory segment.
+//  Define the type to be used for all of the offset references inside the
+//  shared memory segment.
 //
 typedef unsigned long offset_t;
 typedef unsigned long domain_t;
@@ -161,7 +161,7 @@ typedef unsigned long vsiKey_t;
 
     m e m o r y C h u n k _ t
 
-	@brief Define the shared memory memory region control structure.
+    @brief Define the shared memory memory region control structure.
 
     Define the data structure that will be used to keep track of chunks of
     memory in the B-trees.  This data structure is prepended to each memory
@@ -212,7 +212,7 @@ static const unsigned long SPLIT_THRESHOLD   = 16;
 
     s i g n a l L i s t _ t
 
-	@brief Define the structure of each signal list structure.
+    @brief Define the structure of each signal list structure.
 
     This function will define the structure of each signal list in the system.
     A signal list is a list of signals that all have the same domain and key
@@ -231,22 +231,22 @@ typedef struct signalList_t
     //  Define the signal domain and ID values for all of the signals that
     //  will be stored in this signal list.
     //
-	domain_t domain;
-	vsiKey_t key;
+    domain_t domain;
+    vsiKey_t key;
 
-	//
-	//	Define the variables that will be used to keep track of the linked
-	//	list data within each signal list.
-	//
-	//	Note: The "head" is the offset to the first available message in the
-	//	current list and the "tail" is the offset to the last available
-	//	message in the list (i.e. NOT the next available message slot).  This
-	//	is required because we need to be able to update the "next" pointer in
-	//	the last message whenever we append a new message to the list and we
-	//	can't back up in the list (it's a singly linked list).
-	//
-	offset_t head;
-	offset_t tail;
+    //
+    //  Define the variables that will be used to keep track of the linked
+    //  list data within each signal list.
+    //
+    //  Note: The "head" is the offset to the first available message in the
+    //  current list and the "tail" is the offset to the last available
+    //  message in the list (i.e. NOT the next available message slot).  This
+    //  is required because we need to be able to update the "next" pointer in
+    //  the last message whenever we append a new message to the list and we
+    //  can't back up in the list (it's a singly linked list).
+    //
+    offset_t head;
+    offset_t tail;
 
     //
     //  The following fields are just for informational use.  We probably
@@ -254,18 +254,18 @@ typedef struct signalList_t
     //  the sum of all of the message fields in this list but this does not
     //  count the signal data header structure sizes in the sum.
     //
-	unsigned long currentSignalCount;
-	unsigned long totalSignalSize;
+    unsigned long currentSignalCount;
+    unsigned long totalSignalSize;
 
-	//
-    //	Define the semaphore that will be used to manage the processes waiting
-    //	for messages on the message queue.  Each message that is received will
-    //	increment the semaphore and each "wait" that is executed will
-    //	decrement the semaphore.
-	//
+    //
+    //  Define the semaphore that will be used to manage the processes waiting
+    //  for messages on the message queue.  Each message that is received will
+    //  increment the semaphore and each "wait" that is executed will
+    //  decrement the semaphore.
+    //
     semaphore_t semaphore;
 
-}	signalList_t, *signalList_p;
+}   signalList_t, *signalList_p;
 
 #define SIGNAL_LIST_SIZE   ( sizeof(signalList_t) )
 #define END_OF_LIST_MARKER ( 0 )
@@ -274,7 +274,7 @@ typedef struct signalList_t
 
     s i g n a l D a t a _ t
 TODO: REDO!
-	@brief Define the structure of the header of each signal data item.
+    @brief Define the structure of the header of each signal data item.
 
     This message header contains all of the information required to manage a
     message in the shared memory structures.  This "shared message" structure
@@ -324,18 +324,18 @@ TODO: REDO!
 ------------------------------------------------------------------------*/
 typedef struct signalData_t
 {
-	offset_t nextMessageOffset;
-	offset_t messageSize;
-	char     data[0];
+    offset_t nextMessageOffset;
+    offset_t messageSize;
+    char     data[0];
 
 }   signalData_t, *signalData_p;
 
 //
-//	Define the size of the shared message header structure.  This value needs
-//	to be taken into account when the total size of a message is computed.
-//	The "messageSize" field in this header is the size of the "data" field at
-//	the end of the structure so to get the total size of a structure, we must
-//	use:
+//  Define the size of the shared message header structure.  This value needs
+//  to be taken into account when the total size of a message is computed.
+//  The "messageSize" field in this header is the size of the "data" field at
+//  the end of the structure so to get the total size of a structure, we must
+//  use:
 //
 //    totalMessageSize = messagePtr->messageSize + SIGNAL_DATA_HEADER_SIZE;
 //
@@ -344,11 +344,11 @@ typedef struct signalData_t
 
 /*!---------------------------------------------------------------------------
 
-	s h a r e d M e m o r y _ t
+    s h a r e d M e m o r y _ t
 
-	@brief	Define the structure of the shared memory segment.
+    @brief  Define the structure of the shared memory segment.
 
-	This data structure defines the base shared memory segment and is used as
+    This data structure defines the base shared memory segment and is used as
     the shared memory control structure by all of the shared memory functions.
 
 ----------------------------------------------------------------------------*/
@@ -381,7 +381,7 @@ typedef struct sharedMemory_t
     //  Create the condition variable attribute initializer that we can use to
     //  initialize all of the condition variables in the B-trees.
     //
-	pthread_condattr_t masterCvAttributes;
+    pthread_condattr_t masterCvAttributes;
 
     //
     //  Define the mutex that will be used to control access to the shared
@@ -409,10 +409,10 @@ typedef struct sharedMemory_t
     //  This variable is the base time that gets set when the process first
     //  starts.  All other times are computed relative to this value.
     //
-	unsigned long globalTime;
+    unsigned long globalTime;
 #endif
 
-}	sharedMemory_t, *sharedMemory_p;
+}   sharedMemory_t, *sharedMemory_p;
 
 
 /*!---------------------------------------------------------------------------
@@ -452,7 +452,7 @@ typedef struct sysMemory_t
     //  Create the condition variable attribute initializer that we can use to
     //  initialize all of the condition variables in the B-trees.
     //
-	pthread_condattr_t masterCvAttributes;
+    pthread_condattr_t masterCvAttributes;
 
     //
     //  Define the mutex that will be used to control access to the shared
@@ -474,20 +474,20 @@ typedef struct sysMemory_t
 
 /*!-----------------------------------------------------------------------
 
-	S i g n a l   L i s t   m e m b e r   f u n c t i o n s
+    S i g n a l   L i s t   m e m b e r   f u n c t i o n s
 
 ------------------------------------------------------------------------*/
 //
-//	Return the address of a message from the specified signal list.
+//  Return the address of a message from the specified signal list.
 //
-//	This function will return the actual pointer into the shared memory
-//	segment that corresponds to the location of the "offset" within the
-//	specified signal list.  These pointers are necessary when we want to
-//	actually read and write data into the messages being stored.
+//  This function will return the actual pointer into the shared memory
+//  segment that corresponds to the location of the "offset" within the
+//  specified signal list.  These pointers are necessary when we want to
+//  actually read and write data into the messages being stored.
 //
 inline static void* toAddress ( offset_t offset )
 {
-	return (void*)( (void*)smControl + offset );
+    return (void*)( (void*)smControl + offset );
 }
 
 
@@ -503,7 +503,7 @@ inline static offset_t toOffset ( void* address )
 
 ------------------------------------------------------------------------*/
 //
-//	Initialize the shared memory segments.
+//  Initialize the shared memory segments.
 //
 //  These functions will take a newly created shared memory segment file
 //  descriptor and size, map the file into memory, and initialize all of the
@@ -545,22 +545,22 @@ int sm_insert ( domain_t domain, vsiKey_t key, unsigned long newMessageSize,
                 void* body );
 
 //
-//	Remove the first message from the given signal list.
+//  Remove the first message from the given signal list.
 //
 //  This function will remove the signal at the beginning of the specified
 //  signal list.
 //
-//	WARNING: This function assumes that the signal list mutex has been
-//	acquired before this function is called.
+//  WARNING: This function assumes that the signal list mutex has been
+//  acquired before this function is called.
 //
 int sm_removeSignal ( signalList_p signalList );
 
 
 //
-//	Fetch the oldest available record from the user data store.
+//  Fetch the oldest available record from the user data store.
 //
-//	This function will find the oldest record in the data store with the
-//	specified domain and key and return a copy of it to the caller.
+//  This function will find the oldest record in the data store with the
+//  specified domain and key and return a copy of it to the caller.
 //
 //  Note that this function will remove the record that was found from the
 //  data store.
@@ -569,10 +569,10 @@ int sm_fetch ( domain_t domain, vsiKey_t key, unsigned long* messageSize,
                void* body, bool dontWait );
 
 //
-//	Fetch the newest available record from the user data store.
+//  Fetch the newest available record from the user data store.
 //
-//	This function will find the newest record in the data store with the
-//	specified domain and key and return a copy of it to the caller.
+//  This function will find the newest record in the data store with the
+//  specified domain and key and return a copy of it to the caller.
 //
 //  Note that this function will NOT remove the record that was found from the
 //  data store.
@@ -598,7 +598,7 @@ void dumpFreeByOffset ( void );
 void dumpAllSignals   ( int maxSignals );
 
 
-#endif	// End of #ifndef SHARED_MEMORY_H
+#endif  // End of #ifndef SHARED_MEMORY_H
 
 /*! @} */
 

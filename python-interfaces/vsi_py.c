@@ -54,14 +54,14 @@ static PyMethodDef VsiMethods[] =
 
     P y I n i t _ p y V s i
 
-	@brief Initialize the Python interface to the VSI system.
+    @brief Initialize the Python interface to the VSI system.
 
     This function will initialize the Python interface to the VSI system and
     MUST be called before any other VSI functions are called.
 
-	@param[in]  None
+    @param[in]  None
 
-	@return 0 - Error occurred (exception thrown)
+    @return 0 - Error occurred (exception thrown)
            ~0 - Success
 
 -----------------------------------------------------------------------------*/
@@ -153,13 +153,13 @@ static const int mapCount = sizeof(nameMap) / sizeof(NameMap_t);
 
     v s i T r a n s l a t e N a m e
 
-	@brief Translate a CAN signal name to a VSS signal name.
+    @brief Translate a CAN signal name to a VSS signal name.
 
-	This function will translate a CAN signal name to a VSS signal name.
+    This function will translate a CAN signal name to a VSS signal name.
 
-	@param[in] CANname - The ASCII CAN name string.
+    @param[in] CANname - The ASCII CAN name string.
 
-	@return VSSname - The corresponding VSS name string.
+    @return VSSname - The corresponding VSS name string.
             NULL - If the CAN name could not be found in the translate table.
 
 -----------------------------------------------------------------------------*/
@@ -192,16 +192,16 @@ static const char* vsiTranslateName ( const char* CANname )
 
     v s i _ f i r e S i g n a l B y N a m e
 
-	@brief Send a signal to the VSI system using it's name.
+    @brief Send a signal to the VSI system using it's name.
 
-	This function will accept 2 arguments that are the name of the signal and
+    This function will accept 2 arguments that are the name of the signal and
     the integer value of the signal.  This information will be passed to the
     VSI system for storage and later retrieval.
 
-	@param[in] name - The ASCII name of the signal.
-	@param[in] value - The signed integer value of the signal (if any).
+    @param[in] name - The ASCII name of the signal.
+    @param[in] value - The signed integer value of the signal (if any).
 
-	@return status - 0 = Success
+    @return status - 0 = Success
                     ~0 = Errno
 
 -----------------------------------------------------------------------------*/

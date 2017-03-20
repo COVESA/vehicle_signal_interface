@@ -44,15 +44,15 @@ static sysMemory_t*    vsi_core_open_sys  ( bool createNew );
 
     v s i _ c o r e _ o p e n
 
-	@brief Open the shared memory segments.
+    @brief Open the shared memory segments.
 
-	This function will
+    This function will
 
-	@param[in]
-	@param[out]
-	@param[in,out]
+    @param[in]
+    @param[out]
+    @param[in,out]
 
-	@return None
+    @return None
 
 -----------------------------------------------------------------------------*/
 void vsi_core_open ( bool createNew )
@@ -211,15 +211,15 @@ static sharedMemory_t* vsi_core_open_user ( bool createNew )
 
     v s i _ c o r e _ o p e n _ s y s
 
-	@brief
+    @brief
 
-	This function will
+    This function will
 
-	@param[in]
-	@param[out]
-	@param[in,out]
+    @param[in]
+    @param[out]
+    @param[in,out]
 
-	@return None
+    @return None
 
 -----------------------------------------------------------------------------*/
 static sysMemory_t* vsi_core_open_sys ( bool createNew )
