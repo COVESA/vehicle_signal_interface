@@ -43,7 +43,7 @@ void semaphorePost ( semaphore_p semaphore );
 void semaphoreWait ( semaphore_p semaphore );
 
 
-#endif      // End of #ifndef SHARED_MEMORY_LOCKS_H
+#endif     // End of #ifndef SHARED_MEMORY_LOCKS_H
 
 /*! @} */
 

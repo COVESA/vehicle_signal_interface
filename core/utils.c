@@ -100,7 +100,7 @@ void dumpAllSignals ( int maxSignals )
 
     @param[in] signalList - The address of the signal list to be dumped
     @param[in] maxSignals - The maximum number of signals to display in each
-                             signal list.
+                            signal list.
     @return None
 
 ------------------------------------------------------------------------*/
@@ -191,7 +191,7 @@ void dumpSignalList ( signalList_t* signalList, int maxSignals )
 
     @param[in] signalList - The address of the signalList to be dumped.
     @param[in] maxSignals - The maximum number of signals to dump for this
-                             signal list.
+                            signal list.
     @return None
 
 ------------------------------------------------------------------------*/

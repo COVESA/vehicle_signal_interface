@@ -98,7 +98,7 @@ int main ( int argc, char* const argv[] )
         switch ( ch )
         {
           //
-          //    Get the continuous run option flag if present.
+          //  Get the continuous run option flag if present.
           //
           case 'c':
             LOG ( "Record writing will run continuously. <ctrl-c> to "
@@ -107,7 +107,7 @@ int main ( int argc, char* const argv[] )
             break;
 
           //
-          //    Get the requested buffer size argument and validate it.
+          //  Get the requested buffer size argument and validate it.
           //
           case 'm':
             messagesToStore = atol ( optarg );
@@ -121,7 +121,7 @@ int main ( int argc, char* const argv[] )
             break;
 
           //
-          //    Get the random insert option flag if present.
+          //  Get the random insert option flag if present.
           //
           case 'r':
             LOG ( "Record writing will be random.\n" );

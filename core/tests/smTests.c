@@ -96,7 +96,7 @@ int main ( int argc, char* const argv[] )
             break;
 
           //
-          //    Get the requested list count.
+          //  Get the requested list count.
           //
           case 'b':
             listsToDump = atol ( optarg );
@@ -109,21 +109,21 @@ int main ( int argc, char* const argv[] )
             break;
 
           //
-          //    Get the requested domain value.
+          //  Get the requested domain value.
           //
           case 'd':
             // domain = atol ( optarg );
             break;
 
           //
-          //    Get the requested key value.
+          //  Get the requested key value.
           //
           case 'k':
             // key = atol ( optarg );
             break;
 
           //
-          //    Get the requested message count.
+          //  Get the requested message count.
           //
           case 'm':
             messagesToDump = atol ( optarg );

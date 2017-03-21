@@ -1851,7 +1851,7 @@ int vsi_listen_all_in_group ( vsi_handle    handle,
 
 ------------------------------------------------------------------------*/
 int vsi_flush_group ( vsi_handle    handle,
-                      const group_t groupId )
+        const group_t groupId )
 {
     vsi_signal_group        group;
     vsi_signal_group*       temp = 0;

@@ -1,5 +1,12 @@
 
-#include <Python.h>
+#define IPATH python PYTHON_VERSION
+#define IFILE Python.h
+
+#define __header(x) #x
+#define _header(p,f) __header(p/f)
+#define header(p,f) _header(p,f)
+#include header(IPATH,IFILE)
+
 
 //
 //  Define the following symbol to get debugging output.  Note: You may get

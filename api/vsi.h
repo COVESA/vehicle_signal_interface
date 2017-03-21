@@ -38,7 +38,7 @@
 
 
 //
-//  Determine how the various macros will be intrepreted depending on which
+//  Determine how the various macros will be interpreted depending on which
 //  options have been enabled.
 //
 #ifdef VSI_DEBUG

@@ -80,8 +80,8 @@ int main ( int argc, char* const argv[] )
     //
     //  Parse any command line options the user may have supplied.
     //
-    char asciiData[9] = { 0 };      // We only copy 8 bytes so it is always
-                                    // null terminated
+    char asciiData[9] = { 0 };  // We only copy 8 bytes so it is always
+                                // null terminated
     unsigned long keyValue = 0;
     domain_t domainValue = DOMAIN_CAN;
     int status = 0;
@@ -93,28 +93,28 @@ int main ( int argc, char* const argv[] )
         switch ( ch )
         {
           //
-          //    Get the requested domain value.
+          //  Get the requested domain value.
           //
           case 'd':
             domainValue = atol ( optarg );
             LOG ( "Using domain value[%'lu]\n", domainValue );
             break;
           //
-          //    Get the requested key value.
+          //  Get the requested key value.
           //
           case 'k':
             keyValue = atol ( optarg );
             LOG ( "Using key value[%'lu]\n", keyValue );
             break;
           //
-          //    Get the "newest" message flag.
+          //  Get the "newest" message flag.
           //
           case 'n':
             LOG ( "Fetching the newest signal\n" );
             getNewest = true;
             break;
           //
-          //    Display the help message.
+          //  Display the help message.
           //
           case 'h':
           case '?':

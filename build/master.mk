@@ -642,16 +642,16 @@ all: $(ALL_TARGETS)
 .PHONY: $(SUBDIRS)
 $(SUBDIRS):
 	@( \
-      curdir=$(subst $(TOP)/,,$(CURDIR)/$@); \
-      cd $@ > /dev/null 2>&1; \
-      $(DIR_ECHO) "===> [$(MAKELEVEL)] Moving into $$curdir ..."; \
-      targets=$(filter-out $(SUBDIRS), $(MAKECMDGOALS)); \
-      $(MAKE) MAKEFLAGS=$(MAKEFLAGS) $$targets; \
-      if [ $$? -ne 0 ]; \
-      then \
-          exit 255; \
-      fi; \
-      $(DIR_ECHO) "<=== [$(MAKELEVEL)] Moving out of $$curdir"; \
+       curdir=$(subst $(TOP)/,,$(CURDIR)/$@); \
+       cd $@ > /dev/null 2>&1; \
+       $(DIR_ECHO) "===> [$(MAKELEVEL)] Moving into $$curdir ..."; \
+       targets=$(filter-out $(SUBDIRS), $(MAKECMDGOALS)); \
+       $(MAKE) MAKEFLAGS=$(MAKEFLAGS) $$targets; \
+       if [ $$? -ne 0 ]; \
+       then \
+           exit 255; \
+       fi; \
+       $(DIR_ECHO) "<=== [$(MAKELEVEL)] Moving out of $$curdir"; \
     )
 
 #

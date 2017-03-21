@@ -98,7 +98,7 @@ int main ( int argc, char* const argv[] )
         switch ( ch )
         {
           //
-          //    Get the "copy" ASCII flag if the user specified it.
+          //  Get the "copy" ASCII flag if the user specified it.
           //
           case 'a':
             strncpy ( asciiData, optarg, 8 );
@@ -106,7 +106,7 @@ int main ( int argc, char* const argv[] )
             break;
 
           //
-          //    Get the body data from the user.
+          //  Get the body data from the user.
           //
           case 'b':
             numericData = atol ( optarg );
@@ -115,21 +115,21 @@ int main ( int argc, char* const argv[] )
             break;
 
           //
-          //    Get the requested domain value.
+          //  Get the requested domain value.
           //
           case 'd':
             domainValue = atol ( optarg );
             LOG ( "Using domain value[%'lu]\n", domainValue );
             break;
           //
-          //    Get the requested key value.
+          //  Get the requested key value.
           //
           case 'k':
             keyValue = atol ( optarg );
             LOG ( "Using key value[%'lu]\n", keyValue );
             break;
           //
-          //    Display the help message.
+          //  Display the help message.
           //
           case 'h':
           case '?':

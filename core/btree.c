@@ -105,8 +105,8 @@ static bt_node_t* merge_siblings ( btree_t* btree,
                                    unsigned int index );
 
 static void btree_traverse_node ( btree_t*     btree,
-                           bt_node_t*   subtree,
-                           traverseFunc traverseFunction );
+                                  bt_node_t*   subtree,
+                                  traverseFunc traverseFunction );
 
 static int btree_compare_function ( btree_t* btree,
                                     void* data1,
@@ -1444,8 +1444,8 @@ static nodePosition get_min_key_pos ( btree_t*   btree,
 
     This function makes some assumptions:
 
-        The left and right children both have min records.
-        The parent has at least one record.
+    The left and right children both have min records.
+    The parent has at least one record.
 
     @param[in] btree - The btree to operate on
     @param[in] parent - The address of the parent node

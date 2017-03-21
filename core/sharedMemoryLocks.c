@@ -117,9 +117,8 @@ void semaphoreWait ( semaphore_p semaphore )
     while ( semaphore->messageCount == 0 )
     {
         LOG ( "%'lu In semaphore while[%p] - waiterCount: %d, messageCount: %d\n",
-                 getIntervalTime(), semaphore, semaphore->waiterCount,
-                 semaphore->messageCount );
-
+              getIntervalTime(), semaphore, semaphore->waiterCount,
+              semaphore->messageCount );
         //
         //  Install the cancellation cleanup handler function.
         //
