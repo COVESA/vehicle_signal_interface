@@ -8,14 +8,14 @@
 
 /*!----------------------------------------------------------------------------
 
-	@file      utils.c
+    @file      utils.c
 
-	This file contains the utility functions that are used by various parts of
-	the main shared memory test code.
+    This file contains the utility functions that are used by various parts of
+    the main shared memory test code.
 
-	There are dump functions defined here that can be called by the code
-	during debugging to gain insight into the state and structure of the
-	various shared memory segment data structures.
+    There are dump functions defined here that can be called by the code
+    during debugging to gain insight into the state and structure of the
+    various shared memory segment data structures.
 
 -----------------------------------------------------------------------------*/
 
@@ -34,11 +34,11 @@
 /*! @{ */
 
 //
-//	WARNING!!!: All references (and pointers) to data in the VSI signal buffer
-//	are performed by using the offset from the shared memory segment base
-//	address.  All of these references need to be relocatable references so
-//	this will work in multiple processes that have their shared memory
-//	segments mapped to different base addresses.
+//  WARNING!!!: All references (and pointers) to data in the VSI signal buffer
+//  are performed by using the offset from the shared memory segment base
+//  address.  All of these references need to be relocatable references so
+//  this will work in multiple processes that have their shared memory
+//  segments mapped to different base addresses.
 //
 
 
@@ -47,22 +47,22 @@
 
     d u m p A l l S i g n a l s
 
-	@brief Dump all of the signals currently defined.
+    @brief Dump all of the signals currently defined.
 
-	This function will dump all of the signals currently defined.  It
+    This function will dump all of the signals currently defined.  It
     traverses all of the signal lists and dumps them in the order in which
     they are found.  This order is determined by the comparison function
     defined for the signal list B-tree (usually the domain & ID of the
     signal).
 
-	@param[in] maxSignals - The maximum number of signals to dump per list.
+    @param[in] maxSignals - The maximum number of signals to dump per list.
 
-	@return None
+    @return None
 
 -----------------------------------------------------------------------------*/
 void dumpAllSignals ( int maxSignals )
 {
-	signalList_t* signals;
+    signalList_t* signals;
 
     //
     //  If the system has not finished initializing yet, just ignore this call.
@@ -72,17 +72,17 @@ void dumpAllSignals ( int maxSignals )
         return;
     }
 
-	btree_iter iter = btree_iter_begin ( &smControl->signals );
+    btree_iter iter = btree_iter_begin ( &smControl->signals );
 
-	while ( ! btree_iter_at_end ( iter ) )
-	{
-		signals = btree_iter_data ( iter );
+    while ( ! btree_iter_at_end ( iter ) )
+    {
+        signals = btree_iter_data ( iter );
 
-		dumpSignalList ( signals, maxSignals );
+        dumpSignalList ( signals, maxSignals );
 
-		btree_iter_next ( iter );
-	}
-	btree_iter_cleanup ( iter );
+        btree_iter_next ( iter );
+    }
+    btree_iter_cleanup ( iter );
 
     return;
 }
@@ -93,15 +93,15 @@ void dumpAllSignals ( int maxSignals )
 
     d u m p S i g n a l L i s t
 
-	@brief Dump the contents of the specified signal list.
+    @brief Dump the contents of the specified signal list.
 
-	This function will Dump the contents of a single signal list.  This will
-	also dump the individual signals contained in this list.
+    This function will Dump the contents of a single signal list.  This will
+    also dump the individual signals contained in this list.
 
-	@param[in] signalList - The address of the signal list to be dumped
-	@param[in] maxSignals - The maximum number of signals to display in each
-	                         signal list.
-	@return None
+    @param[in] signalList - The address of the signal list to be dumped
+    @param[in] maxSignals - The maximum number of signals to display in each
+                             signal list.
+    @return None
 
 ------------------------------------------------------------------------*/
 void dumpSignalList ( signalList_t* signalList, int maxSignals )
@@ -113,70 +113,70 @@ void dumpSignalList ( signalList_t* signalList, int maxSignals )
     {
         return;
     }
-	//
-	//	If there are some signals in this signal list...
-	//
-	if ( signalList->currentSignalCount > 0 )
-	{
-		//
-        //	Display the address of this signal list and it's offset within the
-        //	shared memory segment.
-		//
-		LOG ( "Signal List %p[0x%lx]:\n", signalList, toOffset ( signalList ) );
+    //
+    //  If there are some signals in this signal list...
+    //
+    if ( signalList->currentSignalCount > 0 )
+    {
+        //
+        //  Display the address of this signal list and it's offset within the
+        //  shared memory segment.
+        //
+        LOG ( "Signal List %p[0x%lx]:\n", signalList, toOffset ( signalList ) );
 
-		//
-		//	If the head offset indicates that this is the end of the signal
-		//	list, display a signal saying we hit the end of the list.
-		//
-		if ( signalList->head == END_OF_LIST_MARKER )
-		{
-			LOG ( "Head offset............: End of List Marker\n" );
-		}
-		//
-		//	Otherwise, display the head offset value.  This is the offset in
-		//	the segment of the first data signal record.
-		//
-		else
-		{
-			LOG ( "Head offset............: 0x%lx[%lu]\n", signalList->head,
+        //
+        //  If the head offset indicates that this is the end of the signal
+        //  list, display a signal saying we hit the end of the list.
+        //
+        if ( signalList->head == END_OF_LIST_MARKER )
+        {
+            LOG ( "Head offset............: End of List Marker\n" );
+        }
+        //
+        //  Otherwise, display the head offset value.  This is the offset in
+        //  the segment of the first data signal record.
+        //
+        else
+        {
+            LOG ( "Head offset............: 0x%lx[%lu]\n", signalList->head,
                   signalList->head );
-		}
-		//
-		//	If the tail offset indicates that this is the end of the signal
-		//	list, display a signal saying we hit the end of the list.
-		//
-		if ( signalList->tail == END_OF_LIST_MARKER )
-		{
-			LOG ( "Tail offset............: End of List Marker\n" );
-		}
-		//
-		//	Otherwise, display the tail offset value.  This is the offset in
-		//	the segment of the start of the last data signal record.
-		//
-		else
-		{
-			LOG ( "Tail offset............: 0x%lx[%lu]\n", signalList->tail,
+        }
+        //
+        //  If the tail offset indicates that this is the end of the signal
+        //  list, display a signal saying we hit the end of the list.
+        //
+        if ( signalList->tail == END_OF_LIST_MARKER )
+        {
+            LOG ( "Tail offset............: End of List Marker\n" );
+        }
+        //
+        //  Otherwise, display the tail offset value.  This is the offset in
+        //  the segment of the start of the last data signal record.
+        //
+        else
+        {
+            LOG ( "Tail offset............: 0x%lx[%lu]\n", signalList->tail,
                   signalList->tail );
-		}
-		//
-		//	Display the number of messages currently stored in this hash
-		//	bucket.
-		//
-		LOG ( "Message count..........: %'lu\n", signalList->currentSignalCount );
+        }
+        //
+        //  Display the number of messages currently stored in this hash
+        //  bucket.
+        //
+        LOG ( "Message count..........: %'lu\n", signalList->currentSignalCount );
 
-		//
-        //	Display the number of bytes of memory that have been allocated to
-        //	this signal list for the storage of signals.
-		//
-		LOG ( "Total signal size......: %lu[0x%lx]\n", signalList->totalSignalSize,
+        //
+        //  Display the number of bytes of memory that have been allocated to
+        //  this signal list for the storage of signals.
+        //
+        LOG ( "Total signal size......: %lu[0x%lx]\n", signalList->totalSignalSize,
               signalList->totalSignalSize );
 
-		//
-		//	Go dump the contents of the signal list in this entry.
-		//
-		dumpSignals ( signalList, maxSignals );
-	}
-	return;
+        //
+        //  Go dump the contents of the signal list in this entry.
+        //
+        dumpSignals ( signalList, maxSignals );
+    }
+    return;
 }
 
 
@@ -184,15 +184,15 @@ void dumpSignalList ( signalList_t* signalList, int maxSignals )
 
     d u m p S i g n a l s
 
-	@brief Dump the contents of the specified shared memory signal list.
+    @brief Dump the contents of the specified shared memory signal list.
 
     This function will dump all of the signals in the specified signals list.
     The actual binary contents of each message is also dumped.
 
-	@param[in] signalList - The address of the signalList to be dumped.
-	@param[in] maxSignals - The maximum number of signals to dump for this
-							 signal list.
-	@return None
+    @param[in] signalList - The address of the signalList to be dumped.
+    @param[in] maxSignals - The maximum number of signals to dump for this
+                             signal list.
+    @return None
 
 ------------------------------------------------------------------------*/
 void dumpSignals ( signalList_t* signalList, int maxSignals )
@@ -228,104 +228,104 @@ void dumpSignals ( signalList_t* signalList, int maxSignals )
     {
         return;
     }
-	//
-	//	Get an actual pointer to the first signal in this list.  This is
-	//	the signal that is pointed to by the "head" offset.
-	//
-	signalData_t* signal = toAddress ( signalOffset );
+    //
+    //  Get an actual pointer to the first signal in this list.  This is
+    //  the signal that is pointed to by the "head" offset.
+    //
+    signalData_t* signal = toAddress ( signalOffset );
 
     //
-    //	Display the signal list address.
+    //  Display the signal list address.
     //
     LOG ( "    Signal list [%p]:\n", signalList );
 
     //
-    //	Display the domain associated with this signal.
+    //  Display the domain associated with this signal.
     //
     LOG ( "      Domain: %'lu\n", signalList->domain );
 
     //
-    //	Display the key value that was associated with this signal.
+    //  Display the key value that was associated with this signal.
     //
     LOG ( "      Key:    %'lu\n", signalList->key );
 
-	//
-	//	Repeat until we reach the end of the signal list in this bucket.
-	//
-	while ( signalOffset != END_OF_LIST_MARKER )
-	{
-		//
-		//	Display the size of this signal in bytes.
-		//
-		LOG ( "      %'d - Signal data size...: %'lu\n", ++i, signal->messageSize );
+    //
+    //  Repeat until we reach the end of the signal list in this bucket.
+    //
+    while ( signalOffset != END_OF_LIST_MARKER )
+    {
+        //
+        //  Display the size of this signal in bytes.
+        //
+        LOG ( "      %'d - Signal data size...: %'lu\n", ++i, signal->messageSize );
 
-		//
-		//	If the "next" signal offset indicates that this is the end of the
-		//	signal list, display a message saying we hit the end of the list.
-		//
+        //
+        //  If the "next" signal offset indicates that this is the end of the
+        //  signal list, display a message saying we hit the end of the list.
+        //
         signalOffset = signal->nextMessageOffset;
-		if ( signalOffset == END_OF_LIST_MARKER )
-		{
-			LOG ( "      Next signal offset.: End of List Marker\n" );
-		}
-		//
-        //	Otherwise, display the next signal offset value.  This is the
-        //	offset in the signal list where the next logical signal in the
-        //	list is located.
-		//
-		else
-		{
-			LOG ( "       Next signal offset.: %'lu\n", signalOffset );
-		}
-		//
-		//	Go dump the contents of the data field for this signal.
-		//
-		HexDump ( signal->data, signal->messageSize, "Signal Data", 6 );
+        if ( signalOffset == END_OF_LIST_MARKER )
+        {
+            LOG ( "      Next signal offset.: End of List Marker\n" );
+        }
+        //
+        //  Otherwise, display the next signal offset value.  This is the
+        //  offset in the signal list where the next logical signal in the
+        //  list is located.
+        //
+        else
+        {
+            LOG ( "       Next signal offset.: %'lu\n", signalOffset );
+        }
+        //
+        //  Go dump the contents of the data field for this signal.
+        //
+        HexDump ( signal->data, signal->messageSize, "Signal Data", 6 );
 
         //
         //  If we have reached the maximum number of signals the caller asked
         //  us to disply, break out of this loop and quit.
         //
-		if ( --maxSignals == 0 )
-		{
-			break;
-		}
-		//
-		//	Get the address of where the next signal in the list is located.
-		//
+        if ( --maxSignals == 0 )
+        {
+            break;
+        }
+        //
+        //  Get the address of where the next signal in the list is located.
+        //
         signal = toAddress ( signalOffset );
-	}
-	return;
+    }
+    return;
 }
 
 
 /*!-----------------------------------------------------------------------
 
-	d u m p S e m a p h o r e
+    d u m p S e m a p h o r e
 
-	@brief Dump the fields of a semaphore.
+    @brief Dump the fields of a semaphore.
 
-	This function will dump all of the fields of the specified semaphore that
-	make sense.  The mutex and condition variable are not dumped as we have no
-	explicit information about what is inside them.
+    This function will dump all of the fields of the specified semaphore that
+    make sense.  The mutex and condition variable are not dumped as we have no
+    explicit information about what is inside them.
 
-	@param[in] semaphore - The address of the semaphore to be dumped.
+    @param[in] semaphore - The address of the semaphore to be dumped.
 
 ------------------------------------------------------------------------*/
 void dumpSemaphore ( semaphore_p semaphore )
 {
 #ifdef DUMP_SEMAPHORE
-	LOG ( "semaphore: %3p\n", (void*)((long)&semaphore->mutex % 0x1000 ) );
+    LOG ( "semaphore: %3p\n", (void*)((long)&semaphore->mutex % 0x1000 ) );
 
-	//
-	//	Display our count values.
-	//
-	LOG ( "   message count.........: %'d\n", semaphore->messageCount );
-	LOG ( "   waiter count..........: %'d\n", semaphore->waiterCount );
+    //
+    //  Display our count values.
+    //
+    LOG ( "   message count.........: %'d\n", semaphore->messageCount );
+    LOG ( "   waiter count..........: %'d\n", semaphore->waiterCount );
 
-	//
-	//	Display the semaphore data...
-	//
+    //
+    //  Display the semaphore data...
+    //
     LOG ( "   semaphore.mutex.lock..: %d\n", semaphore->mutex.__data.__lock );
     LOG ( "   semaphore.mutex.count.: %d\n", semaphore->mutex.__data.__count );
     LOG ( "   semaphore.mutex.owner.: %d\n", semaphore->mutex.__data.__owner );
@@ -333,7 +333,7 @@ void dumpSemaphore ( semaphore_p semaphore )
     LOG ( "   semaphore.mutex.kind..: %d\n", semaphore->mutex.__data.__kind );
 
 #endif
-	return;
+    return;
 }
 
 
@@ -348,15 +348,15 @@ void dumpSemaphore ( semaphore_p semaphore )
     0016   67 4C 65 76 65 6C 3A 00 98                       gLevel:..
 
     Note that the input does not need to be a string, just an array of bytes.
-	The dump will be output with 16 bytes per line and have the ASCII
-	representation of the data appended to each line.  Unprintable characters
-	are printed as a period.
+    The dump will be output with 16 bytes per line and have the ASCII
+    representation of the data appended to each line.  Unprintable characters
+    are printed as a period.
 
-	The title, outputWidth, and leadingSpaces are optional arguments that can
-	be left off by using one of the helper macros.
+    The title, outputWidth, and leadingSpaces are optional arguments that can
+    be left off by using one of the helper macros.
 
-	The output from calling this function will be generated on the "stdout"
-	device.
+    The output from calling this function will be generated on the "stdout"
+    device.
 
     The maximum length of a hex dump is specified by the constant below and
     all dumps will be truncated to this length if they are longer than this
@@ -366,7 +366,7 @@ void dumpSemaphore ( semaphore_p semaphore )
 
         HexDump ( data, length, "Title", 0 );
 
-	or in this case:
+    or in this case:
 
         HEX_DUMP_TL ( data, length, "Title", 0 );
 
@@ -375,8 +375,8 @@ void dumpSemaphore ( semaphore_p semaphore )
         data - The address of the data buffer to be dumped
         length - The number of bytes of data to be dumped
         title - The address of an optional title string for the dump
-		leadingSpaces - The number of spaces to be added at the beginning of
-						each line.
+        leadingSpaces - The number of spaces to be added at the beginning of
+                        each line.
 
     Output Data:  None
 
@@ -394,8 +394,8 @@ void dumpSemaphore ( semaphore_p semaphore )
 #define MAX_DUMP_SIZE ( 1024 )
 
 //
-//	The following macros are defined in the header file to make it easier to
-//	call the HexDump function with various combinations of arguments.
+//  The following macros are defined in the header file to make it easier to
+//  call the HexDump function with various combinations of arguments.
 //
 // #define HEX_DUMP(   data, length )         HexDump ( data, length, "", 0 )
 // #define HEX_DUMP_T( data, length, title )  HexDump ( data, length, title, 0 )
@@ -404,7 +404,7 @@ void dumpSemaphore ( semaphore_p semaphore )
 //
 
 void HexDump ( const char *data, int length, const char *title,
-			   int leadingSpaces )
+               int leadingSpaces )
 {
     unsigned char c;
     int           i;
@@ -413,10 +413,10 @@ void HexDump ( const char *data, int length, const char *title,
     int           outputWidth      = 16;
     int           currentLineWidth = 0;
     int           originalLength   = 0;
-	char          asciiString[400] = { 0 };
+    char          asciiString[400] = { 0 };
 
-	XPRINT ( "data(%d): \"%s\", title: %p, width: %d, spaces: %d\n", length,
-			 data, title, outputWidth, leadingSpaces );
+    XPRINT ( "data(%d): \"%s\", title: %p, width: %d, spaces: %d\n", length,
+             data, title, outputWidth, leadingSpaces );
     //
     //    If the length field is unreasonably long, truncate it.
     //
@@ -431,18 +431,18 @@ void HexDump ( const char *data, int length, const char *title,
     //
     //    Output the leader string at the beginning of the title line.
     //
-	for ( i = 0; i < leadingSpaces; i++ )
-	{
-		putchar ( ' ' );
-	}
+    for ( i = 0; i < leadingSpaces; i++ )
+    {
+        putchar ( ' ' );
+    }
     //
     //    If the user specified a title for the dump, output that title
     //    followed by the buffer size and location.
     //
     if ( title != NULL && strlen(title) != 0 )
     {
-		fputs ( title, stdout );
-		printf ( " (%d bytes @ %p):\n", originalLength, data );
+        fputs ( title, stdout );
+        printf ( " (%d bytes @ %p):\n", originalLength, data );
     }
     //
     //    If the user did not specify a title for the dump, just output the
@@ -450,7 +450,7 @@ void HexDump ( const char *data, int length, const char *title,
     //
     else
     {
-		printf ( "%d bytes @ %p:\n", originalLength, data );
+        printf ( "%d bytes @ %p:\n", originalLength, data );
     }
     //
     //    For each byte in the data to be dumped...
@@ -476,29 +476,29 @@ void HexDump ( const char *data, int length, const char *title,
             //
             if ( i > 0 )
             {
-				asciiString[s] = 0;
-				puts ( asciiString );
+                asciiString[s] = 0;
+                puts ( asciiString );
 
                 asciiString[0] = 0;
-				s = 0;
+                s = 0;
             }
             //
             //    Output the leader string at the beginning of the new line.
             //
-			for ( j = 0; j < leadingSpaces; j++ )
-			{
-				putchar ( ' ' );
-			}
+            for ( j = 0; j < leadingSpaces; j++ )
+            {
+                putchar ( ' ' );
+            }
             //
             //    Output the data offset field for this new line.
             //
-			printf ( "%06d  ", i );
+            printf ( "%06d  ", i );
         }
         //
         //    Generate the hex representation for the current data character.
         //
         c = *data++;
-		printf ( "%02x ", c );
+        printf ( "%02x ", c );
 
         //
         //    Generate the ASCII representation of the data character at this
@@ -507,11 +507,11 @@ void HexDump ( const char *data, int length, const char *title,
         //
         if ( c >= ' ' && c <= '~' )
         {
-			asciiString[s++] = c;
+            asciiString[s++] = c;
         }
         else
         {
-			asciiString[s++] = '.';
+            asciiString[s++] = '.';
         }
         //
         //    Increment the width of the line generated so far.
@@ -527,13 +527,13 @@ void HexDump ( const char *data, int length, const char *title,
     //
     for ( i = 0; i < outputWidth - currentLineWidth; i++ )
     {
-		fputs ( "   ", stdout );
+        fputs ( "   ", stdout );
     }
     //
     //    Output the last line of the display.
     //
-	asciiString[s] = 0;
-	puts ( asciiString );
+    asciiString[s] = 0;
+    puts ( asciiString );
 
     //
     //    If the original length was truncated because it was unreasonably
@@ -541,7 +541,7 @@ void HexDump ( const char *data, int length, const char *title,
     //
     if ( originalLength > length )
     {
-		printf ( "       ...Dump of %d bytes has been truncated\n", originalLength );
+        printf ( "       ...Dump of %d bytes has been truncated\n", originalLength );
     }
     //
     //    Return to the caller.
@@ -552,13 +552,13 @@ void HexDump ( const char *data, int length, const char *title,
 #ifdef VSI_DEBUG
 
 //
-//	TODO: The following function is for debugging purposes.
+//  TODO: The following function is for debugging purposes.
 //
-//	This function will return the time in microseconds since the shared memory
-//	segment was first accessed after being initialized.  The time is in
-//	microseconds instead of the raw nanosecond form because the nanosecond
-//	portion of the time is not very interesting and just clutters up the
-//	output.
+//  This function will return the time in microseconds since the shared memory
+//  segment was first accessed after being initialized.  The time is in
+//  microseconds instead of the raw nanosecond form because the nanosecond
+//  portion of the time is not very interesting and just clutters up the
+//  output.
 //
 //  The first time this function is called it will set the global base time
 //  contained in the shared memory control block.  All subsequent times are
@@ -569,8 +569,8 @@ void HexDump ( const char *data, int length, const char *title,
 
 unsigned long getIntervalTime ( void )
 {
-	unsigned long currentTime;
-	struct timespec timeSpec;
+    unsigned long currentTime;
+    struct timespec timeSpec;
 
     if ( smControl != 0 )
     {

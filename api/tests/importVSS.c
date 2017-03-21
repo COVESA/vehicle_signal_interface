@@ -9,7 +9,7 @@
 
 /*!----------------------------------------------------------------------------
 
-	@file      importVSS.c
+    @file      importVSS.c
 
     This file will read a Vehicle Signal Specification (VSS) format file and
     write all of the signal definitions into the Vehicle Signal Interface
@@ -53,7 +53,7 @@ typedef struct userData
 
     b t r e e   S u p p o r t   F u n c t i o n s
 
-	The following functions will support various functions in the btree
+    The following functions will support various functions in the btree
     library.
 
 ------------------------------------------------------------------------*/
@@ -97,11 +97,11 @@ static void traverseFunction ( char* leader, void* dataPtr )
 
 /*!-----------------------------------------------------------------------
 
-	m a i n
+    m a i n
 
-	@brief The main entry point for this VSS demonstration program.
+    @brief The main entry point for this VSS demonstration program.
 
-	This function will read the supplied VSS definition file and build the
+    This function will read the supplied VSS definition file and build the
     data structures to support it in memory.  It will build 2 indices on that
     data, one to fetch the name of something given it's domain and signal ID,
     and the other to fetch the domain and signal ID given the signal name.

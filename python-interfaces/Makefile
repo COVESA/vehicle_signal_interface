@@ -384,7 +384,7 @@ ifndef PYTHON_VERSION
 	endif
 endif
 
-INCLUDE_DIRS += -I=/usr/include/python${PYTHON_VERSION}
+INCLUDE_DIRS += -I/usr/include/python${PYTHON_VERSION}
 
 #
 #    Define any additional link flags that need to be used to form the "goal"

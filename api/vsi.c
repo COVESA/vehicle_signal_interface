@@ -166,7 +166,7 @@ void printGroupFunction ( char* leader, void* data )
     //
     if ( current == NULL )
     {
-		printf ( "%s  Group has no members defined.\n", leader );
+        printf ( "%s  Group has no members defined.\n", leader );
         return;
     }
     //
@@ -303,10 +303,10 @@ int vsi_VSS_import ( vsi_handle handle, const char* fileName )
         fprintf ( stderr, "ERROR: NULL VSS input file specified.\n" );
         return ENOENT;
     }
-	//
-	//  Attempt to open the specified file.
-	//
-	inputFile = fopen ( fileName, "r" );
+    //
+    //  Attempt to open the specified file.
+    //
+    inputFile = fopen ( fileName, "r" );
 
     //
     //  If we could not open the file that was specified complain and quit.
@@ -695,7 +695,7 @@ int vsi_delete_signal_group ( vsi_handle    handle,
     //
     //  Get the group object that the user specified.
     //
-	vsi_signal_group  group;
+    vsi_signal_group  group;
     vsi_signal_group* temp;
 
     group.groupId = groupId;
@@ -758,9 +758,9 @@ int vsi_delete_signal_group ( vsi_handle    handle,
 
     v s i _ a d d _ s i g n a l _ t o _ g r o u p
 
-	@brief Add a new signal to the specified group.
+    @brief Add a new signal to the specified group.
 
-	This function will add a new signal to the specified group.
+    This function will add a new signal to the specified group.
 
 ------------------------------------------------------------------------*/
 int vsi_add_signal_to_group ( vsi_handle     handle,
@@ -806,9 +806,9 @@ int vsi_add_signal_to_group ( vsi_handle     handle,
 
     v s i _ a d d _ s i g n a l _ t o _ g r o u p _ b y _ n a m e
 
-	@brief Add a new signal to the specified group by name.
+    @brief Add a new signal to the specified group by name.
 
-	This function will add a new signal to the specified group.
+    This function will add a new signal to the specified group.
 
 ------------------------------------------------------------------------*/
 int vsi_add_signal_to_group_by_name ( vsi_handle    handle,
@@ -828,9 +828,9 @@ int vsi_add_signal_to_group_by_name ( vsi_handle    handle,
 
     v s i _ r e m o v e _ s i g n a l _ f r o m _ g r o u p
 
-	@brief Remove a signal from the specified group.
+    @brief Remove a signal from the specified group.
 
-	This function will add a new signal to the specified group.
+    This function will add a new signal to the specified group.
 
     TODO: This removal is awkward.  We need to search for the item we want and
     then call the remove function which will perform another search for the
@@ -886,9 +886,9 @@ int vsi_remove_signal_from_group ( vsi_handle     handle,
 
     v s i _ r e m o v e _ s i g n a l _ f r o m _ g r o u p _ b y _ n a m e
 
-	@brief Remove a signal from the specified group by name.
+    @brief Remove a signal from the specified group by name.
 
-	This function will add a new signal to the specified group.
+    This function will add a new signal to the specified group.
 
 ------------------------------------------------------------------------*/
 int vsi_remove_signal_from_group_by_name ( vsi_handle    handle,
@@ -917,9 +917,9 @@ int vsi_remove_signal_from_group_by_name ( vsi_handle    handle,
 
     v s i _ g e t _ n e w e s t _ i n _ g r o u p
 
-	@brief Get the newest signal available for all signals in a group.
+    @brief Get the newest signal available for all signals in a group.
 
-	This function will fetch the newest (the one with the most recent
+    This function will fetch the newest (the one with the most recent
     timestamp) signal available for each member signal in the specified group.
 
     Note that the result pointer in this case MUST be a pointer to an array of
@@ -1083,9 +1083,9 @@ int vsi_get_newest_in_group_wait ( vsi_handle    handle,
 
     v s i _ g e t _ o l d e s t _ i n _ g r o u p
 
-	@brief Get the oldest signal available for all signals in a group.
+    @brief Get the oldest signal available for all signals in a group.
 
-	This function will fetch the oldest (the one with the least recent
+    This function will fetch the oldest (the one with the least recent
     timestamp) signal available for each member signal in the specified group.
 
     Note that the result pointer in this case MUST be a pointer to an array of
@@ -1839,7 +1839,7 @@ int vsi_listen_all_in_group ( vsi_handle    handle,
 
     v s i _ f l u s h _ g r o u p
 
-	@brief Flush all of the signals available for all signals in a group.
+    @brief Flush all of the signals available for all signals in a group.
 
     This function will flush all of the signals available for each member
     signal in the specified group.
@@ -1955,7 +1955,7 @@ int vsi_flush_group ( vsi_handle    handle,
 
 ------------------------------------------------------------------------*/
 int vsi_name_string_to_id ( vsi_handle  handle,
-						    const char* name,
+                            const char* name,
                             domain_t*   domainId,
                             signal_t*   signalId )
 {

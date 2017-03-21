@@ -641,15 +641,18 @@ all: $(ALL_TARGETS)
 #
 .PHONY: $(SUBDIRS)
 $(SUBDIRS):
-	@curdir=$(subst $(TOP)/,,$(CURDIR)/$@); \
-	$(DIR_ECHO) "===> [$(MAKELEVEL)] Moving into $$curdir ..."; \
-	targets=$(filter-out $(SUBDIRS), $(MAKECMDGOALS)); \
-	$(MAKE) MAKEFLAGS=$(MAKEFLAGS) -C $@ $$targets; \
-	if [ $$? -ne 0 ]; \
-	then \
-	    exit 255; \
-	fi; \
-	$(DIR_ECHO) "<=== [$(MAKELEVEL)] Moving out of $$curdir"
+	@( \
+      curdir=$(subst $(TOP)/,,$(CURDIR)/$@); \
+      cd $@ > /dev/null 2>&1; \
+      $(DIR_ECHO) "===> [$(MAKELEVEL)] Moving into $$curdir ..."; \
+      targets=$(filter-out $(SUBDIRS), $(MAKECMDGOALS)); \
+      $(MAKE) MAKEFLAGS=$(MAKEFLAGS) $$targets; \
+      if [ $$? -ne 0 ]; \
+      then \
+          exit 255; \
+      fi; \
+      $(DIR_ECHO) "<=== [$(MAKELEVEL)] Moving out of $$curdir"; \
+    )
 
 #
 #    This rule will generate all of the executable goal files.  To invoke this
@@ -916,7 +919,7 @@ cleanProlog:
 	then \
 	    echo -n "Removing all generated files... "; \
 	fi; \
-	rm -rf $(CLEAN_FILES)
+	rm -rf $(CLEAN_FILES) > /dev/null 2>&1
 
 
 .PHONY: cleanWork
@@ -954,19 +957,19 @@ distclean: DIR_ECHO := ":"
 distclean: clean
 	@-if [ "$(DEPS_DIR)" != "." ]; \
 	then \
-	    rm -rf $(DEPS_DIR); \
+	    rm -rf $(DEPS_DIR) > /dev/null 2>&1; \
 	fi; \
 	if [ "$(OBJ_DIR)" != "" ]; \
 	then \
-	    rm -rf $(OBJ_DIR); \
+	    rm -rf $(OBJ_DIR) > /dev/null 2>&1; \
 	fi; \
-	rm -rf bin/*; \
-	rm -rf lib/*; \
-	rm -rf include/*; \
-	rm -rf $(TOP_BIN)/*; \
-	rm -rf $(TOP_LIB)/*; \
-	rm -rf $(TOP_INCLUDE)/*; \
-	rm -rf $(DISTCLEAN_FILES)
+	rm -rf bin/* > /dev/null 2>&1; \
+	rm -rf lib/* > /dev/null 2>&1; \
+	rm -rf include/* > /dev/null 2>&1; \
+	rm -rf $(TOP_BIN)/* > /dev/null 2>&1; \
+	rm -rf $(TOP_LIB)/* > /dev/null 2>&1; \
+	rm -rf $(TOP_INCLUDE)/* > /dev/null 2>&1; \
+	rm -rf $(DISTCLEAN_FILES) > /dev/null 2>&1
 
 #
 #    This rule will invoke the "doxygen" documentation processing system to

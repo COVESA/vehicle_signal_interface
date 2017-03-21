@@ -76,9 +76,9 @@ static vsi_core_handle handle = 0;
 
         vsi_core_handle vsi_core_open ( void );
 
-	@param  None
+    @param  None
 
-	@return The handle to the VSI core data store.
+    @return The handle to the VSI core data store.
             NULL indicates an error.
 
 ------------------------------------------------------------------------*/
@@ -130,7 +130,7 @@ static int Lua_vsiCoreOpen ( lua_State* L )
 
     L u a _ v s i C o r e C l o s e
 
-	@brief Close the VSI core environment.
+    @brief Close the VSI core environment.
 
     Lua Interface:
 
@@ -150,9 +150,9 @@ static int Lua_vsiCoreOpen ( lua_State* L )
 
         void vsi_core_close ( vsi_core_handle handle );
 
-	@param[in] handle - The VSI data store handle.
+    @param[in] handle - The VSI data store handle.
 
-	@return None
+    @return None
 
 ------------------------------------------------------------------------*/
 static int Lua_vsiCoreClose ( lua_State* L )
@@ -178,7 +178,7 @@ static int Lua_vsiCoreClose ( lua_State* L )
 
     L u a _ v s i C o r e I n s e r t
 
-	@brief Insert a message into the VSI core data store.
+    @brief Insert a message into the VSI core data store.
 
     Lua Interface:
 
@@ -209,7 +209,7 @@ static int Lua_vsiCoreClose ( lua_State* L )
     @param[in] newMessageSize - The size of the new message in bytes.
     @param[in] body - The address of the body of the new message.
 
-	@return None
+    @return None
 
 ------------------------------------------------------------------------*/
 static int Lua_vsiCoreInsert ( lua_State* L )
@@ -237,7 +237,7 @@ static int Lua_vsiCoreInsert ( lua_State* L )
 
     L u a _ v s i C o r e F e t c h
 
-	@brief Fetch and remove the oldest message from the VSI data store.
+    @brief Fetch and remove the oldest message from the VSI data store.
 
     Lua Interface:
 
@@ -267,7 +267,7 @@ static int Lua_vsiCoreInsert ( lua_State* L )
     @param[in/out] bodySize - The address of the body buffer size.
     @param[out] body - The address of the user's message buffer.
 
-	@return 0      - Success
+    @return 0      - Success
             ENOMSG - The requested domain/key does not exist.
                    - Anything else is an error code.
 
@@ -293,7 +293,7 @@ static int Lua_vsiCoreFetch ( lua_State* L )
 
     L u a _ v s i C o r e F e t c h W a i t
 
-	@brief Fetch and remove a message from the VSI data store with wait.
+    @brief Fetch and remove a message from the VSI data store with wait.
 
     Lua Interface:
 
@@ -326,7 +326,7 @@ static int Lua_vsiCoreFetch ( lua_State* L )
     @param[in/out] bodySize - The address of the body buffer size.
     @param[out] body - The address of the user's message buffer.
 
-	@return 0 - Success
+    @return 0 - Success
               - Anything else is an error code.
 
 ------------------------------------------------------------------------*/
@@ -351,7 +351,7 @@ static int Lua_vsiCoreFetchWait ( lua_State* L )
 
     L u a _ v s i C o r e F e t c h N e w e s t
 
-	@brief Fetch the newest message from the VSI data store with wait.
+    @brief Fetch the newest message from the VSI data store with wait.
 
     Lua Interface:
 
@@ -382,7 +382,7 @@ static int Lua_vsiCoreFetchWait ( lua_State* L )
     @param[in/out] bodySize - The address of the body buffer size.
     @param[out] body - The address of the user's message buffer.
 
-	@return 0 - Success
+    @return 0 - Success
               - Anything else is an error code.
 
 ------------------------------------------------------------------------*/
@@ -407,7 +407,7 @@ static int Lua_vsiCoreFetchNewest ( lua_State* L )
 
     L u a _ v s i C o r e F l u s h S i g n a l
 
-	@brief Flush all instances of the specified signal from the data store.
+    @brief Flush all instances of the specified signal from the data store.
 
     Lua Interface:
 
@@ -419,7 +419,7 @@ static int Lua_vsiCoreFetchNewest ( lua_State* L )
         status - the completion status of the operation (0 == successful).
 
     This function will find the message with the specified domain and key
-	This function will find all of the instances of signals with the specified
+    This function will find all of the instances of signals with the specified
     domain and key and remove them from the data store.  This call is designed
     to allow users to basically reset all of the data associated with a signal
     so the app can start from a known clean point.
@@ -431,7 +431,7 @@ static int Lua_vsiCoreFetchNewest ( lua_State* L )
     @param[in] domain - The domain associated with this message.
     @param[in] key - The key value associated with this message.
 
-	@return 0 on Success
+    @return 0 on Success
             Anything else is an error code (errno value)
 
 ------------------------------------------------------------------------*/
@@ -452,9 +452,9 @@ static int Lua_vsiCoreFlushSignal ( lua_State* L )
 
     l u a o p e n _ l i b l u a _ v s i _ c o r e
 
-	@brief Register the Lua functions we have implemented here.
+    @brief Register the Lua functions we have implemented here.
 
-	This function will make calls to Lua to register the names of all of the
+    This function will make calls to Lua to register the names of all of the
     functions that have been implemented in this library.
 
 ------------------------------------------------------------------------*/

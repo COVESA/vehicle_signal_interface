@@ -68,9 +68,9 @@
 
     C o n f i g u r a t i o n   S e t t i n g s
 
-	@brief Define the system configuration settings.
+    @brief Define the system configuration settings.
 
-	The following definitions should be customized to suit the user's specific
+    The following definitions should be customized to suit the user's specific
     environment.
 
 -----------------------------------------------------------------------------*/
@@ -111,11 +111,11 @@ typedef enum
 
 /*!-----------------------------------------------------------------------
 
-	s t r u c t   v s i _ c o n t e x t
+    s t r u c t   v s i _ c o n t e x t
 
-	@brief The master handle structure that gets passed to all VSI functions
+    @brief The master handle structure that gets passed to all VSI functions
 
-	This data structure is the "handle" object that gets passed to all of the
+    This data structure is the "handle" object that gets passed to all of the
     VSI functions.  All of the master data objects in the VSI system are
     defined as members of this structure.
 
@@ -239,7 +239,7 @@ typedef struct vsi_result
 
     s t r u c t   v s i _ i d _ n a m e _ d e f i n i t i o n
 
-	@brief This data structure is designed to hold the Id and name of each
+    @brief This data structure is designed to hold the Id and name of each
     signal defined in the system.
 
     This defines the "user data" structure that will be used to build the
@@ -267,9 +267,9 @@ typedef struct vsi_id_name_definition
 
     s t r u c t   v s i _ s i g n a l _ g r o u p
 
-	@brief This data structure manages lists of signals in a group.
+    @brief This data structure manages lists of signals in a group.
 
-	This defines the data structure that keeps track of groups and the signals
+    This defines the data structure that keeps track of groups and the signals
     that belong to each group.  This catagorization is accomplished with
     another btree that is indexed by the group Id.  Each group then contains a
     list of all of the signals that have been registered for that group.
@@ -336,15 +336,15 @@ int vsi_destroy ( vsi_handle handle );
 
     v s i _ V S S _ i m p o r t
 
-	@brief Import a VSS file into the VSI data store.
+    @brief Import a VSS file into the VSI data store.
 
-	This function will read the specified file and import the contents of it
+    This function will read the specified file and import the contents of it
     into the specified VSI environment.
 
-	@param[in] - handle - The VSI context handle
-	@param[in] - fileName - The pathname to the VSS definition file to be read
+    @param[in] - handle - The VSI context handle
+    @param[in] - fileName - The pathname to the VSS definition file to be read
 
-	@return - Completion code - 0 = Succesful
+    @return - Completion code - 0 = Succesful
                                 Anything else is an error code
 
 -----------------------------------------------------------------------------*/

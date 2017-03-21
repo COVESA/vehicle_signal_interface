@@ -46,22 +46,22 @@ not be defined here again.
 #### vsi_result
 
 ```C
-	typedef struct vsi_result
-	{
-		pthread_mutex_t lock;
+    typedef struct vsi_result
+    {
+        pthread_mutex_t lock;
 
-		vsi_context*    context;
+        vsi_context*    context;
 
-		domain_t        domainId;
-		signal_t        signalId;
-		char*           name;
+        domain_t        domainId;
+        signal_t        signalId;
+        char*           name;
 
-		char*           data;
-		unsigned long   dataLength;
+        char*           data;
+        unsigned long   dataLength;
 
-		int             status;
+        int             status;
 
-	}   vsi_result;
+    }   vsi_result;
 ```
 
 Many of the functions in the VSI API take a ```vsi_result``` structure as an
@@ -548,11 +548,11 @@ the result structures.
 #### vsi_listen_any_in_group
 
 ```C
-	int vsi_listen_any_in_group ( vsi_handle    handle,
-								  const group_t groupId,
-								  unsigned int  timeout,
-								  domain_t*     domainId,
-								  signal_t*     signalId );
+    int vsi_listen_any_in_group ( vsi_handle    handle,
+                                  const group_t groupId,
+                                  unsigned int  timeout,
+                                  domain_t*     domainId,
+                                  signal_t*     signalId );
 ```
 
 This function will listen for any signal in the specified group.  The signal
@@ -584,11 +584,11 @@ caller within the domain specified.
 #### vsi_listen_all_in_group
 
 ```C
-	int vsi_listen_all_in_group ( vsi_handle    handle,
-								  const group_t groupId,
-								  vsi_result*   results,
-								  unsigned int  resultsSize,
-								  unsigned int  timeout );
+    int vsi_listen_all_in_group ( vsi_handle    handle,
+                                  const group_t groupId,
+                                  vsi_result*   results,
+                                  unsigned int  resultsSize,
+                                  unsigned int  timeout );
 ```
 
 This function will listen for all signals in the specified group.  The signal
@@ -658,10 +658,10 @@ vice versa.
                                   char**         name,
                                   unsigned int   nameLength );
 
-	int vsi_define_signal_name ( vsi_handle     handle,
-								 const domain_t domainId,
-								 const signal_t signalId,
-								 const char*    name );
+    int vsi_define_signal_name ( vsi_handle     handle,
+                                 const domain_t domainId,
+                                 const signal_t signalId,
+                                 const char*    name );
 ```
 
 The vsi_name_string_to_id function takes a signal name and returns the domain

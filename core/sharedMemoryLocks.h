@@ -8,10 +8,10 @@
 
 /*!----------------------------------------------------------------------------
 
-	@file sharedMemoryLocks.h
+    @file sharedMemoryLocks.h
 
-	This file contains the declarations of the semaphore objects and member
-	functions.
+    This file contains the declarations of the semaphore objects and member
+    functions.
 
 -----------------------------------------------------------------------------*/
 
@@ -24,26 +24,26 @@
 /*! @{ */
 
 //
-//	Define the semaphore control structure.
+//  Define the semaphore control structure.
 //
 typedef struct semaphore_t
 {
-	pthread_mutex_t mutex;
-	pthread_cond_t  conditionVariable;
-	int             messageCount;
-	int             waiterCount;
+    pthread_mutex_t mutex;
+    pthread_cond_t  conditionVariable;
+    int             messageCount;
+    int             waiterCount;
 
 }   semaphore_t, *semaphore_p;
 
 
 //
-//	Define the semaphore member functions.
+//  Define the semaphore member functions.
 //
 void semaphorePost ( semaphore_p semaphore );
 void semaphoreWait ( semaphore_p semaphore );
 
 
-#endif		// End of #ifndef SHARED_MEMORY_LOCKS_H
+#endif      // End of #ifndef SHARED_MEMORY_LOCKS_H
 
 /*! @} */
 

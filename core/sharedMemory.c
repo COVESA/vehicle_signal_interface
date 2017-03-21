@@ -8,11 +8,11 @@
 
 /*!----------------------------------------------------------------------------
 
-	@file sharedMemory.c
+    @file sharedMemory.c
 
-	This file contains the functions that manipulate the shared memory segment
-	data structures.  Most of the major functions defined in the VSI are
-	defined here.
+    This file contains the functions that manipulate the shared memory segment
+    data structures.  Most of the major functions defined in the VSI are
+    defined here.
 
 -----------------------------------------------------------------------------*/
 
@@ -50,8 +50,6 @@ static const unsigned int sysSize = ( sizeof(sysMemory_t)    + 7 ) & 0xfffffff8;
 //  Declare the local functions.
 //
 static void memoryChunkPrint ( char* leader, void* recordPtr );
-// static void signalListPrint  ( char* leader, void* recordPtr );
-
 
 //
 //  Define the cleanup handler for the semaphore wait below.  This handler
@@ -70,7 +68,7 @@ static inline void semaphoreCleanupHandler ( void* arg )
 
 /*!-----------------------------------------------------------------------
 
-	S M _ L O C K
+    S M _ L O C K
 
     @brief Acquire the shared memory control structure lock.
 
@@ -96,14 +94,14 @@ static inline void semaphoreCleanupHandler ( void* arg )
 
 /*!-----------------------------------------------------------------------
 
-	S M _ U N L O C K
+    S M _ U N L O C K
 
     @brief Release the shared memory control structure lock.
 
-    This function will unlock the mutex on the signal list.  If another
-    process or thread is waiting on this lock, the scheduler will decide which
-    will run so the order of processes/threads may not be the same as the
-    order in which they called the lock function.
+    This function will unlock the mutex on the shared memory control
+    structure.  If another process or thread is waiting on this lock, the
+    scheduler will decide which will run so the order of processes/threads may
+    not be the same as the order in which they called the lock function.
 
 ------------------------------------------------------------------------*/
 #define SM_UNLOCK                             \
@@ -113,15 +111,59 @@ static inline void semaphoreCleanupHandler ( void* arg )
 
 /*!-----------------------------------------------------------------------
 
+    S L _ L O C K
+
+    @brief Acquire the signal list control structure lock.
+
+    This function will hang if the lock is currently not available and return
+    when the lock has been successfully acquired.  The address of the signal
+    list control block is required as the function argument.
+
+    NOTE: It is REQUIRED that the "push" and "pop" cleanup functions be
+    executed in the same lexical nesting level in the same function so the
+    "lock" and "unlock" macros must be used at the same lexical nesting level
+    and in the same function as well.  These functions also had to be
+    implemented as macros instead of functions because of the lexical level
+    limitation.
+
+------------------------------------------------------------------------*/
+#define SL_LOCK(sigList)                                                      \
+    if ( ( status = pthread_mutex_lock ( &sigList->semaphore.mutex ) ) != 0 ) \
+    {                                                                         \
+        printf ( "Error: Unable to acquire the signal list lock: "            \
+                 "%p - %d[%s]\n", sigList, status, strerror(status) );        \
+    }                                                                         \
+    pthread_cleanup_push ( semaphoreCleanupHandler, sigList );
+
+
+/*!-----------------------------------------------------------------------
+
+    S L _ U N L O C K
+
+    @brief Release the signal list control structure lock.
+
+    This function will unlock the mutex on the signal list.  If another
+    process or thread is waiting on this lock, the scheduler will decide which
+    will run so the order of processes/threads may not be the same as the
+    order in which they called the lock function.
+
+------------------------------------------------------------------------*/
+#define SL_UNLOCK(sigList)                              \
+    pthread_mutex_unlock ( &sigList->semaphore.mutex ); \
+    pthread_cleanup_pop ( 0 );
+
+
+/*!-----------------------------------------------------------------------
+
     d e l e t e M e m o r y C h u n k
 
-	@brief Delete a chunk of memory from both indices.
+    @brief Delete a chunk of memory from both indices.
 
-	This function will delete a chunk of memory from both indices.
+    This function will delete a chunk of memory from both indices.
 
-	@param[in] - The header of the memory chunk to delete.
+    @param[in] - The header of the memory chunk to delete.
 
-	@return  0 = Success
+    @return  0 = Success
             ~0 = Failure (errno value)
 
 ------------------------------------------------------------------------*/
@@ -156,13 +198,13 @@ static int deleteMemoryChunk ( memoryChunk_t* chunk )
 
     i n s e r t M e m o r y C h u n k
 
-	@brief Insert a chunk of memory from both indices.
+    @brief Insert a chunk of memory into both indices.
 
-	This function will insert a chunk of memory from both indices.
+    This function will insert a chunk of memory into both indices.
 
-	@param[in] - The header of the memory chunk to insert
+    @param[in] - The header of the memory chunk to insert
 
-	@return  0 = Success
+    @return  0 = Success
             ~0 = Failure (errno value)
 
 ------------------------------------------------------------------------*/
@@ -197,51 +239,51 @@ static int insertMemoryChunk ( memoryChunk_t* chunk )
 
     s m _ i n i t i a l i z e
 
-	@brief Initialize the data structures in a new shared memory segment.
+    @brief Initialize the data structures in a new shared memory segment.
 
-	The specified file (referenced by the supplied file descriptor) will be
-	mapped into virtual memory and the size of the file adjusted to match the
-	desired size of the shared memory segment.
+    The specified file (referenced by the supplied file descriptor) will be
+    mapped into virtual memory and the size of the file adjusted to match the
+    desired size of the shared memory segment.
 
-	This function will set up all of the data structures in the shared memory
-	segment for use.  This function should be called after a brand new shared
-	memory segment has been created and opened on disk.  This function should
-	not be called on an existing shared memory segment that contains data as
-	all of that data will be deleted by this function.
+    This function will set up all of the data structures in the shared memory
+    segment for use.  This function should be called after a brand new shared
+    memory segment has been created and opened on disk.  This function should
+    not be called on an existing shared memory segment that contains data as
+    all of that data will be deleted by this function.
 
-	@param[in] fd - The file descriptor of the file associated with this
-			   shared memory segment.
+    @param[in] fd - The file descriptor of the file associated with this
+               shared memory segment.
 
-	@param[in] sharedMemorySegmentSize - The size of the shared memory
-			   segment in bytes.
+    @param[in] sharedMemorySegmentSize - The size of the shared memory
+               segment in bytes.
 
-	@return The new memory address of where the shared memory segment begins.
-	        On error, a null pointer is returned and errno will be set to
-			indicate the error that was encountered.
+    @return The new memory address of where the shared memory segment begins.
+            On error, a null pointer is returned and errno will be set to
+            indicate the error that was encountered.
 
 ------------------------------------------------------------------------*/
 sharedMemory_p sm_initialize ( int fd, size_t sharedMemorySegmentSize )
 {
-	int            status;
-	sharedMemory_p sharedMemory;
+    int            status;
+    sharedMemory_p sharedMemory;
 
     LOG ( "Initializing user shared memory - fd[%d], Size[%'lu]\n", fd,
           sharedMemorySegmentSize );
-	//
-	//	Map the shared memory file into virtual memory.
-	//
-	sharedMemory = mmap ( NULL, INITIAL_SHARED_MEMORY_SIZE,
-                          PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0 );
-	if ( sharedMemory == MAP_FAILED )
-	{
-		printf ( "Unable to map the user shared memory segment. errno: %u[%m].\n",
-				 errno );
-		return 0;
-	}
     //
-	//	Make the pseudo-file for the shared memory segment the size of the
-	//	shared memory segment.  Note that this will destroy any existing data
-	//	if the segment already exists.
+    //  Map the shared memory file into virtual memory.
+    //
+    sharedMemory = mmap ( NULL, INITIAL_SHARED_MEMORY_SIZE,
+                          PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0 );
+    if ( sharedMemory == MAP_FAILED )
+    {
+        printf ( "Unable to map the user shared memory segment. errno: %u[%m].\n",
+                 errno );
+        return 0;
+    }
+    //
+    //  Make the pseudo-file for the shared memory segment the size of the
+    //  shared memory segment.  Note that this will destroy any existing data
+    //  if the segment already exists.
     //
     status = ftruncate ( fd, INITIAL_SHARED_MEMORY_SIZE );
     if (status != 0)
@@ -250,11 +292,11 @@ sharedMemory_p sm_initialize ( int fd, size_t sharedMemorySegmentSize )
                  "errno: %u[%m].\n", INITIAL_SHARED_MEMORY_SIZE, errno );
         return 0;
     }
-	//
-	//	Set all of the data in this shared memory segment to zero.
-	//
-	// TODO: (void)memset ( sharedMemory, 0, sharedMemorySegmentSize );
-	(void)memset ( sharedMemory, 0xaa, sharedMemorySegmentSize );
+    //
+    //  Set all of the data in this shared memory segment to zero.
+    //
+    // TODO: (void)memset ( sharedMemory, 0, sharedMemorySegmentSize );
+    (void)memset ( sharedMemory, 0xaa, sharedMemorySegmentSize );
 
     //
     //  Initialize our global pointer to the shared memory segment.
@@ -272,11 +314,11 @@ sharedMemory_p sm_initialize ( int fd, size_t sharedMemorySegmentSize )
     sharedMemory->currentSize             = sharedMemorySegmentSize - smSize;
     sharedMemory->systemInitialized       = 0;
 
-	//
-	//	Create the mutex attribute initializer that we can use to initialize
-	//	all of the mutexes in the B-trees.
     //
-	pthread_mutexattr_t* mutexAttributes = &sharedMemory->masterMutexAttributes;
+    //  Create the mutex attribute initializer that we can use to initialize
+    //  all of the mutexes in the B-trees.
+    //
+    pthread_mutexattr_t* mutexAttributes = &sharedMemory->masterMutexAttributes;
 
     status =  pthread_mutexattr_init ( mutexAttributes );
     if ( status != 0 )
@@ -289,7 +331,7 @@ sharedMemory_p sm_initialize ( int fd, size_t sharedMemorySegmentSize )
     // Set this mutex to be a process shared mutex.
     //
     status = pthread_mutexattr_setpshared ( mutexAttributes,
-											PTHREAD_PROCESS_SHARED );
+                                            PTHREAD_PROCESS_SHARED );
     if ( status != 0 )
     {
         printf ( "Unable to set shared mutex attribute - errno: %u[%m].\n",
@@ -300,37 +342,37 @@ sharedMemory_p sm_initialize ( int fd, size_t sharedMemorySegmentSize )
     // Set this mutex to be a recursive mutex.
     //
     status = pthread_mutexattr_settype ( mutexAttributes,
-										 PTHREAD_MUTEX_RECURSIVE );
+                                         PTHREAD_MUTEX_RECURSIVE );
     if ( status != 0 )
     {
         printf ( "Unable to set recursive mutex attribute - errno: %u[%m].\n",
                  status );
         return 0;
     }
-	//
-	//	Create the condition variable initializer that we can use to
-	//	initialize all of the condition variables in the B-trees.
-	//
-	pthread_condattr_t* conditionVariableAttributes =
+    //
+    //  Create the condition variable initializer that we can use to
+    //  initialize all of the condition variables in the B-trees.
+    //
+    pthread_condattr_t* conditionVariableAttributes =
         &sharedMemory->masterCvAttributes;
 
-	status = pthread_condattr_init ( conditionVariableAttributes );
+    status = pthread_condattr_init ( conditionVariableAttributes );
 
     if ( status != 0 )
     {
         printf ( "Unable to initialize condition variable attributes - "
-			     "errno: %u[%m].\n", status );
+                 "errno: %u[%m].\n", status );
         return 0;
     }
-	//
-	//	Set this condition variable to be shared between processes.
-	//
-	status = pthread_condattr_setpshared ( conditionVariableAttributes,
-										   PTHREAD_PROCESS_SHARED );
+    //
+    //  Set this condition variable to be shared between processes.
+    //
+    status = pthread_condattr_setpshared ( conditionVariableAttributes,
+                                           PTHREAD_PROCESS_SHARED );
     if ( status != 0 )
     {
         printf ( "Unable to set shared condition variable attributes - "
-				 "errno: %u[%m].\n", status );
+                 "errno: %u[%m].\n", status );
         return 0;
     }
     //
@@ -390,10 +432,10 @@ sharedMemory_p sm_initialize ( int fd, size_t sharedMemorySegmentSize )
     dumpSM();
 #endif
 
-	//
-	//	Return the address of the shared memory segment to the caller.
-	//
-	return sharedMemory;
+    //
+    //  Return the address of the shared memory segment to the caller.
+    //
+    return sharedMemory;
 }
 
 
@@ -402,51 +444,51 @@ sharedMemory_p sm_initialize ( int fd, size_t sharedMemorySegmentSize )
 TODO: FIX!
     s m _ i n i t i a l i z e _ s y s
 
-	@brief Initialize the data structures in a new shared memory segment.
+    @brief Initialize the data structures in a new shared memory segment.
 
-	The specified file (referenced by the supplied file descriptor) will be
-	mapped into virtual memory and the size of the file adjusted to match the
-	desired size of the shared memory segment.
+    The specified file (referenced by the supplied file descriptor) will be
+    mapped into virtual memory and the size of the file adjusted to match the
+    desired size of the shared memory segment.
 
-	This function will set up all of the data structures in the shared memory
-	segment for use.  This function should be called after a brand new shared
-	memory segment has been created and opened on disk.  This function should
-	not be called on an existing shared memory segment that contains data as
-	all of that data will be deleted by this function.
+    This function will set up all of the data structures in the shared memory
+    segment for use.  This function should be called after a brand new shared
+    memory segment has been created and opened on disk.  This function should
+    not be called on an existing shared memory segment that contains data as
+    all of that data will be deleted by this function.
 
-	@param[in] fd - The file descriptor of the file associated with this
-			   shared memory segment.
+    @param[in] fd - The file descriptor of the file associated with this
+               shared memory segment.
 
-	@param[in] sharedMemorySegmentSize - The size of the shared memory
-			   segment in bytes.
+    @param[in] sharedMemorySegmentSize - The size of the shared memory
+               segment in bytes.
 
-	@return The new memory address of where the shared memory segment begins.
-	        On error, a null pointer is returned and errno will be set to
-			indicate the error that was encountered.
+    @return The new memory address of where the shared memory segment begins.
+            On error, a null pointer is returned and errno will be set to
+            indicate the error that was encountered.
 
 ------------------------------------------------------------------------*/
 sysMemory_p sm_initialize_sys ( int fd, size_t sharedMemorySegmentSize )
 {
-	int         status;
-	sysMemory_p sharedMemory;
+    int         status;
+    sysMemory_p sharedMemory;
 
     LOG ( "Initializing system shared memory - fd[%d], Size[%'lu]\n", fd,
           sharedMemorySegmentSize );
-	//
-	//	Map the shared memory file into virtual memory.
-	//
-	sharedMemory = mmap ( NULL, SYS_INITIAL_SHARED_MEMORY_SIZE,
-                          PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0 );
-	if ( sharedMemory == MAP_FAILED )
-	{
-		printf ( "Unable to map the system shared memory segment. errno: %u[%m].\n",
-				 errno );
-		return 0;
-	}
     //
-	//	Make the pseudo-file for the shared memory segment the size of the
-	//	shared memory segment.  Note that this will destroy any existing data
-	//	if the segment already exists.
+    //  Map the shared memory file into virtual memory.
+    //
+    sharedMemory = mmap ( NULL, SYS_INITIAL_SHARED_MEMORY_SIZE,
+                          PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0 );
+    if ( sharedMemory == MAP_FAILED )
+    {
+        printf ( "Unable to map the system shared memory segment. errno: %u[%m].\n",
+                 errno );
+        return 0;
+    }
+    //
+    //  Make the pseudo-file for the shared memory segment the size of the
+    //  shared memory segment.  Note that this will destroy any existing data
+    //  if the segment already exists.
     //
     status = ftruncate ( fd, SYS_INITIAL_SHARED_MEMORY_SIZE );
     if (status != 0)
@@ -456,11 +498,11 @@ sysMemory_p sm_initialize_sys ( int fd, size_t sharedMemorySegmentSize )
                   errno );
         return 0;
     }
-	//
-	//	Set all of the data in this shared memory segment to zero.
-	//
-	// TODO: (void)memset ( sharedMemory, 0, sharedMemorySegmentSize );
-	(void)memset ( sharedMemory, 0xbb, sharedMemorySegmentSize );
+    //
+    //  Set all of the data in this shared memory segment to zero.
+    //
+    // TODO: (void)memset ( sharedMemory, 0, sharedMemorySegmentSize );
+    (void)memset ( sharedMemory, 0xbb, sharedMemorySegmentSize );
 
     //
     //  Initialize our global pointer to the shared memory segment.
@@ -478,11 +520,11 @@ sysMemory_p sm_initialize_sys ( int fd, size_t sharedMemorySegmentSize )
     sharedMemory->currentSize             = sharedMemorySegmentSize - sysSize;
     sharedMemory->systemInitialized       = 0;
 
-	//
-	//	Create the mutex attribute initializer that we can use to initialize
-	//	all of the mutexes in the B-trees.
     //
-	pthread_mutexattr_t* mutexAttributes = &sharedMemory->masterMutexAttributes;
+    //  Create the mutex attribute initializer that we can use to initialize
+    //  all of the mutexes in the B-trees.
+    //
+    pthread_mutexattr_t* mutexAttributes = &sharedMemory->masterMutexAttributes;
 
     status =  pthread_mutexattr_init ( mutexAttributes );
     if ( status != 0 )
@@ -495,7 +537,7 @@ sysMemory_p sm_initialize_sys ( int fd, size_t sharedMemorySegmentSize )
     // Set this mutex to be a process shared mutex.
     //
     status = pthread_mutexattr_setpshared ( mutexAttributes,
-											PTHREAD_PROCESS_SHARED );
+                                            PTHREAD_PROCESS_SHARED );
     if ( status != 0 )
     {
         printf ( "Unable to set system shared mutex attribute - errno: %u[%m].\n",
@@ -506,7 +548,7 @@ sysMemory_p sm_initialize_sys ( int fd, size_t sharedMemorySegmentSize )
     // Set this mutex to be a recursive mutex.
     //
     status = pthread_mutexattr_settype ( mutexAttributes,
-										 PTHREAD_MUTEX_RECURSIVE );
+                                         PTHREAD_MUTEX_RECURSIVE );
     if ( status != 0 )
     {
         printf ( "Unable to set system recursive mutex attribute - errno: %u[%m].\n",
@@ -530,24 +572,24 @@ sysMemory_p sm_initialize_sys ( int fd, size_t sharedMemorySegmentSize )
     //  We do this by creating a singly linked list of blocks using the blocks
     //  themselves containing the offset to the next block.
     //
-	//  Now compute the size of each node in the system B-trees...
+    //  Now compute the size of each node in the system B-trees...
     //
     //  If the user specified an even number of records, increment it to be an
     //  odd number.  The btree algorithm here only operates correctly if the
     //  record count is odd.
-	//
+    //
     unsigned int maxRecordsPerNode = SYS_RECORD_COUNT;
 
-	if ( ( maxRecordsPerNode & 1 ) == 0 )
-	{
-		maxRecordsPerNode++;
-	}
-	//
-	//  Compute the node size as the btree node header size plus the size of
-	//  the record offset area plus the link offfset area.
-	//
+    if ( ( maxRecordsPerNode & 1 ) == 0 )
+    {
+        maxRecordsPerNode++;
+    }
+    //
+    //  Compute the node size as the btree node header size plus the size of
+    //  the record offset area plus the link offfset area.
+    //
     unsigned int nodeSize = sN + ( maxRecordsPerNode * sO ) +
-					        ( ( maxRecordsPerNode + 1 ) * sO );
+                            ( ( maxRecordsPerNode + 1 ) * sO );
     //
     //  Round up the node size to the next multiple of 8 bytes to maintain
     //  long int alignment in the structures.
@@ -649,10 +691,10 @@ sysMemory_p sm_initialize_sys ( int fd, size_t sharedMemorySegmentSize )
     //
     LOG ( "\n===== System shared memory is Initialized at %p =====\n\n",
           sharedMemory );
-	//
-	//	Return the address of the shared memory segment to the caller.
-	//
-	return sharedMemory;
+    //
+    //  Return the address of the shared memory segment to the caller.
+    //
+    return sharedMemory;
 }
 
 
@@ -660,7 +702,7 @@ sysMemory_p sm_initialize_sys ( int fd, size_t sharedMemorySegmentSize )
 
     s m _ m a l l o c
 
-	@brief Allocate a chunk of shared memory for a user.
+    @brief Allocate a chunk of shared memory for a user.
 
     This function will allocate a chunk of shared memory of the specified size
     (in bytes).  If no memory is available of the specified size, a NULL
@@ -670,9 +712,9 @@ sysMemory_p sm_initialize_sys ( int fd, size_t sharedMemorySegmentSize )
     This function operates identically to the system "malloc" function and can
     be used the same way.
 
-	@param[in] size - The size in bytes of the memory desired.
+    @param[in] size - The size in bytes of the memory desired.
 
-	@return The address of the allocated memory chunk.
+    @return The address of the allocated memory chunk.
             NULL if the request could not be honored.
 
 -----------------------------------------------------------------------------*/
@@ -850,15 +892,15 @@ mallocEnd:
 
     s m _ m a l l o c _ s y s
 
-	@brief
+    @brief
 
-	This function will
+    This function will
 
-	@param[in]
-	@param[out]
-	@param[in,out]
+    @param[in]
+    @param[out]
+    @param[in,out]
 
-	@return None
+    @return None
 
 -----------------------------------------------------------------------------*/
 void* sm_malloc_sys ( size_t size )
@@ -889,7 +931,7 @@ void* sm_malloc_sys ( size_t size )
 
     s m _ f r e e
 
-	@brief Deallocate a chunk of shared memory.
+    @brief Deallocate a chunk of shared memory.
 
     This function will deallocate the specified chunk of shared memory
     supplied by the caller.  If the supplied chunk of memory is not a valid
@@ -905,9 +947,9 @@ void* sm_malloc_sys ( size_t size )
     This function operates identically to the system "free" function and can
     be used the same way.
 
-	@param[in] allocatedMemory - The address of the chunk of shared memory to free.
+    @param[in] allocatedMemory - The address of the chunk of shared memory to free.
 
-	@return None
+    @return None
 
 -----------------------------------------------------------------------------*/
 void sm_free ( void* userMemory )
@@ -1071,15 +1113,15 @@ void sm_free ( void* userMemory )
 
     s m _ f r e e _ s y s
 
-	@brief
+    @brief
 
-	This function will
+    This function will
 
-	@param[in]
-	@param[out]
-	@param[in,out]
+    @param[in]
+    @param[out]
+    @param[in,out]
 
-	@return None
+    @return None
 
 ------------------------------------------------------------------------*/
 void sm_free_sys ( void* memoryBlock )
@@ -1098,7 +1140,7 @@ void sm_free_sys ( void* memoryBlock )
 
     M e m o r y   A l l o c a t i o n   D e b u g   F u n c t i o n s
 
-	The following functions are designed for debugging purposes and will
+    The following functions are designed for debugging purposes and will
     normally not be included in production builds.
 
 -----------------------------------------------------------------------------*/
@@ -1175,22 +1217,107 @@ void dumpFreeByOffset ( void )
 }
 
 
+/*!----------------------------------------------------------------------------
+
+    S i g n a l   D e b u g   F u n c t i o n s
+
+    The following functions are designed for debugging purposes and will
+    normally not be included in production builds.
+
+-----------------------------------------------------------------------------*/
+//
+//  Print out a nicely formatted message giving the address, size, and offset
+//  of the supplied memory chunk.
+//
+void signalListPrint ( char* leader, void* recordPtr )
+{
+    signalList_t* signalList = recordPtr;
+
+    //
+    //  If this is not a valid signal list pointer, just quit.
+    //
+    if ( signalList == NULL )
+    {
+        return;
+    }
+    //
+    //  Display the contents of the signal list control structure.
+    //
+    printf ( "%sSignal List: %p[%lx]\n", leader, signalList, toOffset(recordPtr));
+    printf ( "%s  domain............: %lu\n", leader, signalList->domain );
+    printf ( "%s  key...............: %lu\n", leader, signalList->key );
+    printf ( "%s  head..............: %lu\n", leader, signalList->head );
+    printf ( "%s  tail..............: %lu\n", leader, signalList->tail );
+    printf ( "%s  currentSignalCount: %lu\n", leader, signalList->currentSignalCount );
+    printf ( "%s  totalSignalSize...: %lu\n", leader, signalList->totalSignalSize );
+
+    //
+    //  Go dump all of the signal records in this signal list.
+    //
+    dumpSignals ( signalList, 0 );
+
+    //
+    //  Return to the caller.
+    //
+    return;
+}
+
+
+//
+//  Define a default traverse callback function that just prints out the data
+//  being pointed to.
+//
+void signalListTraverse ( char* leader, void* data )
+{
+    signalListPrint ( "  ", data );
+}
+
+
+/*!----------------------------------------------------------------------------
+
+    d u m p A l l S i g n a l s
+
+    @brief Dump all current signal list and their signals.
+
+    This function will dump all of the currently defined signals and the list
+    of instances of each one.
+
+    @param[in] maxSignals - The maximum number to be printed
+
+    @return None
+
+-----------------------------------------------------------------------------*/
 void dumpAllSignals ( int maxSignals )
 {
     //
     //  If the system has not finished initializing yet, just ignore this
     //  call.
     //
-    if ( sysControl == NULL )
+    if ( ! smControl->systemInitialized )
     {
         return;
     }
+    //
+    //  Get the signal B-tree structure.
+    //
     btree_t* btree = &smControl->signals;
 
-    printf ( "\nSignls B-tree: %p, count: %u\n",
-             btree, btree->count );
+    //
+    //  Print the total number of signal lists currently defined.  This is the
+    //  number of unique domain/key pairs that have been defined.
+    //
+    printf ( "\nSignls B-tree: %p, count: %u\n", btree, btree->count );
 
-    btree_traverse ( btree, 0 );
+    //
+    //  Go traverse the signal B-tree printing the contents of each signal
+    //  list we find.
+    //
+    btree_traverse ( btree, signalListPrint );
+
+    //
+    //  Return to the caller.
+    //
+    return;
 }
 
 
@@ -1217,28 +1344,109 @@ void dumpSM ( void )
 
     f i n d S i g n a l L i s t
 
-	@brief Find the the signal list for a domain and key value.
+    @brief Find the the signal list for a domain and key value.
 
-	This function will search the signals btree for a match to the domain and
+    This function will search the signals btree for a match to the domain and
     id value supplied.  If a match is found, the address of the signal list
     control block will be returned to the caller.  If no match is found, a
-    null pointer will be returned.
+    new signal list control block will be created and inserted into the btree
+    database.  In either case, the signal list control address will be
+    returned to the caller.
 
-	@param[in] - domain - The domain of the signal list to find
-	@param[in] - key - The id of the signal list to find
+    @param[in] - domain - The domain of the signal list to find
+    @param[in] - key - The id of the signal list to find
 
-	@return If successful, the address of the signal list control block
-            If not found, a NULL
+    @return If successful, the address of the signal list control block
+            If no memory is availabe for a new list, a NULL
 
 -----------------------------------------------------------------------------*/
 signalList_t* findSignalList ( domain_t domain, vsiKey_t key )
 {
-    signalList_t signalList;
+    signalList_t  requestedSignal;
+    signalList_t* signalList;
+    int           status;
 
-    signalList.domain = domain;
-    signalList.key    = key;
+    //
+    //  Initialize the fields we will need to find the requested signal list.
+    //
+    requestedSignal.domain = domain;
+    requestedSignal.key    = key;
 
-    return btree_search ( &smControl->signals, &signalList );
+    //
+    //  Go find the requested signal list.
+    //
+    signalList = btree_search ( &smControl->signals, &requestedSignal );
+
+    //
+    //  If we didn't find this signal list control block then this is the
+    //  first time this domain/id have been seen so we need to create a new
+    //  signal list control block for it.
+    //
+    if ( signalList == NULL )
+    {
+        //
+        //  Go allocate a new signal list control block in the shared memory
+        //  segment.
+        //
+        signalList = sm_malloc ( SIGNAL_LIST_SIZE );
+
+        //
+        //  If the allocation failed, we have exceeded the amount of memory in
+        //  the shared memory segment.  This is a fatal condition so let the
+        //  user know and quit!
+        //
+        if ( signalList == NULL )
+        {
+            printf ( "Error: Unable to allocate a new signal list - "
+                     "Shared memory segment is full!\n" );
+            return 0;
+        }
+        //
+        //  Initialize and populate the new signal list control block.
+        //
+        signalList->domain                = domain;
+        signalList->key                   = key;
+        signalList->currentSignalCount    = 0;
+        signalList->totalSignalSize       = 0;
+        signalList->head                  = END_OF_LIST_MARKER;
+        signalList->tail                  = END_OF_LIST_MARKER;
+
+        //
+        //  Initialize the signal list semaphore and condition variable.
+        //
+        status = pthread_mutex_init ( &signalList->semaphore.mutex,
+                                      &smControl->masterMutexAttributes );
+        if ( status != 0 )
+        {
+            printf ( "Unable to initialize signal list mutex - errno: %u[%m].\n",
+                     status );
+            sm_free ( signalList );
+            return 0;
+        }
+        status = pthread_cond_init ( &signalList->semaphore.conditionVariable,
+                                     &smControl->masterCvAttributes );
+        if ( status != 0 )
+        {
+            printf ( "Unable to initialize signal list condition variable - "
+                     "errno: %u[%m].\n", status );
+            sm_free ( signalList );
+            return 0;
+        }
+        //
+        //  Initialize the semaphore counters for this signal list control block.
+        //
+        signalList->semaphore.messageCount = 0;
+        signalList->semaphore.waiterCount  = 0;
+
+        //
+        //  Insert the new signal list control block into the btree.
+        //
+        btree_insert ( &smControl->signals, signalList );
+    }
+    //
+    //  Return the requested signal list to the caller.
+    //
+    return signalList;
 }
 
 
@@ -1268,7 +1476,7 @@ signalList_t* findSignalList ( domain_t domain, vsiKey_t key )
     @param[in] body - The address of the body of the new message.
 
     @return 0 if successful
-		    Otherwise the error code
+            Otherwise the error code
 
 ------------------------------------------------------------------------*/
 int sm_insert ( domain_t domain, vsiKey_t key, unsigned long newMessageSize,
@@ -1286,78 +1494,6 @@ int sm_insert ( domain_t domain, vsiKey_t key, unsigned long newMessageSize,
     signalList_t* signalList = findSignalList ( domain, key );
 
     //
-    //  If we didn't find this signal list control block then this is the
-    //  first time this domain/id have been seen so we need to create a new
-    //  signal list control block for it.
-    //
-    if ( signalList == NULL )
-    {
-        //
-        //  Go allocate a new signal list control block in the shared memory
-        //  segment.
-        //
-        signalList = sm_malloc ( SIGNAL_LIST_SIZE );
-
-        //
-        //  If the allocation failed, we have exceeded the amount of memory in
-        //  the shared memory segment.  This is a fatal condition so let the
-        //  user know and quit!
-        //
-        if ( signalList == NULL )
-        {
-            printf ( "Error: Unable to allocate a new signal list - "
-                     "Shared memory segment is full!\n" );
-            return ENOMEM;
-        }
-        //
-        //  Initialize and populate the new signal list control block.
-        //
-        signalList->domain                = domain;
-        signalList->key                   = key;
-        signalList->currentSignalCount    = 0;
-        signalList->totalSignalSize       = 0;
-        signalList->head                  = END_OF_LIST_MARKER;
-        signalList->tail                  = END_OF_LIST_MARKER;
-
-        //
-        //  Initialize the signal list semaphore.
-        //
-        status = pthread_mutex_init ( &signalList->semaphore.mutex,
-                                      &smControl->masterMutexAttributes );
-        if ( status != 0 )
-        {
-            printf ( "Unable to initialize signal list mutex - errno: %u[%m].\n",
-                     status );
-            sm_free ( signalList );
-            return errno;
-        }
-        status = pthread_cond_init ( &signalList->semaphore.conditionVariable,
-                                     &smControl->masterCvAttributes );
-        if ( status != 0 )
-        {
-            printf ( "Unable to initialize signal list condition variable - "
-                     "errno: %u[%m].\n", status );
-            sm_free ( signalList );
-            return errno;
-        }
-        //
-        //  Initialize the semaphore counters for this signal list control block.
-        //
-        signalList->semaphore.messageCount = 0;
-        signalList->semaphore.waiterCount  = 0;
-
-        btree_insert ( &smControl->signals, signalList );
-    }
-    //
-    //  Acquire the lock on this signal list.
-    //
-    //  Note that this call will hang if someone else is currently using this
-    //  signal list.  It will return once the lock is acquired and it is safe
-    //  to manipulate the signal list.
-    //
-    SM_LOCK;
-
-    //
     //  Now we need to create a new entry for this message list so compute the
     //  size that we will need and allocate that much memory in the shared
     //  memory segment.
@@ -1368,9 +1504,17 @@ int sm_insert ( domain_t domain, vsiKey_t key, unsigned long newMessageSize,
     {
         printf ( "Error: Unable to allocate a new signal list - "
                  "Shared memory segment is full!\n" );
-        status = ENOMEM;
-        goto insertExit;
+        return ENOMEM;
     }
+    //
+    //  Acquire the lock on this signal list.
+    //
+    //  Note that this call will hang if someone else is currently using this
+    //  signal list.  It will return once the lock is acquired and it is safe
+    //  to manipulate the signal list.
+    //
+    SL_LOCK ( signalList );
+
     //
     //  Initialize all of the fields in the message header of the new message
     //  that we are inserting.  We will be inserting this new message at the
@@ -1435,15 +1579,13 @@ int sm_insert ( domain_t domain, vsiKey_t key, unsigned long newMessageSize,
     LOG ( "%'lu  After Insert/semaphore post:\n", getIntervalTime() );
     SEM_DUMP ( &signalList->semaphore );
 
-insertExit:
-
     //
     //  Give up the signal list lock.
     //
-    SM_UNLOCK
+    SL_UNLOCK ( signalList );
 
     //
-    //  Return to the caller.
+    //  Return the status indicator to the caller.
     //
     return status;
 }
@@ -1453,24 +1595,23 @@ insertExit:
 
     s m _ r e m o v e S i g n a l
 
-	@brief Remove the oldest signal from the signal list.
+    @brief Remove the oldest signal from the signal list.
 
     This function will remove the signal at the beginning of the specified
     signal list.
 
-	WARNING: This function assumes that the signal list mutex has been
-	acquired before this function is called.
+    @param[in] signalList - The address of the signal list to operate on.
 
-	@param[in] signalList - The address of the signal list to operate on.
-
-	@return 0 - Message successfully removed.
+    @return 0 - Message successfully removed.
 
 ------------------------------------------------------------------------*/
 int sm_removeSignal ( signalList_p signalList )
 {
-	signalData_t* signal;
+    signalData_t* signal;
+    int           status = 0;
 
-	LOG ( "%'lu  Removing signal...\n", getIntervalTime() );
+    LOG ( "%'lu  Removing signal with %lu - %lu\n", getIntervalTime(),
+          signalList->domain, signalList->key );
 
     //
     //  If this signal list is empty, just return without doing anything.
@@ -1479,15 +1620,24 @@ int sm_removeSignal ( signalList_p signalList )
     {
         return 0;
     }
-	//
-	//	Grab the first signal on the given signalList control block.
-	//
-	signal = toAddress ( signalList->head );
+    //
+    //  Acquire the lock on this signal list.
+    //
+    //  Note that this call will hang if someone else is currently using this
+    //  signal list.  It will return once the lock is acquired and it is safe
+    //  to manipulate the signal list.
+    //
+    SL_LOCK ( signalList );
 
     //
-    //	If there is only one message in the current list then the head and
-    //	tail offsets will be the same and we should just set both of them to
-    //	the "empty" list state.
+    //  Grab the first signal on the given signalList control block.
+    //
+    signal = toAddress ( signalList->head );
+
+    //
+    //  If there is only one message in the current list then the head and
+    //  tail offsets will be the same and we should just set both of them to
+    //  the "empty" list state.
     //
     if ( signalList->currentSignalCount == 1 )
     {
@@ -1495,35 +1645,40 @@ int sm_removeSignal ( signalList_p signalList )
         signalList->tail = END_OF_LIST_MARKER;
     }
     //
-    //	Otherwise, just make the head offset be the offset of the next signal
-    //	after the one we are removing.
+    //  Otherwise, just make the head offset be the offset of the next signal
+    //  after the one we are removing.
     //
     else
     {
         signalList->head = signal->nextMessageOffset;
     }
-	//
-	//	Decrement the count of the number of signals in this list and the
-    //	total amount of space occupied by those signals.
-	//
-	--signalList->currentSignalCount;
+    //
+    //  Decrement the count of the number of signals in this list and the
+    //  total amount of space occupied by those signals.
+    //
+    --signalList->currentSignalCount;
     signalList->totalSignalSize -= signal->messageSize;
 
-	//
-	//	Decrement the count of the number of signals in the list within the
-	//	semaphore.
-	//
-	--signalList->semaphore.messageCount;
+    //
+    //  Decrement the count of the number of signals in the list within the
+    //  semaphore.
+    //
+    --signalList->semaphore.messageCount;
+
+    //
+    //  Give up the signal list lock.
+    //
+    SL_UNLOCK ( signalList );
 
     //
     //  Free up the shared memory occupied by this signal data structure.
     //
     sm_free ( signal );
 
-	//
-	//	Return a good completion code to the caller.
-	//
-	return 0;
+    //
+    //  Return a good completion code to the caller.
+    //
+    return 0;
 }
 
 
@@ -1533,12 +1688,12 @@ int sm_removeSignal ( signalList_p signalList )
 
     @brief Retrieve a signal from the signal buffer.
 
-    This function will attempt to retrieve a signal with the specified key and
-    domain from the shared memory signal buffer.  The signal that was found
-    (and returned to the caller) will be removed from the signal list.  If
-    there are no signal that match the user's request, this function will hang
-    (on a semaphore) until an appropriate signal is available before returning
-    to the caller.
+    This function will attempt to retrieve the oldest signal with the
+    specified key and domain from the shared memory signal buffer.  The signal
+    that was found (and returned to the caller) will be removed from the
+    signal list.  If there are no signal that match the user's request, this
+    function will hang (on a semaphore) until an appropriate signal is
+    available before returning to the caller if requested.
 
     If the signal list is not empty, the head of the list will be returned to
     the caller.  This is also the oldest signal in the list since the signals
@@ -1548,7 +1703,8 @@ int sm_removeSignal ( signalList_p signalList )
     buffer supplied as the "body" argument.  When we copy the data from the
     shared memory segment to the "body" buffer, the smaller of either the body
     buffer size or the number of bytes of data in the signal found will be
-    copied into the body buffer.
+    copied into the body buffer.  The number of bytes actually copied will be
+    returned to the caller in the bodySize parameter.
 
     Note that since this function does not alter the structure of the signal
     list we don't need to lock the signal list semaphore during the processing
@@ -1564,6 +1720,7 @@ int sm_removeSignal ( signalList_p signalList )
             ENODATA - If waitForData == false and domain/key is not found.
             any other value is an errno value.
 
+    TODO: Can we combine this function with sm_fetch_newest?
 ------------------------------------------------------------------------*/
 int sm_fetch ( domain_t domain, vsiKey_t key, unsigned long* bodySize,
                void* body, bool wait )
@@ -1581,22 +1738,14 @@ int sm_fetch ( domain_t domain, vsiKey_t key, unsigned long* bodySize,
 
     //
     //  If we didn't find this signal list control block then we need to just
-    //  return an error code to the caller.
-    //
-    //  TODO: What should we do here if the user asked us to wait for the
-    //  signal but this signal isn't defined yet?  Should we create the signal
-    //  list block and then wait on it?
-    //
-    if ( signalList == NULL )
-    {
-        return ENODATA;
-    }
+    //  return an error code to the caller.  This should only happen if we run
+    //  out of memory.
     //
     //  If this signal list was found but it is empty and we don't want to
     //  wait for the data to arrive then just return the "no data" error code
     //  to the caller and quit.
     //
-    if ( signalList->semaphore.messageCount == 0 && !wait )
+    if ( !signalList || ( signalList->semaphore.messageCount == 0 && !wait ) )
     {
         return ENODATA;
     }
@@ -1611,6 +1760,8 @@ int sm_fetch ( domain_t domain, vsiKey_t key, unsigned long* bodySize,
     //  signal to all of the processes that are waiting before we delete the
     //  signal from the signal list.
     //
+    SL_LOCK ( signalList );
+
     ++signalList->semaphore.waiterCount;
 
     LOG ( "%'lu  Before Fetch/semaphore wait:\n", getIntervalTime() );
@@ -1657,6 +1808,11 @@ int sm_fetch ( domain_t domain, vsiKey_t key, unsigned long* bodySize,
           signalList->semaphore.waiterCount );
 
     SEM_DUMP ( &signalList->semaphore );
+
+    //
+    //  Unlock the condition variable for this signal.
+    //
+    SL_UNLOCK ( signalList );
 
     //
     //  Return the completion code to the caller.
@@ -1724,7 +1880,7 @@ int sm_fetch_newest ( domain_t domain, vsiKey_t key, unsigned long* bodySize,
     //  arrive then just return the "no data" error code to the caller and
     //  quit.
     //
-    if ( signalList->semaphore.messageCount == 0 && !wait )
+    if ( !signalList || ( signalList->semaphore.messageCount == 0 && !wait ) )
     {
         LOG ( "Signal list is empty - Returning error code ENODATA\n" );
         return ENODATA;
@@ -1740,6 +1896,8 @@ int sm_fetch_newest ( domain_t domain, vsiKey_t key, unsigned long* bodySize,
     //  signal to all of the processes that are waiting before we delete the
     //  signal from the signal list.
     //
+    SL_LOCK ( signalList );
+
     ++signalList->semaphore.waiterCount;
 
     LOG ( "%'lu  Before Fetch/semaphore wait:\n", getIntervalTime() );
@@ -1765,6 +1923,8 @@ int sm_fetch_newest ( domain_t domain, vsiKey_t key, unsigned long* bodySize,
     //  supplied by the caller or the actual data size in the signal
     //  that was found.
     //
+    //  TODO: Make sure the requested size is "reasonable".
+    //
     transferSize = *bodySize <= signal->messageSize
                    ? *bodySize : signal->messageSize;
 
@@ -1778,16 +1938,15 @@ int sm_fetch_newest ( domain_t domain, vsiKey_t key, unsigned long* bodySize,
     //
     //  Return to the caller with a good completion code.
     //
-    //  Note: Sorry for the "goto" but it's the easiest way to ensure that
-    //  this function only has one exit path.  The real issue is that the
-    //  pthread cleanup push & pop functions HAVE to be paired in the same
-    //  compilation context... A REALLY STUPID IMPLEMENTATION!!
-    //  (commentary by DWM).
-    //
     LOG ( "%'lu  At the end of Fetch - waiterCount: %d\n", getIntervalTime(),
           signalList->semaphore.waiterCount );
 
     SEM_DUMP ( &signalList->semaphore );
+
+    //
+    //  Unlock the condition variable for this signal list.
+    //
+    SL_UNLOCK ( signalList );
 
     //
     //  Return the completion code to the caller.
@@ -1839,13 +1998,13 @@ int sm_flush_signal ( domain_t domain, vsiKey_t key )
         return 0;
     }
     //
-    //  Acquire the lock on the shared memory segment.
+    //  Acquire the lock on this signal list.
     //
-    //  Note that this call will hang if someone else is currently using the
-    //  shared memory segment.  It will return once the lock is acquired and it
-    //  is safe to manipulate the shared memory data.
+    //  Note that this call will hang if someone else is currently using this
+    //  signal list.  It will return once the lock is acquired and it is safe
+    //  to manipulate the signal list.
     //
-    SM_LOCK;
+    SL_LOCK ( signalList );
 
     //
     //  Get the head of the signal list.
@@ -1887,88 +2046,17 @@ int sm_flush_signal ( domain_t domain, vsiKey_t key )
     //  If anyone is waiting for this signal, go release them to search the
     //  signal list again.
     //
-    while ( signalList->semaphore.waiterCount > 0 )
-    {
-        semaphorePost ( &signalList->semaphore );
-    }
+    semaphorePost ( &signalList->semaphore );
+
     //
-    //  Give up the shared memory block lock.
+    //  Give up the signal list lock.
     //
-    SM_UNLOCK;
+    SL_UNLOCK ( signalList );
 
     //
     //  Return the completion code to the caller.
     //
     return status;
-}
-
-
-/*!----------------------------------------------------------------------------
-
-    S i g n a l   D e b u g   F u n c t i o n s
-
-	The following functions are designed for debugging purposes and will
-    normally not be included in production builds.
-
------------------------------------------------------------------------------*/
-#if 0
-#ifdef VSI_DEBUG
-//
-//  Print one signal's data in a neat format.
-//
-void SM_signalDataPrint ( char* leader, signalData_t* signal )
-{
-    LOG ( "%sNext: %lx, Size: %lu\n", leader, signal->nextMessageOffset,
-          signal->messageSize );
-
-    HexDump ( (const char*)&signal->data, signal->messageSize, "  ", 0 );
-
-    return;
-}
-
-
-//
-//  Print out the information in a signalList control block in a nice format.
-//
-void signalListPrint ( char* leader, void* recordPtr )
-{
-    dumpSignalList ( recordPtr, 4 );
-    signalList_t* sl = recordPtr;
-
-    LOG ( "\n  Signal List [%p:%lu]\n", sl, toOffset ( sl ) );
-    LOG ( "    Domain.....: %lu\n",     sl->domain );
-    LOG ( "    Key........: %lu\n",     sl->key );
-    LOG ( "    Head.......: %lu\n",     sl->head );
-    LOG ( "    Tail.......: %lu\n",     sl->tail );
-    LOG ( "    Signal Cnt.: %lu\n",     sl->currentSignalCount );
-    LOG ( "    Tot Sig Sz.: %lu\n",     sl->totalSignalSize );
-
-    //
-    //  Run down the list of signals in this signal list and print each one of
-    //  them.
-    //
-    signalData_t* signal = toAddress ( sl->head );
-    do
-    {
-        dumpSignals ( sl, 0 );
-
-        signal = toAddress ( signal->nextMessageOffset );
-
-    }   while ( signal->nextMessageOffset != END_OF_LIST_MARKER );
-    return;
-}
-#endif
-#endif
-
-
-//
-//  Define a default traverse callback function that just prints out
-//  signalList control block info.
-//
-void signalListTraverse ( void* data )
-{
-    // SM_signalListPrint ( "   ", data );
-    dumpSignalList ( data, 0 );
 }
 
 

@@ -51,7 +51,7 @@ unsigned long getIntervalTime ( void );
 #endif
 
 
-#endif		// End of #ifndef UTILS_H
+#endif      // End of #ifndef UTILS_H
 
 /*! @} */
 
