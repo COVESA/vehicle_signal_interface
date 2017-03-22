@@ -15,7 +15,7 @@
 //
 #undef VSI_DEBUG
 
-#include <vsi_core_api.h>
+#include "vsi.h"
 
 
 static vsi_core_handle handle = 0;
@@ -90,14 +90,8 @@ MOD_INIT(vsi_py)
     //
     LOG ( "Initializing the VSI subsystem...\n" );
 
-    handle = vsi_core_open ( false );
+    vsi_core_open ( false );
 
-    if ( handle == NULL )
-    {
-        LOG ( "Error: Unable to initialize VSI\n" );
-        PyErr_Format ( PyExc_SystemError, "Unable to initialize VSI\n" );
-        return MOD_ERROR_VAL;
-    }
     return MOD_SUCCESS_VAL(m);
 }
 
