@@ -57,7 +57,7 @@ defines a 1MB system segment and a 2MB user segment by default.
 ## Running the Sample Executables
 
 To run the "sample" program, change directories to the
-"vehicle_signal_interface/api" directory and type "./sample".
+"vehicle_signal_interface/api" directory and type "./tests/sample".
 
 Similarly, going to the "vehicle_signal_interface/core/tests" directory will allow
 you to run the executables that were created in that directory.
