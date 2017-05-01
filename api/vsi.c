@@ -2142,7 +2142,7 @@ int vsi_define_signal_name ( vsi_handle     handle,
     //
     nameIdDefinition->name = sm_malloc ( strlen(name) + 1 );
     strncpy ( nameIdDefinition->name, name, strlen(name) );
-    nameIdDefinition->name[strlen(name)+1] = 0;
+    nameIdDefinition->name[strlen(name)] = 0;
 
     //
     //  Go insert the new id/name definition structure into both of the btree
