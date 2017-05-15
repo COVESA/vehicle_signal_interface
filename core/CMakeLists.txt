@@ -7,5 +7,6 @@ set(SRC
 )
 
 add_library(vsi-core SHARED ${SRC})
+target_link_libraries(vsi-core pthread)
 
 

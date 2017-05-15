@@ -1,4 +1,8 @@
-find_package( Lua 5.1 REQUIRED )
+if(${CMAKE_VERSION} VERSION_GREATER 3)
+    find_package( Lua 5.1 REQUIRED )
+else()
+    find_package( Lua51 5.1 REQUIRED )
+endif()
 
 set(SRC
     lua_vsi.c
