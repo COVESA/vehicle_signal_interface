@@ -16,5 +16,5 @@ set(SRC
 include_directories(${LUA_INCLUDE_DIR})
 
 add_library(lua_vsi SHARED ${SRC})
-install(TARGETS lua_vsi LIBRARY DESTINATION usr/lib)
+install(TARGETS lua_vsi LIBRARY DESTINATION lib)
 

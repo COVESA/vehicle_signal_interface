@@ -6,6 +6,6 @@ set(SRC
 )
 
 add_library(vsi_py SHARED ${SRC})
-install(TARGETS vsi_py LIBRARY DESTINATION usr/lib)
+install(TARGETS vsi_py LIBRARY DESTINATION lib)
 
 

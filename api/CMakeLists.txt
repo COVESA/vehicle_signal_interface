@@ -4,5 +4,5 @@ set(SRC
 )
 
 add_library(vsi-api SHARED ${SRC})
-install(TARGETS vsi-api LIBRARY DESTINATION usr/lib)
+install(TARGETS vsi-api LIBRARY DESTINATION lib)
 
