@@ -1,7 +1,10 @@
-if(${CMAKE_VERSION} VERSION_GREATER 3)
-    find_package( Lua 5.1 REQUIRED )
+# Do not print error in case FindLua module do not exist
+find_package(Lua 5.1 QUIET)
+if (NOT LUA_FOUND)
+    find_package(Lua51 REQUIRED)
 else()
-    find_package( Lua51 5.1 REQUIRED )
+    # If found do it again just to have information that Lua has been found
+    find_package(Lua 5.1 REQUIRED)
 endif()
 
 set(SRC

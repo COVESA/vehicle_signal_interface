@@ -9,7 +9,7 @@ option(BUILD_PYTHON "Build Python interface" ON)
 include_directories(${CMAKE_SOURCE_DIR}/api)
 include_directories(${CMAKE_SOURCE_DIR}/core)
 
-FIND_PACKAGE ( Threads REQUIRED )
+find_package(Threads REQUIRED)
 add_definitions(-Wall -std=c99 -D_GNU_SOURCE)
 
 add_subdirectory(api)
