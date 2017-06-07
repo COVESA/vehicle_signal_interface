@@ -353,7 +353,7 @@ SOURCES := $(CXX_SOURCES) $(CC_SOURCES)
 #
 #    Define the list of include directories.
 #
-INCLUDE_DIRS := -I. -I.. -I$(TOP)/include
+INCLUDE_DIRS := -I. -I.. -I$(TOP)/src
 
 #
 #    Define the lists of object files.
@@ -431,7 +431,7 @@ AR_GOALS := $(strip $(addsuffix .a,  $(basename $(AR_GOALS))))
 #    shared object libraries will be installed.  This directory will be
 #    created if it does not already exist.
 #
-TOP_LIBRARY = $(TOP)/lib
+TOP_LIBRARY = $(TOP)/src
 TOP_LIB = $(TOP_LIBRARY)
 
 #
@@ -460,7 +460,8 @@ TOP_DOC = $(TOP)/doc
 #
 #    Define the top level required directories.
 #
-TOP_LEVEL_DIRS = $(TOP_LIBRARY) $(TOP_BINARY) $(TOP_INCLUDE) $(TOP_DOC)
+# TOP_LEVEL_DIRS = $(TOP_LIBRARY) $(TOP_BINARY) $(TOP_INCLUDE) $(TOP_DOC)
+TOP_LEVEL_DIRS = $(TOP_DOC)
 
 #
 #    Define the macros to install files into the binary and library
@@ -565,15 +566,15 @@ LD_LINKER         ?= gcc
 LD_OPTIMIZATION   ?= $(OPTIMIZATION)
 override LD_FLAGS += $(LD_OPTIMIZATION)
 LD_LIB_DIRS       += -L. -L..
-LD_LIB_DIRS       += -L$(TOP_LIBRARY)
+LD_LIB_DIRS       += -L$(TOP)/src
 
 ifneq "$(OBJ_DIR)" ""
     LD_LIB_DIRS += -L$(OBJ_DIR)
 endif
 
 LD_LIBS += -lc
-LD_OPTS ?= $(LD_FLAGS) $(LD_LIB_DIRS)
-LD_CMD	?= $(LD_LINKER) $(LD_OPTS) $(LD_LIBS)
+LD_OPTS ?= $(LD_FLAGS)
+LD_CMD	?= $(LD_LINKER) $(LD_OPTS)
 
 SO_CMD  ?= $(LD_CMD) -shared -fPIC
 AR_CMD  ?= ar
@@ -666,7 +667,7 @@ define GOAL_TEMPLATE
     $(2): $$(OBJS_$(1))
 	echo "Linking executable file $(1)"; \
 	$$(LD_CMD) $$(LD_OPTS_$(1)) -o $(2) $$(OBJS_$(1)) \
-	    $$(LD_LIBS_$(1)) $$(LD_LIBS); \
+	    $$(LD_LIB_DIRS) $$(LD_LIBS_$(1)) $$(LD_LIBS); \
 
     ALL_OBJS  += $$(OBJS_$(1))
     ALL_GOALS += $(2)
@@ -852,15 +853,15 @@ endif
 install: $(SO_GOALS) $(AR_GOALS) $(GOALS) $(DEFAULT_GOALS) $(INSTALL_DEPS)
 	if [ -n "$(INSTALL_BIN_FILES)" ]; \
 	then \
-            $(INSTALL_BIN) $(INSTALL_BIN_FILES); \
-		fi; \
+		$(INSTALL_BIN) $(INSTALL_BIN_FILES); \
+	fi; \
 	\
 	\
 	\
 	if [ -n "$(INSTALL_PLAIN_BIN_FILES)" ]; \
 	then \
-            $(INSTALL_PLAIN_BIN) $(INSTALL_PLAIN_BIN_FILES); \
-		fi; \
+		$(INSTALL_PLAIN_BIN) $(INSTALL_PLAIN_BIN_FILES); \
+	fi; \
 	\
 	\
 	\
@@ -869,16 +870,34 @@ install: $(SO_GOALS) $(AR_GOALS) $(GOALS) $(DEFAULT_GOALS) $(INSTALL_DEPS)
 	    for file in $(INSTALL_LIB_FILES); \
 	    do \
 		src=$$file; \
-	        if [ -n "$(OBJ_DIR)" -a \
-		     $$( expr $$file : '.*$(OBJ_DIR)' ) -eq 0 ]; \
+		if [ -n "$(OBJ_DIR)" -a $$( expr $$file : '.*$(OBJ_DIR)' ) -eq 0 ]; \
 		then \
 		    src=$(OBJ_DIR)$$file; \
 		fi; \
-	        if [ $$( expr $$src : '.*' ) -eq 0 ]; \
+		if [ $$( expr $$src : '.*' ) -eq 0 ]; \
 		then \
 		    src=$$src; \
 		fi; \
 		$(INSTALL_LIB) $$src; \
+	    done; \
+	fi; \
+	\
+	\
+	\
+	if [ -n "$(INSTALL_PLAIN_LIB_FILES)" ]; \
+	then \
+	    for file in $(INSTALL_PLAIN_LIB_FILES); \
+	    do \
+		src=$$file; \
+		if [ -n "$(OBJ_DIR)" -a $$( expr $$file : '.*$(OBJ_DIR)' ) -eq 0 ]; \
+		then \
+		    src=$(OBJ_DIR)$$file; \
+		fi; \
+		if [ $$( expr $$src : '.*' ) -eq 0 ]; \
+		then \
+		    src=$$src; \
+		fi; \
+		$(INSTALL_PLAIN_LIB) $$src; \
 	    done; \
 	fi; \
 	\
@@ -966,9 +985,6 @@ distclean: clean
 	rm -rf bin/* > /dev/null 2>&1; \
 	rm -rf lib/* > /dev/null 2>&1; \
 	rm -rf include/* > /dev/null 2>&1; \
-	rm -rf $(TOP_BIN)/* > /dev/null 2>&1; \
-	rm -rf $(TOP_LIB)/* > /dev/null 2>&1; \
-	rm -rf $(TOP_INCLUDE)/* > /dev/null 2>&1; \
 	rm -rf $(DISTCLEAN_FILES) > /dev/null 2>&1
 
 #
@@ -1186,11 +1202,12 @@ dumpFlags:
 	echo "       MAKEFLAGS: $(MAKEFLAGS)"; \
 	echo "    MAKECMDGOALS: $(MAKECMDGOALS)"; \
 	echo ""; \
-	echo "    CC: $(CC_CMD)"; \
-	echo "   C++: $(CXX_CMD)"; \
-	echo "    LD: $(LD_CMD)"; \
-	echo "    SO: $(SO_CMD)"; \
-	echo "    AR: $(AR_CMD)"; \
+	echo "     CC: $(CC_CMD)"; \
+	echo "    C++: $(CXX_CMD)"; \
+	echo "     LD: $(LD_CMD)"; \
+	echo "     SO: $(SO_CMD)"; \
+	echo "SO_LIBS: $(SO_LIBS)"; \
+	echo "     AR: $(AR_CMD)"; \
 	echo ""
 
 #

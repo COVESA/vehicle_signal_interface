@@ -184,7 +184,7 @@ static int Lua_vsi_destroy ( lua_State* L )
 
     Lua Interface:
 
-      status = Lua_vsi_VSS_import ( "/somePath/vss_rel_1.vsi" )
+      status = Lua_vsi_VSS_import ( "/somePath/vss_rel_1.0.vsi" )
 
         Input arguments:
             fileName - A string representing the name and location of the
@@ -339,7 +339,7 @@ static int Lua_vsi_fire_signal ( lua_State* L )
         result.signalId = luaL_checkinteger ( L, 2 );
         userData        = luaL_checkinteger ( L, 3 );
 
-        LOG ( "  Firing signal by ID: %d,%d with value: %lu\n", result.domainId,
+        LOG ( "  Firing signal by ID: %lu,%lu with value: %lu\n", result.domainId,
               result.signalId, userData );
 
         status = vsi_fire_signal ( handle, &result );
@@ -471,7 +471,7 @@ static int Lua_vsi_get_oldest_signal ( lua_State* L )
         result.domainId = luaL_checkinteger ( L, 1 );
         result.signalId = luaL_checkinteger ( L, 2 );
 
-        LOG ( "  Calling vsi_get_oldest_signal[%d,%d]\n", result.domainId,
+        LOG ( "  Calling vsi_get_oldest_signal[%lu,%lu]\n", result.domainId,
               result.signalId );
 
         status = vsi_get_oldest_signal ( handle, &result );
@@ -589,7 +589,7 @@ static int Lua_vsi_get_newest_signal ( lua_State* L )
         result.domainId = luaL_checkinteger ( L, 1 );
         result.signalId = luaL_checkinteger ( L, 2 );
 
-        LOG ( "  Calling vsi_get_newest_signal[%d,%d]\n", result.domainId,
+        LOG ( "  Calling vsi_get_newest_signal[%lu,%lu]\n", result.domainId,
               result.signalId );
 
         status = vsi_get_newest_signal ( handle, &result );

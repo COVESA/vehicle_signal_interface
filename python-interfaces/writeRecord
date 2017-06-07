@@ -1,0 +1,91 @@
+#! /usr/bin/python3.5m
+
+#
+#   Copyright (C) 2016-2017, Jaguar Land Rover. All Rights Reserved.
+#
+#   This Source Code Form is subject to the terms of the Mozilla Public
+#   License, v. 2.0. If a copy of the MPL was not distributed with this file,
+#   You can obtain one at http://mozilla.org/MPL/2.0/.
+#
+
+from getopt import *
+import sys
+
+from vsi_py import *
+
+
+def usage():
+    print ( """
+
+Usage:
+
+  writeRecord options
+
+where \"options\" can be any combination of:
+
+  -h | --help        Display this help message
+  -d | --domain      Define the domain ID
+  -s | --signal      Define the signal ID
+  -n | --signalName  Define the signal name
+  -v | --value       Define the data value
+  -V | --verbose     Set \"verbose\" output mode
+
+All of the options except \"-h\" or \"--help\" require an argument value
+
+""" )
+
+
+def main():
+    try:
+        opts, args = getopt(sys.argv[1:], "hd:s:n:v:V", ["help", "output="])
+
+    except GetoptError as err:
+        # print help information and exit:
+        print(err)  # will print something like "option -a not recognized"
+        usage()
+        sys.exit(2)
+
+    domain     = 1
+    signal     = 0
+    signalName = ""
+    value      = 0
+    verbose    = False
+
+    for option, arg in opts:
+
+        if option in ("-h", "--help"):
+            usage()
+            sys.exit()
+
+        elif option in ("-d", "--domain"):
+            domain = arg
+
+        elif option in ("-s", "--signal"):
+            signal = arg
+
+        elif option in ("-n", "--name"):
+            signalName = arg
+
+        elif option in ("-v", "--value"):
+            value = arg
+
+        elif option in ("-V", "--verbose"):
+            verbose = True
+            print ( "Verbose output mode set" )
+
+        else:
+            assert False, "unhandled option"
+
+    if verbose:
+        print ( "\nOptions found:" )
+        print ( "  domain:", domain )
+        print ( "  signal:", signal )
+        print ( "    name:", signalName )
+        print ( "   value:", value, "\n" )
+
+    status = insertSignalData ( int(domain), int(signal), signalName, int(value) )
+    if ( status != 0 ):
+        print ( "Error: Signal insertion error:", status );
+
+if __name__ == "__main__":
+    main()

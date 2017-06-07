@@ -1,0 +1,11 @@
+#
+#    "Source" this file to set the relevant Python environment variables.
+#
+export PYTHON_VERSION=3.5m
+
+export PYTHONPATH=${PYTHONPATH}:../src
+
+export PATH=${PATH}:../src
+
+export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:../src
+
