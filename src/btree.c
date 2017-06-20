@@ -1009,24 +1009,31 @@ static void btree_split_child ( btree_t*     btree,
     child->keysInUse = btree->min;
 
     //
-    //  Move all the child pointers of the parent up (towards the end) of the
-    //  parent node to make room for the record we are going to move up to the
-    //  parent from the old child.
+    //  If this insertion is not at the end of the data records in the
+    //  parent...
     //
-    moveChildren ( btree, parent, index, parent, index + 1,
-                   parent->keysInUse - index + 1 );
+    if ( index < parent->keysInUse )
+    {
+        //
+        //  Move all the child pointers of the parent up (towards the end) of
+        //  the parent node to make room for the record we are going to move
+        //  up to the parent from the old child.
+        //
+        moveChildren ( btree, parent, index, parent, index + 1,
+                       parent->keysInUse - index + 1 );
+        //
+        //  Move all the data records in the parent one place to the right as
+        //  well to make room for the new child record.
+        //
+        moveRecords ( btree, parent, index, parent, index + 1,
+                      parent->keysInUse - index + 1 );
+    }
     //
     //  Store the new child we just created into the node list of the parent
     //  as the right child of the index location.
     //
     setChild ( btree, parent, index + 1, cvtToOffset ( btree, newChild ) );
 
-    //
-    //  Move all the data records in the parent one place to the right as well
-    //  to make room for the new child record.
-    //
-    moveRecords ( btree, parent, index, parent, index + 1,
-                  parent->keysInUse - index + 1 );
     //
     //  Move the key that was used to split the node from the child to the
     //  parent.  Note that it was split at the "index" value specified by the
@@ -1050,9 +1057,9 @@ static void btree_split_child ( btree_t*     btree,
 
     b t r e e _ i n s e r t _ n o n f u l l
 
-    @brief Insert a record into a non-full node.
+    @brief Insert a record into a tree with a non-full root node.
 
-    This function will insert a record into a non-full node.
+    This function will insert a record into a tree with a non-full root node.
 
     TODO: We could make the node search more efficient by implementing a
     binary search instead of the linear one.  For small tree orders, the
@@ -4516,23 +4523,23 @@ static void btree_print_header ( btree_t* btree )
         printf ( "Error: Attempt to print NULL btree!\n" );
         exit ( 255 );
     }
-    LOG ( "\nB-tree parameters set to the following:\n" );
-    LOG ( "    B-tree location: %p\n",  btree );
-    LOG ( "          Node Size: %u\n",  btree->nodeSize );
-    LOG ( "          Tree Type: %s\n",  btree->type == TYPE_USER ?
+    BLOG ( "\nB-tree parameters set to the following:\n" );
+    BLOG ( "    B-tree location: %p\n",  btree );
+    BLOG ( "          Node Size: %u\n",  btree->nodeSize );
+    BLOG ( "          Tree Type: %s\n",  btree->type == TYPE_USER ?
                                        "user" : "system" );
-    LOG ( "      Max Recs/Node: %u\n",  btree->maxRecCnt );
-    LOG ( "         Min Degree: %u\n",  btree->minDegree );
-    LOG ( "        Min Records: %u\n",  btree->min );
-    LOG ( "      Current Count: %u\n",  btree->count );
-    LOG ( "          Root Node: 0x%lx\n", btree->root );
+    BLOG ( "      Max Recs/Node: %u\n",  btree->maxRecCnt );
+    BLOG ( "         Min Degree: %u\n",  btree->minDegree );
+    BLOG ( "        Min Records: %u\n",  btree->min );
+    BLOG ( "      Current Count: %u\n",  btree->count );
+    BLOG ( "          Root Node: 0x%lx\n", btree->root );
 
     btree_key_def* keyDefinition = cvtToAddr ( btree, btree->keyDef );
 
-    LOG ( "  Num of Key Fields: %u\n", keyDefinition->fieldCount );
+    BLOG ( "  Num of Key Fields: %u\n", keyDefinition->fieldCount );
     for ( int i = 0; i < keyDefinition->fieldCount; ++i )
     {
-        LOG ( "            Field %d: type[%d], offset[%d], size[%d]\n",
+        BLOG ( "            Field %d: type[%d], offset[%d], size[%d]\n",
                i,  keyDefinition->btreeFields[i].type,
                keyDefinition->btreeFields[i].offset,
                keyDefinition->btreeFields[i].size );
@@ -4659,8 +4666,8 @@ static void validateInit ( int maxSize )
 
 static void validateRecord ( char* leader, void* recordPtr )
 {
-    userData* data = recordPtr;
-    int       item = data->domainId;
+    userData*     data = recordPtr;
+    unsigned long item = data->domainId;
 
     validateIds[item]++;
 }

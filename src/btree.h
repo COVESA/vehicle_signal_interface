@@ -16,6 +16,8 @@
 
     TODO: Invalidate iterators if the tree structure changes.
 
+    TODO: Put mutex into btree_t and change LOCKS to use it.
+
 -----------------------------------------------------------------------------*/
 
 #ifndef _BTREE_SM_H_

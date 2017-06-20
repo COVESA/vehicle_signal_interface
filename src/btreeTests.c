@@ -47,11 +47,13 @@
 //  The following is the user defined data structure that all of the records
 //  in the btree will point to.
 //
+#define MAX_NAME_LEN ( 32 )
+
 typedef struct userData
 {
     unsigned long domainId;
     unsigned long signalId;
-    char*         name;
+    char          name[MAX_NAME_LEN + 1];
 
 }   userData;
 
@@ -166,7 +168,7 @@ Usage: %s options\n\
 \n\
   Option     Meaning       Type     Default   \n\
   ======  ==============  ======  =========== \n\
-    -c    Record Count     int        20      \n\
+    -c    Record Count     int        200     \n\
     -o    Btree Order      int         2      \n\
     -h    Help Message     N/A        N/A     \n\
     -?    Help Message     N/A        N/A     \n\
@@ -181,14 +183,13 @@ Usage: %s options\n\
 //
 int main ( int argc, char *argv[] )
 {
-    int       recordCount = 20;
+    int       recordCount = 200;
     int       order = 2;
     int       i = 0;
     int       status = 0;
     userData* data;
     userData* tempData;
     userData  scratch = { 0 };
-    char      nameString[32] = { 0 };
 
 #ifdef TEST_BTREE_NAMES_INDEX
     btree_t  nameTree;
@@ -349,15 +350,15 @@ int main ( int argc, char *argv[] )
         //
         //  Go allocate a new userData data structure.
         //
-        data = (userData*)sm_malloc ( sizeof(userData) );
+        data = sm_malloc ( sizeof(userData) );
 
         //
         //  Initialize the fields in the data structure.
         //
         data->domainId = i;
         data->signalId = i * 11;
-        sprintf ( nameString, "%lu-%lu", data->domainId, data->signalId );
-        data->name = strdup ( nameString );
+        sprintf ( data->name, "%lu-%lu", data->domainId, data->signalId );
+        data->name[MAX_NAME_LEN] = 0;
 
         //
         //  Go insert this new data structure into both of the btrees that we
@@ -660,6 +661,8 @@ int main ( int argc, char *argv[] )
     printf ( "btree_iter_previous found " );
     printFunction ( "", iter->key );
     printf ( "\n" );
+
+    btree_iter_cleanup ( iter );
 
     scratch.domainId = 7;
     scratch.signalId = 80;

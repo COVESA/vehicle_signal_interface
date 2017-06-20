@@ -7,6 +7,11 @@
 #   License, v. 2.0. If a copy of the MPL was not distributed with this file,
 #   You can obtain one at http://mozilla.org/MPL/2.0/.
 #
+#   Usage: resetVSI vssFile
+#
+#   Where "vssFile" is the name of the file in the "...vsi_bridge/vsi"
+#   directory to be loaded into the VSI database.
+#
 
 VSIroot=/home/dmies/git/vsi_bridge/vsi/src
 VSSroot=/home/dmies/git/vsi_bridge/vss
@@ -21,8 +26,8 @@ $VSIroot/importVSS $VSIroot/$1
 
 echo ""
 echo "Dumping the contents of the shared memory segments..."
-# $VSIroot/dump
-gdb $VSIroot/dump
+$VSIroot/dump
+# gdb $VSIroot/dump
 
 echo ""
 echo "===> The VSI system has been cleared and reinitialized"

@@ -819,6 +819,11 @@ void* sm_malloc ( size_t size )
 mallocEnd:
 
     //
+    //  Go clean up all of the iterator data and memory.
+    //
+    btree_iter_cleanup ( iter );
+
+    //
     //  Go unlock our shared memory mutex.
     //
     SM_UNLOCK;

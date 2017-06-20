@@ -163,9 +163,8 @@ int main ( int argc, char* const argv[] )
     {
 #ifdef VSI_DEBUG
         HX_DUMP ( data, dataSize, "  Returned Value: " );
-#else
-        printf ( "  Returned Value: %lu\n", data );
 #endif
+        printf ( "  Returned Value: %lu\n", data );
     }
     else
     {

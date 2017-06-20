@@ -27,9 +27,9 @@
 #include "vsi_core_api.h"
 
 #undef VSI_DEBUG
-#define VSI_DEBUG
-#undef LOG
-#define LOG printf
+// #define VSI_DEBUG
+// #undef LOG
+// #define LOG printf
 
 //
 //	Define the externally defined functions.
@@ -84,6 +84,7 @@ extern void          dumpSemaphore   ( semaphore_t* semaphore );
 }
 
 
+#if 0
 //
 //  Define the cleanup handler for the semaphore wait below.  This handler
 //  will be executed if this thread is cancelled while it is waiting.  What
@@ -143,8 +144,9 @@ static void semaphoreCleanupHandler ( void* arg )
 
 ------------------------------------------------------------------------*/
 #define SL_UNLOCK(sigList)                              \
-    pthread_mutex_unlock ( &sigList->semaphore.mutex ); \
-    pthread_cleanup_pop ( 0 );
+    pthread_cleanup_pop ( 0 );                          \
+    pthread_mutex_unlock ( &sigList->semaphore.mutex );
+#endif
 
 
 /*!-----------------------------------------------------------------------

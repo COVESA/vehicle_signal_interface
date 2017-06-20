@@ -45,7 +45,7 @@
 //  Define any of the conditional compilation flags that we want to enable.
 //
 #undef VSI_DEBUG
-//#undef DUMP_SEMAPHORE
+#undef DUMP_SEMAPHORE
 
 //
 //  Include the local header files we need.
@@ -96,6 +96,8 @@
 //  Linux "system", it is just the VSI "system" code.
 //
 //  Both segments can be dynamically resized as needed with minimal cost.
+//
+//  TODO: The resizing of the shared memory segments needs to be written!
 //
 #define MB ( 1024L * 1024L )
 #define SHARED_MEMORY_SEGMENT_NAME "/var/run/shm/vsiUserDataStore"

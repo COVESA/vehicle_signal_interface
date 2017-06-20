@@ -30,6 +30,7 @@
 #include "signals.h"
 #include "vsi_core_api.h"
 
+
 //
 //  Define the global VSI "context" structure.
 //
@@ -265,6 +266,7 @@ int vsi_VSS_import ( const char* fileName, int domain )
     signal_t privateId = 0;
     int      tokenCount = 0;
     int      signalCount = 0;
+    int      lineCount = 0;
     int      status = 0;
     bool     versionLineSeen = false;
 
@@ -302,6 +304,11 @@ int vsi_VSS_import ( const char* fileName, int domain )
     //
     while ( fgets ( line, MAX_VSS_LINE, inputFile ) != NULL )
     {
+        //
+        //  Increment the line count in the source file.
+        //
+        lineCount++;
+
         //
         //  If this line begins with a '#', it is a comment line so just
         //  ignore it.
@@ -357,6 +364,9 @@ int vsi_VSS_import ( const char* fileName, int domain )
                 printf ( "ERROR: Inserting data into the VSI: %d[%s]\n",
                          status, strerror(status) );
             }
+            printf ( "Importing signal %d at line %d: %u - %s\n",
+                     signalCount, lineCount, id, name );
+
 #ifdef BTREE_VERBOSE
             btree_print ( &vsiContext->signalNameIndex, NULL );
 #endif
