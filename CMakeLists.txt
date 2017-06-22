@@ -4,6 +4,7 @@ project(vehicle_signal_interface C)
 
 option(BUILD_LUA "Build Lua interface" ON)
 option(BUILD_PYTHON "Build Python interface" ON)
+option(BUILD_CAN "Build SocketCAN bindings" ON)
 
 include_directories(${CMAKE_SOURCE_DIR}/src)
 
@@ -21,5 +22,9 @@ if(BUILD_PYTHON)
     set(MIN_PYTHON_VERSION "${MIN_PYTHON_VERSION}" CACHE STRING "3")
 
     add_subdirectory(python-interfaces)
+endif()
+
+if(BUILD_CAN)
+    add_subdirectory(socketcan-bindings)
 endif()
 
