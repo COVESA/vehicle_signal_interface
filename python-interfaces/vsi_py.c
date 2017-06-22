@@ -19,16 +19,7 @@
 /*! @{ */
 
 
-#define IPATH python PYTHON_VERSION
-#define IFILE Python.h
-
-#define __header(x) #x
-#define _header(p,f) __header(p/f)
-#define header(p,f) _header(p,f)
-
-#include header(IPATH,IFILE)
-
-
+#include <Python.h>
 //
 //  Define the following symbol to get debugging output.  Note: You may get
 //  some compiler warnings about multiple definitions when you do this.  They
