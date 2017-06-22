@@ -2,7 +2,7 @@ cmake_minimum_required (VERSION 2.8)
 
 project(vehicle_signal_interface C)
 
-option(BUILD_LUA "Build Lua interface" ON)
+option(BUILD_LUA "Build Lua interface" OFF)
 option(BUILD_PYTHON "Build Python interface" ON)
 option(BUILD_CAN "Build SocketCAN bindings" ON)
 
