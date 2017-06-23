@@ -41,6 +41,11 @@
 #include <vsi_core_api.h>
 #include <signals.h>
 
+#ifndef LOG
+    #define LOG printf
+#endif
+
+
 //
 //  Declare the local Python objects we need in this file.
 //

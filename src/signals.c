@@ -2703,11 +2703,9 @@ int vsi_define_signal ( const domain_t domainId,
         signalList->name = toOffset ( tempName );
 
         //
-        //  Copy the input name string into the new buffer and make sure that
-        //  it's null terminated.
+        //  Copy the input name string into the new buffer.
         //
         strncpy ( tempName, name, nameLen - 1 );
-        tempName[nameLen-1] = 0;
 
         //
         //  Go add this signal list structure to the signal-name btree index.

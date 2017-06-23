@@ -703,8 +703,11 @@ void* sm_malloc ( size_t size )
     neededSize = size + CHUNK_HEADER_SIZE;
 
     //
-    //  Make sure the memory we are going to allocate is on an 8 byte boundary
-    //  by rounding it up to the next multiple of 8.
+    //  Make sure the memory we are going to allocate is a multiple of 8 bytes
+    //  by rounding it up to the next multiple of 8.  Note that since we start
+    //  with a properly aligned block of memory, all of the allocated blocks
+    //  will also be properly aligned as long as we make sure they are all a
+    //  multiple of 8 bytes.
     //
     //  TODO: Do we need to generalize this?  (like using "sizeof(long)", etc.
     //

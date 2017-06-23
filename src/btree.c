@@ -1026,7 +1026,7 @@ static void btree_split_child ( btree_t*     btree,
         //  well to make room for the new child record.
         //
         moveRecords ( btree, parent, index, parent, index + 1,
-                      parent->keysInUse - index + 1 );
+                      parent->keysInUse - index );
     }
     //
     //  Store the new child we just created into the node list of the parent
@@ -4052,6 +4052,8 @@ static int btree_compare_function ( btree_t* btree, void* data1, void* data2 )
     int              diff     = 0;
     offset_t         offset   = 0;
     btree_field_def* fieldDef = NULL;
+    char*            string1;
+    char*            string2;
 
     //
     //  Get the address of the key definition structures for this btree.
@@ -4091,14 +4093,14 @@ static int btree_compare_function ( btree_t* btree, void* data1, void* data2 )
           //    function to compare the 2 string pointers.
           //
           case ft_string:
-            diff = strncmp ( cvtToAddr ( btree, *(offset_t*)(data1 + offset) ),
-                             cvtToAddr ( btree, *(offset_t*)(data2 + offset) ),
-                             256 );
-                VERBOSE ( "Comparing String1: %s\n", (char*)cvtToAddr ( btree,
-                                                   *(offset_t*)(data1 + offset)));
-                VERBOSE ( "          String2: %s\n", (char*)cvtToAddr ( btree,
-                                                   *(offset_t*)(data2 + offset)));
-                VERBOSE ( "    Diff: %d\n", diff );
+            string1 = toAddress ( *(unsigned long*)( data1 + offset ));
+            string2 = toAddress ( *(unsigned long*)( data2 + offset ));
+            diff    = strncmp ( string1, string2, 256 );
+
+            VERBOSE ( "Comparing String1: %s\n", string1 );
+            VERBOSE ( "          String2: %s\n", string2 );
+            VERBOSE ( "             Diff: %d\n", diff );
+
             break;
 
           //

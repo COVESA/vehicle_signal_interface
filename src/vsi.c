@@ -367,7 +367,7 @@ int vsi_VSS_import ( const char* fileName, int domain )
             printf ( "Importing signal %d at line %d: %u - %s\n",
                      signalCount, lineCount, id, name );
 
-#ifdef BTREE_VERBOSE
+#ifdef VSI_DEBUG
             btree_print ( &vsiContext->signalNameIndex, NULL );
 #endif
         }
