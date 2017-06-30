@@ -87,7 +87,7 @@ int main ( int argc, char* const argv[] )
     unsigned long dataSize = sizeof(data);
     int           status = 0;
     char          ch;
-    bool          getOldest = true;
+    bool          getOldest = false;
 
     while ( ( ch = getopt ( argc, argv, "d:hos:?" ) ) != -1 )
     {
@@ -98,7 +98,7 @@ int main ( int argc, char* const argv[] )
           //
           case 'd':
             domain = atol ( optarg );
-            LOG ( "Using domain value[%'d]\n", domain );
+            LOG ( "Using domain ID[%'d]\n", domain );
             break;
 
           //
@@ -106,7 +106,7 @@ int main ( int argc, char* const argv[] )
           //
           case 's':
             signal = atol ( optarg );
-            LOG ( "Using signal value[%'d]\n", signal );
+            LOG ( "Using signal ID[%'d]\n", signal );
             break;
 
           //
@@ -114,7 +114,7 @@ int main ( int argc, char* const argv[] )
           //
           case 'o':
             LOG ( "Fetching the oldest signal\n" );
-            getOldest = false;
+            getOldest = true;
             break;
 
           //
@@ -149,7 +149,7 @@ int main ( int argc, char* const argv[] )
     //
     //  Go read this message from the message pool.
     //
-    LOG ( "  Fetching domain: %'d\n           signal...: %'d\n", domain, signal );
+    LOG ( "  Fetching domain: %'d, signal: %'d\n", domain, signal );
 
     if ( getOldest )
     {
@@ -162,7 +162,7 @@ int main ( int argc, char* const argv[] )
     if ( status == 0 )
     {
 #ifdef VSI_DEBUG
-        HX_DUMP ( data, dataSize, "  Returned Value: " );
+        HX_DUMP ( &data, dataSize, "  Returned Value: " );
 #endif
         printf ( "  Returned Value: %lu\n", data );
     }

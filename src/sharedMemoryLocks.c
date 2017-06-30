@@ -65,16 +65,11 @@ void semaphorePost ( semaphore_p semaphore )
     //  that the resource is available and release the process(s) that are
     //  waiting.
     //
-    // pthread_mutex_lock ( &semaphore->mutex );
+    pthread_mutex_lock ( &semaphore->mutex );
 
     LOG ( "%'lu Before semaphore broadcast (post) of sem: %p\n", getIntervalTime(),
           semaphore );
     SEM_DUMP ( semaphore );
-
-    //
-    //  Increment the number of messages available now.
-    //
-    semaphore->messageCount++;
 
     status = pthread_cond_broadcast ( &semaphore->conditionVariable );
     if ( status != 0 )
@@ -146,11 +141,6 @@ void semaphoreWait ( semaphore_p semaphore )
         //
         pthread_cleanup_pop ( 0 );
     }
-    //
-    //  Decrement the number of messages available now.
-    //
-    semaphore->messageCount--;
-
     pthread_mutex_unlock ( &semaphore->mutex );
 
     LOG ( "%'lu After semaphore wait on %p:\n", getIntervalTime(),

@@ -525,15 +525,10 @@ int sm_insert ( domain_t domain, signal_t signal, unsigned long newMessageSize,
     memcpy ( (void*)(&signalData->data), body, newMessageSize );
 
     //
-    //  Increment the message count and total message data size.
+    //  Increment the signal count and total message data size.
     //
     ++signalList->currentSignalCount;
     signalList->totalSignalSize += newMessageSize;
-
-    //
-    //  Increment the message count in the semaphore.
-    //
-    ++signalList->semaphore.messageCount;
 
     //
     //  Post to the semaphore to reflect the message we just inserted into the
@@ -547,6 +542,8 @@ int sm_insert ( domain_t domain, signal_t signal, unsigned long newMessageSize,
           toOffset ( &signalList->semaphore ) );
 
     SEM_DUMP ( &signalList->semaphore );
+
+    ++signalList->semaphore.messageCount;
 
     semaphorePost ( &signalList->semaphore );
 
@@ -624,12 +621,6 @@ int sm_removeSignal ( signal_list* signalList )
     signalList->totalSignalSize -= signalData->messageSize;
 
     //
-    //  Decrement the count of the number of signals in the list within the
-    //  semaphore.
-    //
-    --signalList->semaphore.messageCount;
-
-    //
     //  Free up the shared memory occupied by this signal data structure.
     //
     sm_free ( signalData );
@@ -668,8 +659,8 @@ int sm_removeSignal ( signal_list* signalList )
     Note that since this function does not alter the structure of the signal
     list we don't need to lock the signal list semaphore during the processing
     (except when we wait on an empty list).  We do lock the list of signal
-    data records attached to the signalList however as we will be modifying
-    that list.
+    instance records attached to the signalList however as we will be
+    modifying that list.
 
     @param[in]  domain - The domain value of the signal to be removed.
     @param[in]  signal - The signal ID value of the signal to be removed.
@@ -708,8 +699,10 @@ int sm_fetch ( domain_t domain, signal_t signal, unsigned long* bodySize,
     //  wait for the data to arrive then just return the "no data" error code
     //  to the caller and quit.
     //
-    if ( !signalList || ( ( signalList->semaphore.messageCount == 0 ) && !wait ) )
+    if ( !signalList || ( ( signalList->currentSignalCount == 0 ) && !wait ) )
     {
+        LOG ( "Warning: Signal list for domain %d, signal %d was not found.\n",
+              domain, signal );
         return ENODATA;
     }
     //
@@ -734,6 +727,8 @@ int sm_fetch ( domain_t domain, signal_t signal, unsigned long* bodySize,
     SEM_DUMP ( &signalList->semaphore );
 
     semaphoreWait ( &signalList->semaphore );
+
+    --signalList->semaphore.messageCount;
 
     --signalList->semaphore.waiterCount;
 
@@ -851,9 +846,9 @@ int sm_fetch_newest ( domain_t domain, signal_t signal, unsigned long* bodySize,
     //  arrive then just return the "no data" error code to the caller and
     //  quit.
     //
-    if ( !signalList || ( signalList->semaphore.messageCount == 0 && !wait ) )
+    if ( !signalList || ( signalList->currentSignalCount == 0 && !wait ) )
     {
-        LOG ( "Signal list is empty - Returning error code ENODATA\n" );
+        LOG ( "Signal list is empty - Returning error code 61 - ENODATA\n" );
         return ENODATA;
     }
     //
@@ -969,7 +964,7 @@ int sm_flush_signal ( domain_t domain, signal_t signal )
     //  If this signal list doesn't exist or is empty then we don't need to do
     //  anything.  In this case, just return a good completion code.
     //
-    if ( signalList == NULL || signalList->semaphore.messageCount == 0 )
+    if ( signalList == NULL || signalList->currentSignalCount == 0 )
     {
         return 0;
     }
@@ -1030,6 +1025,7 @@ int sm_flush_signal ( domain_t domain, signal_t signal )
     //  Note that this call may not return immediately if executing the post
     //  resulted in another thread/process running.
     //
+    signalList->semaphore.messageCount = 0;
     semaphorePost ( &signalList->semaphore );
 
     //
@@ -2823,21 +2819,21 @@ void printSignalList ( signal_list* signalList, int maxSignals )
     //
     //  Display the signal list keys.
     //
-    printf ( "  Domain ID..............: %d\n", signalList->domainId );
-    printf ( "  Signal ID..............: %d\n", signalList->signalId );
-    printf ( "  Private ID.............: %d\n", signalList->privateId );
+    printf ( "  Domain ID........: %d\n", signalList->domainId );
+    printf ( "  Signal ID........: %d\n", signalList->signalId );
+    printf ( "  Private ID.......: %d\n", signalList->privateId );
 
     //
     //  Diisplay the signal name if it's defined.
     //
     if ( signalList->name != 0 )
     {
-        printf ( "  Signal Name............: [%s]\n",
+        printf ( "  Signal Name......: [%s]\n",
               (char*)toAddress ( signalList->name ) );
     }
     else
     {
-        printf ( "  Signal Name............: [null]\n" );
+        printf ( "  Signal Name......: [null]\n" );
     }
     //
     //  If there are some signals in this signal list...
@@ -2850,7 +2846,7 @@ void printSignalList ( signal_list* signalList, int maxSignals )
         //
         if ( signalList->head == END_OF_LIST_MARKER )
         {
-            printf ( "  Head offset............: End of List Marker\n" );
+            printf ( "  Head offset......: End of List Marker\n" );
         }
         //
         //  Otherwise, display the head offset value.  This is the offset in
@@ -2858,7 +2854,7 @@ void printSignalList ( signal_list* signalList, int maxSignals )
         //
         else
         {
-            printf ( "  Head offset............: 0x%lx[%lu]\n", signalList->head,
+            printf ( "  Head offset......: 0x%lx[%lu]\n", signalList->head,
                   signalList->head );
         }
         //
@@ -2867,7 +2863,7 @@ void printSignalList ( signal_list* signalList, int maxSignals )
         //
         if ( signalList->tail == END_OF_LIST_MARKER )
         {
-            printf ( "  Tail offset............: End of List Marker\n" );
+            printf ( "  Tail offset......: End of List Marker\n" );
         }
         //
         //  Otherwise, display the tail offset value.  This is the offset in
@@ -2875,20 +2871,20 @@ void printSignalList ( signal_list* signalList, int maxSignals )
         //
         else
         {
-            printf ( "  Tail offset............: 0x%lx[%lu]\n", signalList->tail,
+            printf ( "  Tail offset......: 0x%lx[%lu]\n", signalList->tail,
                   signalList->tail );
         }
         //
         //  Display the number of messages currently stored in this hash
         //  bucket.
         //
-        printf ( "  Message count..........: %'lu\n", signalList->currentSignalCount );
+        printf ( "  Signal count.....: %'lu\n", signalList->currentSignalCount );
 
         //
         //  Display the number of bytes of memory that have been allocated to
         //  this signal list for the storage of signals.
         //
-        printf ( "  Total signal size......: %lu[0x%lx]\n", signalList->totalSignalSize,
+        printf ( "  Total signal size: %lu[0x%lx]\n", signalList->totalSignalSize,
               signalList->totalSignalSize );
 
         //

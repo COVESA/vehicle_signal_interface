@@ -520,7 +520,7 @@ PLATFORM := $(shell uname -i)
 #    flags are needed for each type of operation, the individual optimization
 #    flags defined below can be set as needed.
 #
-OPTIMIZATION ?= -g
+OPTIMIZATION ?= -ggdb -O0
 
 #
 #    Set the appropriate flags for C and C++ compilations in 64 and 32 bit
