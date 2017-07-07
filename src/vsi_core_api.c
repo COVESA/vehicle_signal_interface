@@ -490,6 +490,9 @@ int vsi_core_fetch ( domain_t domain,
                      unsigned long* bodySize,
                      void* body )
 {
+    LOG ( "Called vsi_core_fetch with domain[%u], key[%lu], bodySize[%p-%lu], "
+          "body[%p]\n", domain, key, bodySize, *bodySize, body );
+
     return sm_fetch ( domain, key, bodySize, body, false );
 }
 

@@ -557,6 +557,8 @@ typedef struct vsi_signal_group_data
     another btree that is indexed by the group Id.  Each group then contains a
     list of all of the signals that have been registered for that group.
 
+    TODO: Add mutex locks to group manipulation functions.
+
 ------------------------------------------------------------------------*/
 typedef struct vsi_signal_group
 {
@@ -609,6 +611,24 @@ int vsi_create_signal_group ( const group_t groupId );
 
 ------------------------------------------------------------------------*/
 int vsi_delete_signal_group ( const group_t groupId);
+
+
+/*!-----------------------------------------------------------------------
+
+    v s i _ f e t c h _ s i g n a l _ g r o u p
+
+    @brief Fetch the specified signal group record.
+
+    This function will find the specified signal group data structure and
+    return a pointer to that structure.
+
+    @param[in] - groupId - The ID of the group desired.
+
+    @return The address of the signal group data structure found
+            NULL if the specified signal group could not be found.
+
+------------------------------------------------------------------------*/
+vsi_signal_group* vsi_fetch_signal_group ( const group_t groupId );
 
 
 /*!-----------------------------------------------------------------------

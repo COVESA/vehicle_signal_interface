@@ -195,6 +195,11 @@ int main ( int argc, char* const argv[] )
         //
         dumpSignals();
 
+        //
+        //  Go dump all of the current groups.
+        //
+        dumpGroups();
+
 #ifdef VSI_DEBUG
         //
         //  Go dump the contents of the memory management btrees.

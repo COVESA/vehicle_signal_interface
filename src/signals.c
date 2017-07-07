@@ -26,7 +26,6 @@
 #include "signals.h"
 #include "vsi_core_api.h"
 
-#undef VSI_DEBUG
 // #define VSI_DEBUG
 // #undef LOG
 // #define LOG printf
@@ -211,7 +210,7 @@ int vsi_get_oldest_signal ( vsi_result* result )
     result->status = vsi_core_fetch ( result->domainId, result->signalId,
                                       &result->dataLength, result->data );
 
-    LOG ( "vsi_get_oldest_signal returning: %lu\n", (unsigned long)result->data );
+    LOG ( "vsi_get_oldest_signal returning: %lu\n", *(unsigned long*)result->data );
 
     return result->status;
 }
@@ -681,10 +680,9 @@ int sm_fetch ( domain_t domain, signal_t signal, unsigned long* bodySize,
     int          transferSize;
     int          status = 0;
 
-    LOG ( "Fetching signal domain[%d], signal[%d], bodySize[%lx-%lx], "
-          "body[%lx-%lx], wait[%d]\n", domain, signal, (unsigned long)bodySize,
-          *(unsigned long*)bodySize, (unsigned long)body, *(unsigned long*)body,
-          wait );
+    LOG ( "Fetching signal domain[%d], signal[%d], bodySize[%p-%lu], "
+          "body[%p], wait[%d]\n", domain, signal, bodySize, *bodySize,
+          body, wait );
     //
     //  Go find the signal list control block for this domain and signal.
     //
@@ -701,8 +699,8 @@ int sm_fetch ( domain_t domain, signal_t signal, unsigned long* bodySize,
     //
     if ( !signalList || ( ( signalList->currentSignalCount == 0 ) && !wait ) )
     {
-        LOG ( "Warning: Signal list for domain %d, signal %d was not found.\n",
-              domain, signal );
+        LOG ( "Warning: Signal list for domain %d, signal %d was not found "
+              "or empty.\n", domain, signal );
         return ENODATA;
     }
     //
@@ -1227,6 +1225,41 @@ int vsi_delete_signal_group ( const group_t groupId )
 
 /*!-----------------------------------------------------------------------
 
+    v s i _ f e t c h _ s i g n a l _ g r o u p
+
+    @brief Delete an existing signal group.
+
+    Delete a signal group.  This function will delete the specified signal
+    group and release any shared memory occupied by it's members.  If there
+    are any signal lists associated with the group, they will not be deleted.
+
+------------------------------------------------------------------------*/
+vsi_signal_group* vsi_fetch_signal_group ( const group_t groupId )
+{
+    LOG ( "Fetching signal group: %u\n", groupId );
+
+    //
+    //  Get the group object that the user specified.
+    //
+    vsi_signal_group  requestedGroup = { 0 };
+    vsi_signal_group* signalGroup;
+
+    requestedGroup.groupId = groupId;
+
+    signalGroup = btree_search ( &vsiContext->groupIdIndex, &requestedGroup );
+
+    LOG ( "  Returning signal group: %p\n", signalGroup );
+
+    //
+    //  Return the address of the signal group structure.  Note that this will
+    //  return a NULL pointer if the group could not be found.
+    //
+    return signalGroup;
+}
+
+
+/*!-----------------------------------------------------------------------
+
     v s i _ a d d _ s i g n a l _ t o _ g r o u p
 
     @brief Add a new signal to the specified group.
@@ -1239,17 +1272,12 @@ int vsi_add_signal_to_group ( const domain_t domainId,
                               const signal_t signalId,
                               const group_t  groupId )
 {
-    vsi_signal_group  requestedGroup = { 0 };
     vsi_signal_group* signalGroup = 0;
-
-    CHECK_AND_RETURN_IF_ERROR ( groupId );
-
-    requestedGroup.groupId = groupId;
 
     //
     //  Go find the group record for this groupId.
     //
-    signalGroup = btree_search ( &vsiContext->groupIdIndex, &requestedGroup );
+    signalGroup = vsi_fetch_signal_group ( groupId );
 
     //
     //  If the group record was not found, return an error code to the caller
@@ -1275,7 +1303,7 @@ int vsi_add_signal_to_group ( const domain_t domainId,
     //
     //  Go get the memory for a new signal group data record.
     //
-    vsi_signal_group_data* groupData = sm_malloc ( sizeof(vsi_signal_group_data ) );
+    vsi_signal_group_data* groupData = sm_malloc ( sizeof(vsi_signal_group_data) );
 
     //
     //  If the memory allocation failed, issue an error message and return an
@@ -1287,33 +1315,40 @@ int vsi_add_signal_to_group ( const domain_t domainId,
                  "group data record\n" );
         return ENOMEM;
     }
+    //
+    //  Fill in the fields of the new signal group data structure.
+    //
     groupData->nextMessageOffset = END_OF_LIST_MARKER;
     groupData->signalList        = toOffset ( signalList );
 
+    //
+    //  Get the offset of the new signal group data structure.
+    //
     offset_t newGroupDataOffset = toOffset ( groupData );
 
     //
-    //  If the group tail pointer is not NULL, make the current tail record
-    //  point to this new signal group data record.
+    //  If this signal group is not empty, make the current tail record
+    //  point to this new signal group data record.  We will insert this new
+    //  record at the end of the list.
     //
-    if ( signalGroup->tail != END_OF_LIST_MARKER )
+    if ( signalGroup->count != 0 )
     {
         ((signal_data*)toAddress(signalGroup->tail))->nextMessageOffset =
             newGroupDataOffset;
     }
     //
-    //  Now make the tail pointer point to our new message.
+    //  If the signal group is currently empty, make the head pointer point to
+    //  our new signal group data record.
     //
-    signalList->tail = newGroupDataOffset;
-
-    //
-    //  If the head offset is at the beginning of the list, make it point to
-    //  our new groupData record as well.
-    //
-    if ( signalGroup->head == END_OF_LIST_MARKER )
+    else
     {
         signalGroup->head = newGroupDataOffset;
     }
+    //
+    //  Now make the tail pointer point to our new message.
+    //
+    signalGroup->tail = newGroupDataOffset;
+
     //
     //  Increment the signal count for this group.
     //
@@ -1365,20 +1400,15 @@ int vsi_remove_signal_from_group ( const domain_t domainId,
                                    const signal_t signalId,
                                    const group_t  groupId )
 {
-    vsi_signal_group       requestedGroup = { 0 };
     vsi_signal_group*      signalGroup;
     vsi_signal_group_data* groupData;
     vsi_signal_group_data* trailingPtr;
     signal_list*           signalList;
 
-    CHECK_AND_RETURN_IF_ERROR ( groupId );
-
-    requestedGroup.groupId = groupId;
-
     //
     //  Go find the group record for this groupId.
     //
-    signalGroup = btree_search ( &vsiContext->groupIdIndex, &requestedGroup );
+    signalGroup = vsi_fetch_signal_group ( groupId );
 
     //
     //  If the group record was not found, return an error code to the caller
@@ -1392,6 +1422,7 @@ int vsi_remove_signal_from_group ( const domain_t domainId,
     //  While we have not reached the last signal in the group list...
     //
     offset_t groupDataOffset = signalGroup->head;
+
     trailingPtr = 0;
 
     while ( groupDataOffset != END_OF_LIST_MARKER )
@@ -1434,7 +1465,14 @@ int vsi_remove_signal_from_group ( const domain_t domainId,
             //
             if ( groupData->nextMessageOffset == END_OF_LIST_MARKER )
             {
-                signalGroup->tail = toOffset ( trailingPtr );
+                if ( trailingPtr == 0 )
+                {
+                    signalGroup->tail = END_OF_LIST_MARKER;
+                }
+                else
+                {
+                    signalGroup->tail = toOffset ( trailingPtr );
+                }
             }
             //
             //  Go return the structure we found to the shared memory free
@@ -1530,10 +1568,11 @@ int vsi_get_newest_in_group ( const group_t groupId,
                               vsi_result*   results )
 {
     int                    resultIndex = 0;
-    vsi_signal_group       requestedSignalGroup = { 0 };
     vsi_signal_group*      signalGroup = 0;
     vsi_signal_group_data* groupData = 0;
     signal_list*           signalList = 0;
+
+    printf ( "vsi_get_newest_in_group called with group: %d\n", groupId );
 
     //
     //  Make sure the inputs are all present.
@@ -1543,9 +1582,7 @@ int vsi_get_newest_in_group ( const group_t groupId,
     //
     //  Go get the signal group structure for the specified group id.
     //
-    requestedSignalGroup.groupId = groupId;
-
-    signalGroup = btree_search ( &vsiContext->groupIdIndex, &requestedSignalGroup );
+    signalGroup = vsi_fetch_signal_group ( groupId );
 
     //
     //  If the group id specified does not exist, return an error code to the
@@ -1668,7 +1705,7 @@ int vsi_get_newest_in_group_wait ( const group_t groupId,
     indicating that there was no data available for that signal.
 
     Also note that the signal information retrieved will be removed from the
-    database during this operation.  Fetches of the "oldest" signal data not
+    database during this operation.  Fetches of the "oldest" signal data
     automatically delete that information from the database.
 
 ------------------------------------------------------------------------*/
@@ -1676,11 +1713,13 @@ int vsi_get_oldest_in_group ( const group_t groupId,
                               vsi_result*   results )
 {
     int                    resultIndex = 0;
-    vsi_signal_group       requestedSignalGroup = { 0 };
     vsi_signal_group*      signalGroup = 0;
     vsi_signal_group_data* groupData = 0;
     signal_list*           signalList = 0;
+    vsi_result*            result = 0;
 
+    LOG ( "Called vsi_get_oldest_in_group with group: %u, results: %p\n",
+          groupId, results );
     //
     //  Make sure the inputs are all present.
     //
@@ -1689,9 +1728,9 @@ int vsi_get_oldest_in_group ( const group_t groupId,
     //
     //  Go get the signal group structure for the specified group id.
     //
-    requestedSignalGroup.groupId = groupId;
+    signalGroup = vsi_fetch_signal_group ( groupId );
 
-    signalGroup = btree_search ( &vsiContext->groupIdIndex, &requestedSignalGroup );
+    LOG ( "  Signal group found: %p\n", signalGroup );
 
     //
     //  If the group id specified does not exist, return an error code to the
@@ -1701,6 +1740,9 @@ int vsi_get_oldest_in_group ( const group_t groupId,
     {
         return ENOENT;
     }
+
+    // printSignalGroup ( "", signalGroup );
+
     //
     //  While we have not reached the end of the signal list...
     //
@@ -1718,12 +1760,20 @@ int vsi_get_oldest_in_group ( const group_t groupId,
         //
         signalList = toAddress ( groupData->signalList );
 
+        LOG ( "  Found signal %u, %u\n", signalList->domainId,
+              signalList->signalId );
 		//
 		//  Populate the current result structure with the signal
 		//  identification information.
 		//
-		results[resultIndex].domainId = signalList->domainId;
-		results[resultIndex].signalId = signalList->signalId;
+        result = &results[resultIndex++];
+
+		result->domainId    = signalList->domainId;
+		result->signalId    = signalList->signalId;
+		result->name        = toAddress ( signalList->name );
+		result->data        = (char*)&result->literalData;
+		result->literalData = 0;
+        result->dataLength  = sizeof(unsigned long);
 
         //
         //  Go get the oldest entry in the database for this signal.
@@ -1731,7 +1781,7 @@ int vsi_get_oldest_in_group ( const group_t groupId,
         //  Note that the return information will be populated in the result
         //  object that is passed in.
         //
-        vsi_get_oldest_signal ( &results[resultIndex++] );
+        vsi_get_oldest_signal ( result );
 
         //
         //  Get the next signal definition object in the list for this group.
@@ -3020,7 +3070,7 @@ void printSignalData ( signal_list* signalList, int maxSignals )
 -----------------------------------------------------------------------------*/
 void dumpGroups ( void )
 {
-    printf ( "  Dumping the signal group index...\n" );
+    printf ( "The defined groups in ID order:...\n\n" );
 
     //
     //  Go print all of the currently defined group records.
@@ -3100,7 +3150,7 @@ void printSignalGroup ( char* leader, void* data )
 	}
 	else
 	{
-        printf ( "%s  Head Offset.: 0x%lx[%lu]\n", leader, groupDataOffset,
+        printf ( "%s   Head Offset.: 0x%lx[%lu]\n", leader, groupDataOffset,
                  groupDataOffset );
 	}
     //
@@ -3141,7 +3191,7 @@ void printSignalGroup ( char* leader, void* data )
         //
         //  Go print the contents of the current signal structure.
         //
-        printf ( "%s      Domain: %d, Signal: %d, Name: %s\n", leader,
+        printf ( "%s      Domain: %d, Signal: %d, Name:[%s]\n", leader,
                  signalList->domainId, signalList->signalId,
                  (char*)toAddress ( signalList->name ) );
         //

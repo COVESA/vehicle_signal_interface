@@ -42,7 +42,9 @@
 #include <signals.h>
 
 #ifndef LOG
-    #define LOG printf
+//    #define LOG printf
+#else
+#define LOG(...)
 #endif
 
 
@@ -54,9 +56,14 @@ static PyObject* VsiError;
 //
 //  Declare the local functions that implement the python to C wrappers.
 //
-static PyObject* vsi_insertSignalData ( PyObject* self, PyObject* args );
-static PyObject* vsi_getSignalData    ( PyObject* self, PyObject* args );
-static PyObject* vsi_flushSignalData  ( PyObject* self, PyObject* args );
+static PyObject* vsi_insertSignalData      ( PyObject* self, PyObject* args );
+static PyObject* vsi_getSignalData         ( PyObject* self, PyObject* args );
+static PyObject* vsi_flushSignalData       ( PyObject* self, PyObject* args );
+static PyObject* vsi_createSignalGroup     ( PyObject* self, PyObject* args );
+static PyObject* vsi_deleteSignalGroup     ( PyObject* self, PyObject* args );
+static PyObject* vsi_addSignalToGroup      ( PyObject* self, PyObject* args );
+static PyObject* vsi_removeSignalFromGroup ( PyObject* self, PyObject* args );
+static PyObject* vsi_getOldestInGroup      ( PyObject* self, PyObject* args );
 
 //
 //  Define the data structure that implements the Python to C function mapping.
@@ -80,6 +87,36 @@ static PyMethodDef VsiMethods[] =
         vsi_flushSignalData,
         METH_VARARGS,
         "Flush a VSI signal data by name."
+    },
+    {
+        "createSignalGroup",
+        vsi_createSignalGroup,
+        METH_VARARGS,
+        "Create a new signal group."
+    },
+    {
+        "deleteSignalGroup",
+        vsi_deleteSignalGroup,
+        METH_VARARGS,
+        "Delete the specified signal group."
+    },
+    {
+        "addSignalToGroup",
+        vsi_addSignalToGroup,
+        METH_VARARGS,
+        "Add the specified signal to a group."
+    },
+    {
+        "removeSignalFromGroup",
+        vsi_removeSignalFromGroup,
+        METH_VARARGS,
+        "Remove the specified signal from a group."
+    },
+    {
+        "getOldestInGroup",
+        vsi_getOldestInGroup,
+        METH_VARARGS,
+        "Return the oldest data item in each signal of a group."
     },
     { NULL, NULL, 0, NULL }        // End of table marker
 };
@@ -161,7 +198,7 @@ MOD_INIT ( vsi_py )
 
     Python usage:
 
-        status = insertSignalData ( domain, name, value )
+        status = insertSignalData ( domain, signal, name, value )
 
     @param[in] domain - The domain of the signal.
     @param[in] name - The ASCII CAN name of the signal.
@@ -537,6 +574,445 @@ static PyObject* vsi_flushSignalData ( PyObject* self, PyObject* args )
     //
     return PyLong_FromLong ( status );
 }
+
+
+/*!----------------------------------------------------------------------------
+
+    v s i _ c r e a t e S i g n a l G r o u p
+
+    @brief Create a new signal group.
+
+    This function will create a new empty signal group with the specified ID
+    value.
+
+    Python usage:  status = createSignalGroup ( groupId )
+
+    @param[in] groupId - The group Id of the group to be created.
+
+    @return status - 0 = Success
+                    ~0 = Errno
+
+-----------------------------------------------------------------------------*/
+static PyObject* vsi_createSignalGroup ( PyObject* self, PyObject* args )
+{
+    unsigned long group  = 0;
+    int           status = 0;
+
+    //
+    //  Go get the input arguments from the user's function call.
+    //
+    status = PyArg_ParseTuple ( args, "I", &group );
+    if ( ! status )
+    {
+        return PyLong_FromLong ( status );
+    }
+    //
+    //  If we are debugging, output what it is we are doing.
+    //
+    LOG ( "Create a new signal group: %lu\n", group );
+
+    //
+    //  Display the input parameters we received if debug is enabled.
+    //
+    LOG ( "Calling vsi_create_signal_group with:\n" );
+    LOG ( "   Group Id: %lu\n",   group );
+
+    //
+    //  Go create this signal group in the VSI data store.
+    //
+    status = vsi_create_signal_group ( group );
+
+    //
+    //  Display the output parameters from the call if debug is enabled.
+    //
+    LOG ( "\nReturned[%d] from vsi_create_signal_group with:\n", status );
+    LOG ( "   Group Id: %lu\n",   group );
+
+    //
+    //  Return the status from the above call to the Python caller.
+    //
+    return PyLong_FromLong ( status );
+}
+
+
+/*!----------------------------------------------------------------------------
+
+    v s i _ d e l e t e S i g n a l G r o u p
+
+    @brief Delete the specified signal group.
+
+    This function will remove the specified signal group from the system.
+
+    Python usage:  status = deleteSignalGroup ( groupId )
+
+    @param[in] groupId - The signal group to be deleted
+
+    @return status - 0 = Success
+                    ~0 = Errno
+
+-----------------------------------------------------------------------------*/
+static PyObject* vsi_deleteSignalGroup ( PyObject* self, PyObject* args )
+{
+    unsigned long group  = 0;
+    int           status = 0;
+
+    //
+    //  Go get the input arguments from the user's function call.
+    //
+    status = PyArg_ParseTuple ( args, "I", &group );
+    if ( ! status )
+    {
+        return PyLong_FromLong ( status );
+    }
+    //
+    //  If we are debugging, output what it is we are doing.
+    //
+    LOG ( "Delete an existing signal group: %lu\n", group );
+
+    //
+    //  Display the input parameters we received if debug is enabled.
+    //
+    LOG ( "Calling vsi_delete_signal_group with:\n" );
+    LOG ( "   Group Id: %lu\n",   group );
+
+    //
+    //  Go delete this signal group from the VSI data store.
+    //
+    status = vsi_delete_signal_group ( group );
+
+    //
+    //  Display the output parameters from the call if debug is enabled.
+    //
+    LOG ( "\nReturned[%d] from vsi_delete_signal_group with:\n", status );
+    LOG ( "   Group Id: %lu\n", group );
+
+    //
+    //  Return the status from the above call to the Python caller.
+    //
+    return PyLong_FromLong ( status );
+}
+
+
+/*!----------------------------------------------------------------------------
+
+    v s i _ a d d S i g n a l T o G r o u p
+
+    @brief Add a signal to a group
+
+    This function will add the specified signal to the specified group.
+
+    Python usage:  status = vsi_addSignalToGroup ( domain, signal, name, group )
+
+    @param[in] domain - The domain of the signal to be added
+    @param[in] signal - The ID of the signal to be added
+    @param[in] name - The name of the signal to be added
+    @param[in] group - The ID of the group to be added to.
+
+    @return status - 0 = Success
+                    ~0 = Errno
+
+-----------------------------------------------------------------------------*/
+static PyObject* vsi_addSignalToGroup  ( PyObject* self, PyObject* args )
+{
+    unsigned int domain = 1;
+    unsigned int signal = 0;
+    char*          name = 0;
+    unsigned int group  = 0;
+    int          status = 0;
+
+    //
+    //  Go get the input arguments from the user's function call.
+    //
+    status = PyArg_ParseTuple ( args, "IIsI", &domain, &signal, &name, &group );
+    if ( ! status )
+    {
+        return PyLong_FromLong ( status );
+    }
+    //
+    //  If we are debugging, output what it is we are doing.
+    //
+    LOG ( "Adding domain %u, signal %u[%s] to group %u\n", domain, signal,
+          name, group );
+    //
+    //  Display the input parameters we received if debug is enabled.
+    //
+    LOG ( "Calling add signal to group with:\n" );
+    LOG ( "  Domain Id: %u\n",  domain );
+    LOG ( "  Signal Id: %u\n",  signal );
+    LOG ( "Signal name: %s\n",  name );
+    LOG ( "   Group Id: %u\n", group );
+
+    //
+    //  If the user did not specify the domain, print an error message and
+    //  quit.
+    //
+    if ( domain == 0 )
+    {
+        printf ( "Error: The domain must be specified - aborting\n" );
+        return PyLong_FromLong ( EINVAL );
+    }
+    //
+    //  If the signal was specified, use the ID to insert this signal into the
+    //  specified group.
+    //
+    if ( signal != 0 )
+    {
+        status = vsi_add_signal_to_group ( domain, signal, group );
+    }
+    //
+    //  Otherwise, if the signal is not present but the name is a non-empty
+    //  string then use the name as the lookup key.
+    //
+    else if ( name != NULL && *name != '\0' )
+    {
+        status = vsi_add_signal_to_group_by_name ( domain, name, group );
+    }
+    //
+    //  If neither the signal nor the name was supplied, it is an error so
+    //  complain and quit.
+    //
+    else
+    {
+        printf ( "Error: Either the signal ID or the name must be specified - "
+                 "aborting\n" );
+        return PyLong_FromLong ( EINVAL );
+    }
+    //
+    //  Display the output parameters from the call if debug is enabled.
+    //
+    LOG ( "\nReturned[%d] from vsi_add_signal_to_group with:\n", status );
+    LOG ( "  Domain Id: %u\n", domain );
+    LOG ( "  Signal Id: %u\n", signal );
+    LOG ( "Signal name: %s\n", name );
+    LOG ( "   Group Id: %u\n", group );
+
+    //
+    //  Return the status from the above call to the Python caller.
+    //
+    return PyLong_FromLong ( status );
+}
+
+
+
+/*!----------------------------------------------------------------------------
+
+    v s i _ r e m o v e S i g n a l F r o m G r o u p
+
+    @brief Remove a signal from a group
+
+    This function will remove the specified signal from the specified group.
+
+    Python usage:  status = vsi_removeSignalFromGroup ( domain, signal, name, group )
+
+    @param[in] domain - The domain of the signal to be added
+    @param[in] signal - The ID of the signal to be added
+    @param[in] name - The name of the signal to be added
+    @param[in] group - The ID of the group to be added to.
+
+    @return status - 0 = Success
+                    ~0 = Errno
+
+-----------------------------------------------------------------------------*/
+static PyObject* vsi_removeSignalFromGroup  ( PyObject* self, PyObject* args )
+{
+    unsigned int domain = 1;
+    unsigned int signal = 0;
+    char*          name = 0;
+    unsigned int group  = 0;
+    int          status = 0;
+
+    //
+    //  Go get the input arguments from the user's function call.
+    //
+    status = PyArg_ParseTuple ( args, "IIsI", &domain, &signal, &name, &group );
+    if ( ! status )
+    {
+        return PyLong_FromLong ( status );
+    }
+    //
+    //  If we are debugging, output what it is we are doing.
+    //
+    LOG ( "Adding domain %u, signal %u[%s] to group %u\n", domain, signal,
+          name, group );
+    //
+    //  Display the input parameters we received if debug is enabled.
+    //
+    LOG ( "Calling add signal to group with:\n" );
+    LOG ( "  Domain Id: %u\n",  domain );
+    LOG ( "  Signal Id: %u\n",  signal );
+    LOG ( "Signal name: %s\n",  name );
+    LOG ( "   Group Id: %u\n", group );
+
+    //
+    //  If the user did not specify the domain, print an error message and
+    //  quit.
+    //
+    if ( domain == 0 )
+    {
+        printf ( "Error: The domain must be specified - aborting\n" );
+        return PyLong_FromLong ( EINVAL );
+    }
+    //
+    //  If the signal was specified, use the ID to remove this signal from the
+    //  specified group.
+    //
+    if ( signal != 0 )
+    {
+        status = vsi_remove_signal_from_group ( domain, signal, group );
+    }
+    //
+    //  Otherwise, if the signal is not present but the name is a non-empty
+    //  string then use the name as the lookup key.
+    //
+    else if ( name != NULL && *name != '\0' )
+    {
+        status = vsi_remove_signal_from_group_by_name ( domain, name, group );
+    }
+    //
+    //  If neither the signal ID nor the name was supplied, it is an error so
+    //  complain and quit.
+    //
+    else
+    {
+        printf ( "Error: Either the signal ID or the name must be specified - "
+                 "aborting\n" );
+        return PyLong_FromLong ( EINVAL );
+    }
+    //
+    //  Display the output parameters from the call if debug is enabled.
+    //
+    LOG ( "\nReturned[%d] from vsi_add_signal_to_group with:\n", status );
+    LOG ( "  Domain Id: %u\n", domain );
+    LOG ( "  Signal Id: %u\n", signal );
+    LOG ( "Signal name: %s\n", name );
+    LOG ( "   Group Id: %u\n", group );
+
+    //
+    //  Return the status from the above call to the Python caller.
+    //
+    return PyLong_FromLong ( status );
+}
+
+
+/*!----------------------------------------------------------------------------
+
+    v s i _ g e t O l d e s t I n G r o u p
+
+    @brief Get the oldest data in each signal of a group.
+
+    This function will retrieve the oldest data in each signal of a group.
+    Any data that is returned to the caller will be automatically deleted from
+    the database.
+
+    Python usage:  results = vsi_getOldestInGroup ( groupId )
+
+    @param[in] - groupId - The ID of the group to be fetched.
+
+    @return - A list of dictionaries containing the results requested.
+
+-----------------------------------------------------------------------------*/
+static PyObject* vsi_getOldestInGroup ( PyObject* self, PyObject* args )
+{
+    vsi_signal_group* signalGroup = 0;
+    unsigned int      group       = 0;
+    int               status      = 0;
+
+    //
+    //  Go get the input arguments from the user's function call.
+    //
+    status = PyArg_ParseTuple ( args, "I", &group );
+    if ( ! status )
+    {
+        return PyLong_FromLong ( status );
+    }
+    //
+    //  Display the input parameters we received if debug is enabled.
+    //
+    LOG ( "Calling fetch oldest data from group with:\n" );
+    LOG ( "   Group Id: %u\n", group );
+
+    signalGroup = vsi_fetch_signal_group ( group );
+
+    //
+    //  If the signal group was not found, return an error indication to the
+    //  caller.
+    //
+    if ( signalGroup == NULL )
+    {
+        return PyLong_FromLong ( EINVAL );
+    }
+    //
+    //  Go allocate the memory for the results array that will be filled in.
+    //
+    vsi_result* results = malloc ( sizeof(vsi_result) * signalGroup->count );
+    memset ( results, 0, sizeof(vsi_result) * signalGroup->count );
+
+    //
+    //  If we ran out of memory, return an error code to the caller.
+    //
+    if ( results == NULL )
+    {
+        return PyLong_FromLong ( ENOMEM );
+    }
+    //
+    //  Go get the oldest results for this group.
+    //
+    status = vsi_get_oldest_in_group ( group, results );
+
+    //
+    //  If there was an error fetching the results, return the error code and
+    //  free up the memory we allocated.
+    //
+    if ( status != 0 )
+    {
+        free ( results );
+        return PyLong_FromLong ( status );
+    }
+    //
+    //  Define and initialize the Python list object that we will be returning
+    //  to the caller.
+    //
+    PyObject* list = PyList_New(0);
+
+    //
+    //  For each result structure returned...
+    //
+    for ( int i = 0; i < signalGroup->count; ++i )
+    {
+        //
+        //  If we successfully found data for this signal then create a new
+        //  dictionary.
+        //
+        if ( results[i].status == 0 )
+        {
+            //
+            //  Build the results item dictionary.
+            //
+            PyObject* dict = PyDict_New();
+            PyDict_SetItemString ( dict, "domain",
+                                   PyLong_FromLong ( results[i].domainId ) );
+            PyDict_SetItemString ( dict, "signal",
+                                   PyLong_FromLong ( results[i].signalId ) );
+            PyDict_SetItemString ( dict, "value",
+                                   PyLong_FromLong ( *(long*)results[i].data ) );
+            //
+            //  Append the dictionary to the list we will return.
+            //
+            PyList_Append ( list, dict );
+        }
+    }
+    //
+    //  Go return the memory we used to the system.
+    //
+    free ( results );
+
+    //
+    //  Return the list of dictionaries to the caller.
+    //
+    // return (PyObject *) list;
+    return list;
+}
+
 
 
 /*! @} */

@@ -1,0 +1,136 @@
+#! /usr/bin/python3.5m
+
+#
+#   Copyright (C) 2016-2017, Jaguar Land Rover. All Rights Reserved.
+#
+#   This Source Code Form is subject to the terms of the Mozilla Public
+#   License, v. 2.0. If a copy of the MPL was not distributed with this file,
+#   You can obtain one at http://mozilla.org/MPL/2.0/.
+#
+
+from getopt import *
+import sys
+
+from vsi_py import *
+
+
+def usage():
+    print ( """
+
+Usage:
+
+  getOldestInGroup options
+
+where \"options\" can be any combination of:
+
+  -g: | --group       Define the group ID
+  -h  | --help        Display this help message
+  -V  | --verbose     Set \"verbose\" output mode
+
+All of the options denoted with a \":\" require an argument value
+
+""" )
+
+
+#
+#   m a i n
+#
+def main():
+
+    #
+    #   Go parse the command line input options.
+    #
+    try:
+        opts, args = getopt(sys.argv[1:], "g:hV", ["help", "output="])
+
+    #
+    #   If we get any errors, report them and quit.
+    #
+    except GetoptError as err:
+        #
+        #   The following will print something like "option -a not recognized"
+        #
+        print(err)
+
+        #
+        #   Print the "usage" message and quit.
+        #
+        usage()
+        sys.exit(2)
+
+    #
+    #   Initialize the parameter variables.
+    #
+    group   = 0
+    verbose = False
+
+    #
+    #   For each command line option the user supplied...
+    #
+    for option, arg in opts:
+
+        #
+        #   If this is a "group" option, save the value specified.
+        #
+        if option in ("-g", "--group"):
+            group = arg
+            print ( "Using group ID:", group )
+        #
+        #   If this is a "help" option, display the "usage" message and quit.
+        #
+        elif option in ("-h", "--help"):
+            usage()
+            sys.exit()
+        #
+        #   If this is a "verbose" option, set the "verbose" flag.
+        #
+        elif option in ("-V", "--verbose"):
+            verbose = True
+            print ( "Verbose output mode set" )
+        #
+        #   If this is anything else, it's an error so print an error message
+        #   and quit.
+        #
+        else:
+            assert False, "unhandled option"
+
+    #
+    #   If we are in verbose mode, display the values of all of the
+    #   parameters.
+    #
+    if verbose:
+        print ( "\nOptions found:" )
+        print ( "   group:", group )
+        print ( " verbose:", verbose )
+    #
+    #   Go get the oldest data record in each of the signals that belong to
+    #   the specified group.
+    #
+    results = getOldestInGroup ( int(group) )
+
+    #
+    #   If there are no results, just tell the user and quit.
+    #
+    if ( type(results) is not list ):
+        print ( "No results available for group", group, "at this time." );
+        sys.exit()
+
+    #
+    #   Print the column header for the result data.
+    #
+    print ( "domain   signal   value" )
+    print ( "======   ======   =====" )
+
+    #
+    #   Print each result record found the the signals of this group.
+    #
+    for data in iter(results):
+        print ( '{:6d}{:9d}{:8d}'.format(data["domain"], data["signal"], data["value"]))
+
+
+
+#
+#   If this file is called directly, go execute the main function.
+#
+if __name__ == "__main__":
+    main()

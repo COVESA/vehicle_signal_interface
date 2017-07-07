@@ -31,7 +31,6 @@
 //  is desired, define the debug symbol.
 //
 #ifndef VSI_DEBUG
-#    undef VSI_DEBUG
 // #    define VSI_DEBUG
 #endif
 
@@ -179,6 +178,14 @@ extern vsi_context* vsiContext;
     the caller's responsibility to ensure that it is null terminated if need
     be.
 
+    The literalData field is designed as a convenience for apps that only
+    store small amounts of data (like the CAN signals for instance).  If the
+    amount of storage is 8 bytes or less, the data can be stored directly in
+    this literal field and the caller doesn't need to bother allocating and
+    deallocating a small data buffer for this purpose.  If this field is used
+    to store the actual ("literal") data then the "data" pointer should be set
+    to the address of this literalData field.
+
     The dataLength parameter is the size of the user's data buffer being
     supplied.  This is the maximum number of bytes of data that will be copied
     into the supplied buffer by the API code.  This value should be set to the
@@ -203,20 +210,23 @@ extern vsi_context* vsiContext;
     The caller is responsible for allocating and deallocating all of these
     structures and buffers.
 
+    TODO: Add logic to group functions to lock/unlock the list!
+
 ------------------------------------------------------------------------*/
 typedef struct vsi_result
-{
-    pthread_mutex_t lock;
-
+ {
     domain_t        domainId;
     signal_t        signalId;
     name_t          nameOffset;
     char*           name;
 
     char*           data;
+    unsigned long   literalData;
     unsigned long   dataLength;
 
     int             status;
+
+    pthread_mutex_t lock;
 
 }   vsi_result;
 

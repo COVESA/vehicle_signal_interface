@@ -199,7 +199,7 @@ endif
 SO_GOALS = libvsi.so
 
 GOALS  = btreeTests smTests dump insert fetch flush writeRecord readRecord \
-		 importVSS sample
+		 importVSS sample bug
 #
 #    Define the list of alternate source directories.  This is a space or colon
 #    separated list of directory names that the system will search for source
@@ -271,6 +271,7 @@ OBJS_readRecord  = readRecord.o
 OBJS_sample      = sample.o
 OBJS_smTests     = smTests.o
 OBJS_writeRecord = writeRecord.o
+OBJS_bug         = bug.o
 
 #
 #    Define the directory to be used to store object files and "goal" files.
