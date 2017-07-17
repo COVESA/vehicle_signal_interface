@@ -1,0 +1,150 @@
+#! /usr/bin/python3.5m
+
+#
+#   Copyright (C) 2016-2017, Jaguar Land Rover. All Rights Reserved.
+#
+#   This Source Code Form is subject to the terms of the Mozilla Public
+#   License, v. 2.0. If a copy of the MPL was not distributed with this file,
+#   You can obtain one at http://mozilla.org/MPL/2.0/.
+#
+
+from getopt import *
+import sys
+
+from vsi_py import *
+
+
+def usage():
+    print ( """
+
+Usage:
+
+  addSignalToGroup options
+
+where \"options\" can be any combination of:
+
+  -d: | --domain      Define the signal domain ID
+  -g: | --group       Define the group ID
+  -h  | --help        Display this help message
+  -n: | --name        Define the signal name to be added
+  -s: | --signal      Define the signal ID
+  -V  | --verbose     Set \"verbose\" output mode
+
+All of the options denoted with a \":\" require an argument value
+
+""" )
+
+
+#
+#   m a i n
+#
+def main():
+
+    #
+    #   Go parse the command line input options.
+    #
+    try:
+        opts, args = getopt(sys.argv[1:], "d:g:hn:s:V", ["help", "output="])
+
+    #
+    #   If we get any errors, report them and quit.
+    #
+    except GetoptError as err:
+        #
+        #   The following will print something like "option -a not recognized"
+        #
+        print(err)
+
+        #
+        #   Print the "usage" message and quit.
+        #
+        usage()
+        sys.exit(2)
+
+    #
+    #   Initialize the parameter variables.
+    #
+    domain  = 1
+    group   = 0
+    signal  = 0
+    name    = ""
+    verbose = False
+
+    #
+    #   For each command line option the user supplied...
+    #
+    for option, arg in opts:
+
+        #
+        #   If this is a "domain" option, save the value specified.
+        #
+        if option in ("-d", "--domain"):
+            domain = arg
+            print ( "Using domain ID:", domain )
+        #
+        #   If this is a "group" option, save the value specified.
+        #
+        elif option in ("-g", "--group"):
+            group = arg
+            print ( "Using group ID:", group )
+        #
+        #   If this is a "help" option, display the "usage" message and quit.
+        #
+        elif option in ("-h", "--help"):
+            usage()
+            sys.exit()
+        #
+        #   If this is a "name" option, save the value specified.
+        #
+        elif option in ("-n", "--name"):
+            name = arg
+            print ( "Using signal name:", name )
+        #
+        #   If this is a "signal" option, save the value specified.
+        #
+        elif option in ("-s", "--signal"):
+            signal = arg
+            print ( "Using signal ID:", signal )
+        #
+        #   If this is a "verbose" option, set the "verbose" flag.
+        #
+        elif option in ("-V", "--verbose"):
+            verbose = True
+            print ( "Verbose output mode set" )
+        #
+        #   If this is anything else, it's an error so print an error message
+        #   and quit.
+        #
+        else:
+            assert False, "unhandled option"
+
+    #
+    #   If we are in verbose mode, display the values of all of the
+    #   parameters.
+    #
+    if verbose:
+        print ( "\nOptions found:" )
+        print ( "  domain:", domain )
+        print ( "   group:", group )
+        print ( "  signal:", signal )
+        print ( "    name:", name )
+    #
+    #   Go add the specified signal to the group.
+    #
+    status = addSignalToGroup ( int(domain), int(signal), name, int(group) )
+
+    #
+    #
+    #
+    if ( status != 0 ):
+        print ( "Error: Adding signal", signal, "[", name, "] to group", group, "error:", status )
+    else:
+        if verbose:
+            print ( "Added signal", signal, "[", name, "] to group", group )
+
+
+#
+#   If this file is called directly, go execute the main function.
+#
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,89 @@
+#! /usr/bin/python3
+
+#
+#   Copyright (C) 2016-2017, Jaguar Land Rover. All Rights Reserved.
+#
+#   This Source Code Form is subject to the terms of the Mozilla Public
+#   License, v. 2.0. If a copy of the MPL was not distributed with this file,
+#   You can obtain one at http://mozilla.org/MPL/2.0/.
+#
+
+#
+#   Import the VSI Python wrapper library.
+#
+from vsi_py import *
+
+#
+#   Insert 1,28 - value 32
+#
+print ( "===> Inserting signal domain[1], name[BodyType], value[32]" )
+status = insertSignalDataByName ( 1, 28, "BodyType", 32 )
+if ( status != 0 ):
+    print ( "===>   Error from insertSignalByName call:", status )
+print ( "===>   Completion code:", status, "\n" )
+
+#
+#   Insert 1,28 - value 33, 34, & 35
+#
+print ( "===> Inserting 3 more signals with values 33 thru 35" )
+status = insertSignalDataByName ( 1, 28, "BodyType", 33 )
+status |= insertSignalDataByName ( 1, 28, "BodyType", 34 )
+status |= insertSignalDataByName ( 1, 28, "BodyType", 35 )
+print ( "===>   Completion code:", status, "\n" )
+
+
+#
+#    Fetch oldest 1, 28 - 32
+#
+status, value = getSignalDataByName ( 1, "BodyType", False, True )
+if ( status != 0 ):
+    print ( "===> Error from getOldestSignalByName call:", status )
+if ( value == 32 ):
+    print ( "===> Successful: getOldestSignalByName call returned:", value, "\n" )
+else:
+    print ( "===> Error wrong value returned: expected 32, got", value, "\n" )
+
+#
+#    Fetch oldest 1, 28 - 33
+#
+status, value = getSignalDataByName ( 1, "BodyType", False, True )
+if ( status != 0 ):
+    print ( "===> Error from getOldestSignalByName call: ", status )
+if ( value == 33 ):
+    print ( "===> Successful: getOldestSignalByName call returned:", value, "\n" )
+else:
+    print ( "===> Error wrong value returned: expected 33, got", value, "\n" )
+
+#
+#    Fetch newest 1, 28 - 35
+#
+status, value = getSignalDataByName ( 1, "BodyType", False, False )
+if ( status != 0 ):
+    print ( "===> Error from getNewestSignalByName call: ", status )
+if ( value == 35 ):
+    print ( "===> Successful: getNewestSignalByName call returned:", value, "\n" )
+else:
+    print ( "===> Error wrong value returned: expected 35, got", value, "\n" )
+
+#
+#    Fetch newest 1, 28 - 35
+#
+status, value = getSignalDataByName ( 1, "BodyType", False, False )
+if ( status != 0 ):
+    print ( "===> Error from getNewestSignalByName call: ", status )
+if ( value == 35 ):
+    print ( "===> Successful: getNewestSignalByName call returned:", value, "\n" )
+else:
+    print ( "===> Error wrong value returned: expected 35, got", value, "\n" )
+
+#
+#    Flush signal 1, 28
+#
+status = flushSignalDataByName ( 1, "BodyType" )
+if ( status != 0 ):
+    print ( "===> Error from flushSignalByName call: ", status )
+else:
+    print ( "===> Successful: flushSignalByName call returned:", status, "\n" )
+
+
+print ( "===> Tests Complete <===\n" )
