@@ -1,5 +1,5 @@
 #
-#   Copyright (C) 2016, Jaguar Land Rover. All Rights Reserved.
+#   Copyright (C) 2016-2017, Jaguar Land Rover. All Rights Reserved.
 #
 #   This Source Code Form is subject to the terms of the Mozilla Public
 #   License, v. 2.0. If a copy of the MPL was not distributed with this file,
@@ -196,6 +196,10 @@ endif
 # SO_GOALS = libsharedLibrary.so
 # AR_GOALS = archiveLibrary.a
 
+SO_GOALS = libvsi.so
+
+GOALS  = btreeTests smTests dump insert fetch flush writeRecord readRecord \
+		 importVSS sample bug
 #
 #    Define the list of alternate source directories.  This is a space or colon
 #    separated list of directory names that the system will search for source
@@ -254,6 +258,21 @@ endif
 #
 # OBJS_testJson = testJson.o
 
+OBJS_libvsi      = btree.o sharedMemory.o sharedMemoryLocks.o signals.o \
+				   utils.o vsi_core_api.o vsi.o
+
+OBJS_btreeTests  = btreeTests.o
+OBJS_dump        = dump.o
+OBJS_fetch       = fetch.o
+OBJS_flush       = flush.o
+OBJS_importVSS   = importVSS.o
+OBJS_insert      = insert.o
+OBJS_readRecord  = readRecord.o
+OBJS_sample      = sample.o
+OBJS_smTests     = smTests.o
+OBJS_writeRecord = writeRecord.o
+OBJS_bug         = bug.o
+
 #
 #    Define the directory to be used to store object files and "goal" files.
 #    This MUST occur before the include of the global makefile.  This is
@@ -279,9 +298,6 @@ endif
 #    directory is built.
 #
 # SUBDIRS += foo bar
-
-# SUBDIRS += src lua-interfaces python-interfaces
-SUBDIRS += src python-interfaces
 
 #
 #    If there are any goals that should be added to the default list of goals
@@ -339,6 +355,8 @@ include $(TOP)/build/master.mk
 #    be specified here.
 #
 
+$(GOALS): $(SO_GOALS)
+
 #
 #    Define the compiler/linker optimization level.  If this variable is not
 #    defined, it will default to the the optimization level defined in the
@@ -391,6 +409,8 @@ include $(TOP)/build/master.mk
 # SO_LIBS_testJson += -L../someDirectory -ljunk -lpthreads
 # AR_LIBS_testJson += -L../someDirectory -ljunk -lpthreads
 
+LD_LIBS += -lvsi -pthread
+
 #
 #    Define any files that need to be removed when the "make clean" command is
 #    issued.  All of the derived files such as object files and executables
@@ -398,6 +418,8 @@ include $(TOP)/build/master.mk
 #    If there are additional files the user wishes removed, specify them here.
 #
 # CLEAN_FILES += someFile someOtherFile *.qt
+
+DISTCLEAN_FILES += /var/run/shm/vsi*DataStore
 
 #
 #    This rule will install the goal executables and libraries into the top
@@ -435,7 +457,6 @@ include $(TOP)/build/master.mk
 #INSTALL_PLAIN_BIN_FILES = ""
 #INSTALL_LIB_FILES       = ""
 #INSTALL_PLAIN_LIB_FILES = ""
-#INSTALL_PLAIN_INCLUDE_FILES = $(wildcard *.h)
 
 #
 #    Define the following macro if additional dependencies are needed for the

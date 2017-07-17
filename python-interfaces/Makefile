@@ -1,5 +1,5 @@
 #
-#   Copyright (C) 2016, Jaguar Land Rover. All Rights Reserved.
+#   Copyright (C) 2016-2017, Jaguar Land Rover. All Rights Reserved.
 #
 #   This Source Code Form is subject to the terms of the Mozilla Public
 #   License, v. 2.0. If a copy of the MPL was not distributed with this file,
@@ -196,7 +196,7 @@ endif
 # SO_GOALS = libsharedLibrary.so
 # AR_GOALS = archiveLibrary.so
 
-SO_GOALS = libpy_vsi.so
+SO_GOALS = vsi_py.so
 
 #
 #    Define the list of alternate source directories.  This is a space or colon
@@ -256,7 +256,7 @@ SO_GOALS = libpy_vsi.so
 #
 # OBJS_testJson = testJson.o
 
-OBJS_libpy_vsi = vsi_py.o
+OBJS_libvsi_py = vsi_py.o
 
 #
 #    Define the directory to be used to store object files and "goal" files.
@@ -412,6 +412,8 @@ DEFINES += -DPYTHON_VERSION=$(PYTHON_VERSION)
 # SO_LIBS_testJson += -L../someDirectory -ljunk -lpthreads
 # AR_LIBS_testJson += -L../someDirectory -ljunk -lpthreads
 
+SO_LIBS += -L ../src -lvsi
+
 #
 #    Define any files that need to be removed when the "make clean" command is
 #    issued.  All of the derived files such as object files and executables
@@ -457,8 +459,6 @@ DEFINES += -DPYTHON_VERSION=$(PYTHON_VERSION)
 #INSTALL_LIB_FILES       = ""
 #INSTALL_PLAIN_LIB_FILES = ""
 #INSTALL_PLAIN_INCLUDE_FILES = $(wildcard *.h)
-
-INSTALL_LIB_FILES = libpy_vsi.so
 
 #
 #    Define the following macro if additional dependencies are needed for the
