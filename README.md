@@ -29,30 +29,24 @@ and can be modified by the user to his application.  This version of the code
 defines a 1MB system segment and a 2MB user segment by default.
 
 ## Building
+```
+git clone https://github.com/GENIVI/vehicle_signal_interface.git
+cd vehicle_signal_interface
+mkdir build
+cd build
+cmake ..
+make
+```
+### Building options
+* BUILD_LUA - Build Lua interface. Default OFF
+* BUILD_PYTHON - Build Python interface. Default ON
+* MIN_PYTHON_VERSION - Define minimal Python version to be used. Default 3.
 
-* Clone or download the entire directory tree from this location.
-* Change directories to the "vehicle_signal_interface" directory.
-* Build everything by typing "make" in this directory.
-    * Dynamic shared libraries will be built in the core and api subdirectories.
-    * The api directory contains a "sample" executable.
-    * The core directory contains some executables for performance testing and
-      scripted write/read of individual data records.
-    * There is a python-interfaces directory that contains some sample Python
-      interfaces for the VSI api functions.
-    * There is a lua-interfaces directory that contains some sample Lua
-      interfaces for the VSI api functions.  This directory is very sparse
-      currently and may get fleshed out more if there is any interest in the
-      Lua interfaces.
-    * See the README files in the subdirectories for more information.
-* At the top level, there are some directories that will be populated when the
-  system is built.
-    * The lib directory is the primary directory that will contain all of the
-      built shared libraries with the API interfaces in them.  Putting this
-      directory in you library search path is recommended.
-    * The include directory will contain the header files that define the user
-      API functions.
-    * There are several other directories that are currently empty but will
-      most likely be populated as this library matures.
+E.g. to enable LUA building and use Python 2.7 version:
+```
+cmake .. -DBUILD_LUA=ON -DMIN_PYTHON_VERSION=2.7
+```
+__NOTE:__ It may be required to completely clear build directory (i.e. rm -rf \*) to change building options
 
 ## Running the Sample Executables
 
