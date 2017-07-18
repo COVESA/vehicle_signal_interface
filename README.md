@@ -38,14 +38,13 @@ cmake ..
 make
 ```
 ### Building options
-* BUILD_TESTS - Build test programs. Default ON
-* BUILD_LUA - Build Lua interface. Default ON
+* BUILD_LUA - Build Lua interface. Default OFF
 * BUILD_PYTHON - Build Python interface. Default ON
 * MIN_PYTHON_VERSION - Define minimal Python version to be used. Default 3.
 
-E.g. to disable LUA building and use Python 2.7 version:
+E.g. to enable LUA building and use Python 2.7 version:
 ```
-cmake .. -DBUILD_LUA=OFF -DMIN_PYTHON_VERSION=2.7
+cmake .. -DBUILD_LUA=ON -DMIN_PYTHON_VERSION=2.7
 ```
 __NOTE:__ It may be required to completely clear build directory (i.e. rm -rf \*) to change building options
 
