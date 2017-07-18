@@ -1,22 +1,3 @@
-# SocketCAN bindings to VSI
-**NOTE:** To succesfully build you need to add/update can-sginals submodule i.e.
-```
-git submodule update --init
-```
-
-## CAN frame layout for GENIVI AMM studio:
-* frame 0x111, length 8 bytes
-    * bit 0-7 vehicle.engine.oilpressure
-    * bit 8-15 vehicle.engine.rpm
-    * bit 16-23 vehicle.engine.temperature
-    * bit 24 - vehicle.turnsignal.right
-    * bit 25 - vehicle.turnsignal.left
-    * bit 32-39 - vehicle.battery
-    * bit 40-43 - vehicle.transmission.gear
-    * bit 44-47 - vehicle.ignition
-    * bit 48-55 - vehicle.fuel
-    * bit 56-63 - vehicle.speed
-    
 ## To start vsi-socketcand as daemon
 ```
 vsi-socketcand ../vehicle_signal_specification/genivi-demo_1.0.vsi can0
@@ -39,6 +20,19 @@ sudo ip link add dev vcan0 type vcan
 ip link set can0 up
 ```
 
+## CAN frame layout for GENIVI AMM studio:
+* frame 0x111, length 8 bytes
+    * bit 0-7 vehicle.engine.oilpressure
+    * bit 8-15 vehicle.engine.rpm
+    * bit 16-23 vehicle.engine.temperature
+    * bit 24 - vehicle.turnsignal.right
+    * bit 25 - vehicle.turnsignal.left
+    * bit 32-39 - vehicle.battery
+    * bit 40-43 - vehicle.transmission.gear
+    * bit 44-47 - vehicle.ignition
+    * bit 48-55 - vehicle.fuel
+    * bit 56-63 - vehicle.speed
+    
 ## Exemplary CAN frame
 ```
 cansend can0 111#010203030a481122
