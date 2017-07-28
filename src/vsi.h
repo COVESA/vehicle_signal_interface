@@ -30,10 +30,7 @@
 //  If the debugging mode has not already been defined and the debugging mode
 //  is desired, define the debug symbol.
 //
-#ifndef VSI_DEBUG
-// #    define VSI_DEBUG
-#endif
-
+#undef VSI_DEBUG
 
 #include "btree.h"
 

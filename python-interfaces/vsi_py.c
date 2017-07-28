@@ -902,9 +902,11 @@ static PyObject* vsi_removeSignalFromGroup  ( PyObject* self, PyObject* args )
 
     This function will retrieve the oldest data in each signal of a group.
     Any data that is returned to the caller will be automatically deleted from
-    the database.
+    the database.  If the "wait" parameter is set to "True", the system will
+    wait for any signal of the group to occur before returning if there is no
+    data in any of the signals when the call is made.
 
-    Python usage:  results = vsi_getOldestInGroup ( groupId )
+    Python usage:  results = vsi_getOldestInGroup ( groupId, wait )
 
     @param[in] - groupId - The ID of the group to be fetched.
 
@@ -915,12 +917,13 @@ static PyObject* vsi_getOldestInGroup ( PyObject* self, PyObject* args )
 {
     vsi_signal_group* signalGroup = 0;
     unsigned int      group       = 0;
+    unsigned int      wait        = 0;
     int               status      = 0;
 
     //
     //  Go get the input arguments from the user's function call.
     //
-    status = PyArg_ParseTuple ( args, "I", &group );
+    status = PyArg_ParseTuple ( args, "ii", &group, &wait );
     if ( ! status )
     {
         return PyLong_FromLong ( status );
@@ -930,6 +933,7 @@ static PyObject* vsi_getOldestInGroup ( PyObject* self, PyObject* args )
     //
     LOG ( "Calling fetch oldest data from group with:\n" );
     LOG ( "   Group Id: %u\n", group );
+    LOG ( "  Wait Mode: %u\n", wait );
 
     signalGroup = vsi_fetch_signal_group ( group );
 
@@ -955,10 +959,16 @@ static PyObject* vsi_getOldestInGroup ( PyObject* self, PyObject* args )
         return PyLong_FromLong ( ENOMEM );
     }
     //
-    //  Go get the oldest results for this group.
+    //  Go get the oldest results for this group with or without waiting.
     //
-    status = vsi_get_oldest_in_group ( group, results );
-
+    if ( wait )
+    {
+        status = vsi_get_oldest_in_group_wait ( group, results );
+    }
+    else
+    {
+        status = vsi_get_oldest_in_group ( group, results );
+    }
     //
     //  If there was an error fetching the results, return the error code and
     //  free up the memory we allocated.
