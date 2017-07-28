@@ -1250,6 +1250,17 @@ vsi_signal_group* vsi_fetch_signal_group ( const group_t groupId )
 
     LOG ( "  Returning signal group: %p\n", signalGroup );
 
+#ifdef LOG
+    if ( signalGroup )
+    {
+        printSignalGroup ( "   ", signalGroup );
+    }
+    else
+    {
+        LOG ( "Warning: groupId[%u] was NOT found!\n", groupId );
+    }
+#endif
+
     //
     //  Return the address of the signal group structure.  Note that this will
     //  return a NULL pointer if the group could not be found.
@@ -1801,8 +1812,6 @@ int vsi_get_oldest_in_group ( const group_t groupId,
 
     @brief Retrieve the oldest signal for every member of the specified group.
 
-    TODO: WARNING: Unimplemented!
-
     The groupId is the numeric group ID previously assigned to the group being
     operated on.
 
@@ -1814,7 +1823,7 @@ int vsi_get_oldest_in_group ( const group_t groupId,
     will result in memory corruption and undefined behavior (almost always
     very bad!).
 
-    The signal data that is retrieved and returned to the caller will NOT be
+    The signal data that is retrieved and returned to the caller will be
     removed from the VSI core database once it is copied into the result
     structures.
 
@@ -1825,12 +1834,34 @@ int vsi_get_oldest_in_group ( const group_t groupId,
 
 ------------------------------------------------------------------------*/
 int vsi_get_oldest_in_group_wait ( const group_t groupId,
-                                   vsi_result*   result )
+                                   vsi_result*   results )
 {
-    printf ( "Warning: Unimplemented function \"vsi_get_oldest_in_group_wait\" "
-             "called - Call ignored!\n" );
+    int status = 0;
+    domain_t domain = 0;
+    signal_t signal = 0;
 
-    return ENOSYS;
+    LOG ( "Called vsi_get_oldest_in_group_wait with group: %u, results: %p\n",
+          groupId, results );
+
+    //
+    //  Go wait for a signal on any of the signals in the specified group.
+    //
+    status = vsi_listen_any_in_group ( groupId, 0, &domain, &signal );
+
+    if ( status != 0 )
+    {
+        LOG ( "Warning: Error[%d-%s] returned by vsi_listen_any_in_group.\n",
+              status, strerror(status) );
+
+        return status;
+    }
+
+    LOG ( "  Signal seen for domain[%u], signal[%u]\n", domain, signal );
+
+    //
+    //  Return the oldest value in all of the signals of the group.
+    //
+    return status;
 }
 
 
@@ -1959,16 +1990,17 @@ int vsi_listen_any_in_group ( const group_t groupId,
                               domain_t*     domainId,
                               signal_t*     signalId )
 {
-    int                    groupCount = 0;
-    int                    i = 0;
-    int                    status = 0;
-    vsi_signal_group       requestedSignalGroup = { 0 };
+    int                    groupCount  = 0;
+    int                    i           = 0;
+    int                    status      = 0;
     vsi_signal_group*      signalGroup = 0;
-	vsi_signal_group_data* groupData = 0;
-    signal_list*           signalList = 0;
-    vsi_result*            result = 0;
-    threadData_t*          tData;
-    pthread_t*             threadIds = 0;
+	vsi_signal_group_data* groupData   = 0;
+    signal_list*           signalList  = 0;
+    vsi_result*            result      = 0;
+    threadData_t*          tData       = 0;
+    pthread_t*             threadIds   = 0;
+
+    LOG ( "Called vsi_listen_any_in_group with group: %u\n", groupId );
 
     //
     //  Make sure the required inputs are all present.
@@ -1978,9 +2010,9 @@ int vsi_listen_any_in_group ( const group_t groupId,
     //
     //  Go get the signal group structure for the specified group id.
     //
-    requestedSignalGroup.groupId = groupId;
+    signalGroup = vsi_fetch_signal_group ( groupId );
 
-    signalGroup = btree_search ( &vsiContext->groupIdIndex, &requestedSignalGroup );
+    LOG ( "  Signal group found: %p\n", signalGroup );
 
     //
     //  If the group id specified does not exist, return an error code to the
@@ -1990,6 +2022,9 @@ int vsi_listen_any_in_group ( const group_t groupId,
     {
         return ENOENT;
     }
+
+    printSignalGroup ( "", signalGroup );
+
     //
     //  Allocate the array of thread ids that we will need.
     //
@@ -2006,6 +2041,7 @@ int vsi_listen_any_in_group ( const group_t groupId,
     vsi_result* results = malloc ( groupCount * sizeof(vsi_result) );
     if ( ! results )
     {
+        free ( threadIds );
         return ENOMEM;
     }
     //
@@ -2014,6 +2050,8 @@ int vsi_listen_any_in_group ( const group_t groupId,
     tData = malloc ( groupCount * sizeof(threadData_t) );
     if ( ! tData )
     {
+        free ( threadIds );
+        free ( results );
         return ENOMEM;
     }
     //
@@ -2036,7 +2074,8 @@ int vsi_listen_any_in_group ( const group_t groupId,
         LOG ( "  Creating listening thread for %d, %d\n",
               signalList->domainId, signalList->signalId );
         //
-        //  Get a pointer to the current result structure.
+        //  Get a pointer to the current result structure.  This result
+        //  structure will be filled in by the thread we are going to create.
         //
         result = &results[i];
 
@@ -2051,19 +2090,19 @@ int vsi_listen_any_in_group ( const group_t groupId,
         //
         pthread_mutex_lock ( &result->lock );
 
-        result->dataLength = 0;
-
-        result->domainId = signalList->domainId;
-        result->signalId = signalList->signalId;
-
-        result->status = ENOENT;
+        result->domainId    = signalList->domainId;
+        result->signalId    = signalList->signalId;
+        result->data        = (char*)&result->literalData;
+        result->literalData = 0;
+        result->dataLength  = sizeof(unsigned long);;
+        result->status      = ENOENT;
 
         pthread_mutex_unlock ( &result->lock );
 
         //
         //  Initialize all of the fields of the thread data structure.
         //
-        tData[i].result          = results;
+        tData[i].result          = result;
         tData[i].threadIds       = threadIds;
         tData[i].numberOfThreads = groupCount;
 
@@ -2084,6 +2123,10 @@ int vsi_listen_any_in_group ( const group_t groupId,
         if ( status != 0 )
         {
             printf ( "Error creating thread: %m\n" );
+
+            free ( threadIds );
+            free ( results );
+            free ( tData );
             return status;
         }
         //
@@ -2810,7 +2853,7 @@ void dumpSignals ( void )
 	printf ( "\nThe defined signals in name order:...\n\n" );
 	btree_traverse ( &vsiContext->signalNameIndex, signalTraverseFunction );
 
-	printf ( "\nThe defined signals in private ID order:...\n\n" );
+	printf ( "The defined signals in private ID order:...\n\n" );
 	btree_traverse ( &vsiContext->privateIdIndex, signalTraverseFunction );
 
     return;

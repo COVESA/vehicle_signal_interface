@@ -26,6 +26,7 @@ where \"options\" can be any combination of:
   -g: | --group       Define the group ID
   -h  | --help        Display this help message
   -V  | --verbose     Set \"verbose\" output mode
+  -w  | --wait        Wait for a signal if none are available
 
 All of the options denoted with a \":\" require an argument value
 
@@ -41,7 +42,7 @@ def main():
     #   Go parse the command line input options.
     #
     try:
-        opts, args = getopt(sys.argv[1:], "g:hV", ["help", "output="])
+        opts, args = getopt(sys.argv[1:], "g:hVw", ["help", "output="])
 
     #
     #   If we get any errors, report them and quit.
@@ -56,13 +57,14 @@ def main():
         #   Print the "usage" message and quit.
         #
         usage()
-        sys.exit(2)
+        return
 
     #
     #   Initialize the parameter variables.
     #
     group   = 0
     verbose = False
+    wait    = False
 
     #
     #   For each command line option the user supplied...
@@ -88,6 +90,12 @@ def main():
             verbose = True
             print ( "Verbose output mode set" )
         #
+        #   If this is a "wait" option, set the "wait" flag.
+        #
+        elif option in ("-w", "--wait"):
+            wait = True
+            print ( "Wait for signal mode set" )
+        #
         #   If this is anything else, it's an error so print an error message
         #   and quit.
         #
@@ -102,18 +110,19 @@ def main():
         print ( "\nOptions found:" )
         print ( "   group:", group )
         print ( " verbose:", verbose )
+        print ( "    wait:", wait )
     #
     #   Go get the oldest data record in each of the signals that belong to
     #   the specified group.
     #
-    results = getOldestInGroup ( int(group) )
+    results = getOldestInGroup ( int(group), bool(wait) )
 
     #
     #   If there are no results, just tell the user and quit.
     #
     if ( type(results) is not list ):
         print ( "No results available for group", group, "at this time." );
-        sys.exit()
+        return;
 
     #
     #   Print the column header for the result data.

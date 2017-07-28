@@ -57,7 +57,7 @@
 ------------------------------------------------------------------------*/
 void dumpSemaphore ( semaphore_p semaphore )
 {
-#ifdef DUMP_SEMAPHORE
+#ifdef SEM_DUMP
     LOG ( "semaphore: %3p\n", (void*)((long)&semaphore->mutex % 0x1000 ) );
 
     //

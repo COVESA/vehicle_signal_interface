@@ -42,38 +42,11 @@
 #include <stdbool.h>
 
 //
-//  Define any of the conditional compilation flags that we want to enable.
-//
-#undef VSI_DEBUG
-#undef DUMP_SEMAPHORE
-
-//
 //  Include the local header files we need.
 //
 #include "vsi.h"
 #include "sharedMemoryLocks.h"
 #include "btree.h"
-
-
-#if 0
-//
-//  Determine how the various macros will be intrepreted depending on which
-//  options have been enabled.
-//
-#ifdef VSI_DEBUG
-#   define LOG      printf
-#   define HX_DUMP  HEX_DUMP_T
-#else
-#   define LOG(...)
-#   define HX_DUMP(...)
-#endif
-
-#ifdef DUMP_SEMAPHORE
-#   define SEM_DUMP dumpSemaphore
-#else
-#   define SEM_DUMP(...)
-#endif
-#endif
 
 
 //
