@@ -50,6 +50,7 @@ def main():
     signal     = 0
     signalName = ""
     verbose    = False
+    length     = 0
     value      = 0
     oldest     = False
     wait       = False
@@ -91,15 +92,19 @@ def main():
         print ( "  oldest:", oldest )
         print ( "    wait:", wait )
 
-    status, value = getSignalData ( int(domain), int(signal), signalName, \
-                                    int(wait), int(oldest) )
+    status, length, value, strValue = getSignalData ( int(domain), \
+            int(signal), signalName, int(wait), int(oldest) )
+
     if ( status != 0 ):
         if ( status == 61 ):
             print ( "No Data available for signal." );
         else:
             print ( "Error: Signal fetch error:", status );
     else:
-        print ( "Signal fetch returned", value )
+        if ( length == 8 ):
+            print ( "Signal fetch returned number", value )
+        else:
+            print ( "Signal fetch returned string", strValue )
 
 
 if __name__ == "__main__":

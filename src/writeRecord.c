@@ -39,6 +39,7 @@ Usage: %s options\n\
 \n\
   Option     Meaning       Type     Default   \n\
   ======  ==============  ======  =========== \n\
+    -a    ASCII Value     string      N/A     \n\
     -d    Domain Value     int         1      \n\
     -h    Help Message     N/A        N/A     \n\
     -s    Signal Value     int        N/A     \n\
@@ -82,14 +83,43 @@ int main ( int argc, char* const argv[] )
     //  Parse any command line options the user may have supplied.
     //
     unsigned long dataValue = 0;
+    char*         dataString = NULL;
+    int           dataLength = 8;
     signal_t      signal = 0;
     domain_t      domain = 1;
     char          ch;
 
-    while ( ( ch = getopt ( argc, argv, "d:hs:v:?" ) ) != -1 )
+    while ( ( ch = getopt ( argc, argv, "a:d:hs:v:?" ) ) != -1 )
     {
         switch ( ch )
         {
+          //
+          //  Get the requested ASCII string signal value.
+          //
+          case 'a':
+            dataString = optarg;
+            dataLength = strlen ( dataString );
+
+            //
+            //  If the string length is exactly 8 bytes, increment it to 9 so
+            //  we can tell the difference between and 8 byte number and an 8
+            //  byte string.  Note that this results in the null byte at the
+            //  end of the string being stored in the shared memory segment
+            //  but this should not hurt anything.
+            //
+            //  Because of this logic, there will never be an 8 byte ASCII
+            //  string stored as a signal value.  When reading the signal
+            //  value back out, we can check to see if it is 8 bytes in length
+            //  and assume that if it is it is a numeric value.  Any other
+            //  length value means that the value is an ASCII string.
+            //
+            if ( dataLength == 8 )
+            {
+                ++dataLength;
+            }
+            LOG ( "Data String value[%s]\n", dataString );
+            break;
+
           //
           //  Get the requested domain value.
           //
@@ -111,6 +141,7 @@ int main ( int argc, char* const argv[] )
           //
           case 'v':
             dataValue = atol ( optarg );
+            dataLength = sizeof(dataValue);
             LOG ( "Data value[%'lu] will be used.\n", dataValue );
             break;
 
@@ -146,8 +177,14 @@ int main ( int argc, char* const argv[] )
     //
     //  Go insert this message into the signal lists.
     //
-    vsi_core_insert ( domain, signal, 8, &dataValue );
-
+    if ( dataLength == sizeof(dataValue ) )
+    {
+        vsi_core_insert ( domain, signal, dataLength, &dataValue );
+    }
+    else
+    {
+        vsi_core_insert ( domain, signal, dataLength, dataString );
+    }
 #ifdef VSI_DEBUG
     dumpSignals();
 #endif

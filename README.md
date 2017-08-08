@@ -28,6 +28,12 @@ segments are defined in the sharedMemory.h header file as defined constants
 and can be modified by the user to his application.  This version of the code
 defines a 1MB system segment and a 2MB user segment by default.
 
+Aug. 8, 2017 - Modified to allow the easy creation of VSI signals with an
+ASCII string as their value.  Both the Python and C API functions have been
+modified to accept the "-a" ("--ascii") option to specify an ASCII string on
+creation.  If both the "-v" and "-a" options are specified, the ASCII option
+will take precedence.
+
 ## Building
 ```
 git clone https://github.com/GENIVI/vehicle_signal_interface.git

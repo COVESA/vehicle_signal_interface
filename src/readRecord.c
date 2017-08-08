@@ -89,6 +89,10 @@ int main ( int argc, char* const argv[] )
     char          ch;
     bool          getOldest = false;
 
+#ifdef VSI_DEBUG
+    char*         asciiData = NULL;
+#endif
+
     while ( ( ch = getopt ( argc, argv, "d:hos:?" ) ) != -1 )
     {
         switch ( ch )
@@ -162,9 +166,18 @@ int main ( int argc, char* const argv[] )
     if ( status == 0 )
     {
 #ifdef VSI_DEBUG
-        HX_DUMP ( &data, dataSize, "  Returned Value: " );
+        if ( dataSize == sizeof(data) )
+        {
+            HX_DUMP ( &data, dataSize, "  Returned Value: " );
+            printf ( "  Returned Value: %lu\n", data );
+        }
+        else
+        {
+            HX_DUMP ( data, dataSize, "  Returned Value: " );
+            asciiData = (char*)data;
+            printf ( "  Returned Value: %s\n", asciiData );
+        }
 #endif
-        printf ( "  Returned Value: %lu\n", data );
     }
     else
     {

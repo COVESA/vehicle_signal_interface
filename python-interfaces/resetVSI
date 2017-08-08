@@ -7,27 +7,44 @@
 #   License, v. 2.0. If a copy of the MPL was not distributed with this file,
 #   You can obtain one at http://mozilla.org/MPL/2.0/.
 #
-#   Usage: resetVSI vssFile
+#   Usage: resetVSI [vssFile]
 #
-#   Where "vssFile" is the name of the file in the "...vsi_bridge/vsi"
-#   directory to be loaded into the VSI database.
+#   Where "vssFile" is the name of the file to be loaded into the VSI
+#   database.  If this parameter is not suplied, the file
+#   "...vsi_bridge/vss/vss_rel_1.0.vsi" will be loaded into the VSI database.
 #
 
-VSIroot=/home/dmies/git/vsi_bridge/vsi/src
+VSIroot=/home/dmies/git/vsi_bridge/vsi
 VSSroot=/home/dmies/git/vsi_bridge/vss
 
+#
+#   Remove the existing shared memory segment.  Note that this will destroy
+#   all information stored in the shared memory segment.
+#
 echo ""
 echo "Clearing the shared memory segments..."
 rm -f /var/run/shm/vsi*DataStore
 
+#
+#   Import the specified VSS definition file.
+#
 echo ""
 echo "Importing the VSS definitions..."
-$VSIroot/importVSS $VSIroot/$1
+if [ $# -gt 0 ]
+then
+    vssFile=$1
+else
+    vssFile=$VSSroot/vss_rel_1.0.vsi
+fi
 
+$VSIroot/build/src/importVSS $vssFile
+
+#
+#   Dump the contents of the loaded database.
+#
 echo ""
 echo "Dumping the contents of the shared memory segments..."
-$VSIroot/dump
-# gdb $VSIroot/dump
+$VSIroot/build/src/dump
 
 echo ""
 echo "===> The VSI system has been cleared and reinitialized"

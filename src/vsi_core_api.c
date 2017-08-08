@@ -436,6 +436,22 @@ void vsi_core_insert ( domain_t domain, offset_t key, unsigned long newMessageSi
                        void* body )
 {
     //
+    //  Display the input parameters for the call if debug is enabled.
+    //
+    LOG ( "\nCalled vsi_core_insert with:\n" );
+    LOG ( "  Domain Id: %u\n",    domain );
+    LOG ( "  Signal Id: %lu\n",   key );
+    LOG ( "       Name: [%s]\n",  "" );
+    LOG ( "   Data Len: %lu\n",   newMessageSize );
+    if ( newMessageSize == sizeof(unsigned long) )
+    {
+        LOG ( "       Data: 0x%lx\n", (unsigned long)body );
+    }
+    else
+    {
+        LOG ( "       Data: %s\n", (char*)body );
+    }
+    //
     //  Go insert this key into the core data store.
     //
     sm_insert ( domain, key, newMessageSize, body );

@@ -23,6 +23,7 @@ Usage:
 
 where \"options\" can be any combination of:
 
+  -a | --ascii       Define an ASCII string value
   -h | --help        Display this help message
   -d | --domain      Define the domain ID
   -s | --signal      Define the signal ID
@@ -32,12 +33,28 @@ where \"options\" can be any combination of:
 
 All of the options except \"-h\" or \"--help\" require an argument value
 
+If both -v and -a are given, -a will be used.
+
 """ )
 
 
+#
+#   NOTE: In order to support numeric as well as ASCII data in the VSI, this
+#   interface has been changed a bit.  Generally speaking, if the length of
+#   the data value is the size of an unsigned long (8 bytes most of the time)
+#   then the data item is assumed to be numeric.
+#
+#   If the length of the data item is anything else, it is assumed to be an
+#   ASCII string.  Note that for strings that are 8 bytes long, we will
+#   increment their size to 9 (which will result in the terminating null being
+#   stored in the VSI.  This will not hurt anything in the VSI API and the
+#   string will be returned to the user correctly upon recall.  All this
+#   should be transparent to the user.
+#
+
 def main():
     try:
-        opts, args = getopt(sys.argv[1:], "hd:s:n:v:V", ["help", "output="])
+        opts, args = getopt(sys.argv[1:], "ha:d:s:n:v:V", ["help", "output="])
 
     except GetoptError as err:
         # print help information and exit:
@@ -49,13 +66,21 @@ def main():
     signal     = 0
     signalName = ""
     value      = 0
+    valueSize  = 0
     verbose    = False
+    strValue   = ""
 
     for option, arg in opts:
 
         if option in ("-h", "--help"):
             usage()
             sys.exit()
+
+        elif option in ("-a", "--ascii"):
+            strValue  = arg
+            valueSize = len(strValue)
+            if ( valueSize == 8 ):
+                valueSize += 1;
 
         elif option in ("-d", "--domain"):
             domain = arg
@@ -67,7 +92,8 @@ def main():
             signalName = arg
 
         elif option in ("-v", "--value"):
-            value = arg
+            value     = arg
+            valueSize = 8
 
         elif option in ("-V", "--verbose"):
             verbose = True
@@ -81,9 +107,13 @@ def main():
         print ( "  domain:", domain )
         print ( "  signal:", signal )
         print ( "    name:", signalName )
-        print ( "   value:", value, "\n" )
+        print ( "valueLen:", valueSize )
+        print ( "   value:", value )
+        print ( "strValue:", strValue, "\n" )
 
-    status = insertSignalData ( int(domain), int(signal), signalName, int(value) )
+    status = insertSignalData ( int(domain), int(signal), signalName, \
+             int(valueSize), int(value), strValue )
+
     if ( status != 0 ):
         print ( "Error: Signal insertion error:", status );
 

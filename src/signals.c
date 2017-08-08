@@ -164,13 +164,28 @@ static void semaphoreCleanupHandler ( void* arg )
 ------------------------------------------------------------------------*/
 int vsi_insert_signal ( vsi_result* result )
 {
-    LOG ( "vsi_insert_signal called with domain: %d, signal: %d, name: [%s]\n",
-          result->domainId, result->signalId, result->name );
-
     CHECK_AND_RETURN_IF_ERROR ( result && result->data && result->dataLength );
 
-    vsi_core_insert ( result->domainId, result->signalId,
-                      result->dataLength, &result->data );
+	//
+    //  Display the input parameters for the call if debug is enabled.
+    //
+    LOG ( "\nCalled vsi_insert_signal with:\n" );
+    LOG ( "  Domain Id: %u\n",    result->domainId );
+    LOG ( "  Signal Id: %u\n",    result->signalId );
+    LOG ( "       Name: [%s]\n",  result->name );
+    LOG ( "   Data Len: %lu\n",   result->dataLength );
+    if ( result->dataLength == sizeof(unsigned long) )
+    {
+        LOG ( "       Data: 0x%lx\n", (unsigned long)result->data );
+        vsi_core_insert ( result->domainId, result->signalId,
+                          result->dataLength, &result->data );
+    }
+    else
+    {
+        LOG ( "       Data: %s\n", result->data );
+        vsi_core_insert ( result->domainId, result->signalId,
+                          result->dataLength, result->data );
+    }
     return 0;
 }
 
@@ -449,7 +464,23 @@ int sm_insert ( domain_t domain, signal_t signal, unsigned long newMessageSize,
 {
     int status = 0;
 
-    LOG ( "Inserting domain[%d] signal[%d]\n", domain, signal );
+    //
+    //  Display the input parameters for the call if debug is enabled.
+    //
+    LOG ( "\nCalled sm_insert with:\n" );
+    LOG ( "  Domain Id: %u\n",    domain );
+    LOG ( "  Signal Id: %u\n",    signal );
+    LOG ( "       Name: [%s]\n",  "" );
+    LOG ( "   Data Len: %lu\n",   newMessageSize );
+    if ( newMessageSize == sizeof(unsigned long) )
+    {
+        LOG ( "       Data: 0x%lx\n", (unsigned long)body );
+    }
+    else
+    {
+        LOG ( "       Data: %s\n", (char*)body );
+    }
+    // LOG ( "Inserting domain[%d] signal[%d]\n", domain, signal );
 
     HX_DUMP ( body, newMessageSize, "New Message" );
 
@@ -677,7 +708,7 @@ int sm_fetch ( domain_t domain, signal_t signal, unsigned long* bodySize,
                void* body, bool wait )
 {
     signal_data* signalData;
-    int          transferSize;
+    int          transferSize = 0;
     int          status = 0;
 
     LOG ( "Fetching signal domain[%d], signal[%d], bodySize[%p-%lu], "
@@ -752,6 +783,8 @@ int sm_fetch ( domain_t domain, signal_t signal, unsigned long* bodySize,
     transferSize = *bodySize <= signalData->messageSize
                    ? *bodySize
                    : signalData->messageSize;
+
+    LOG ( "    Transferring %d bytes of data to the caller.\n", transferSize );
 
     memcpy ( body, signalData->data, transferSize );
 
@@ -896,6 +929,8 @@ int sm_fetch_newest ( domain_t domain, signal_t signal, unsigned long* bodySize,
     //
     transferSize = *bodySize <= signalData->messageSize
                    ? *bodySize : signalData->messageSize;
+
+    LOG ( "    Transferring %d bytes of data to the caller.\n", transferSize );
 
     memcpy ( body, signalData->data, transferSize );
 

@@ -18,15 +18,25 @@
 
 /*! @{ */
 
+//
+//  Use the user's environment variable "PYTHON_VERSION" to determine which
+//  Python.h include file to include here.
+//
+//#define IPATH /usr/include/python PYTHON_VERSION
+//#define IFILE Python.h
+//
+//#define __header(x) #x
+//#define _header(p,f) __header(p/f)
+//#define header(p,f) _header(p,f)
+//
+//#include header(IPATH,IFILE)
+//
+//    NOTE: I could not get the above to compile so I commented it out for the
+//    time being.  This file was developed for Python 3.5m and will need
+//    modifications if Python 2.7 needs to be supported.
+//
 
-#define IPATH python PYTHON_VERSION
-#define IFILE Python.h
-
-#define __header(x) #x
-#define _header(p,f) __header(p/f)
-#define header(p,f) _header(p,f)
-
-#include header(IPATH,IFILE)
+#include <Python.h>
 
 
 //
@@ -41,11 +51,11 @@
 #include <vsi_core_api.h>
 #include <signals.h>
 
-#ifndef LOG
-//    #define LOG printf
-#else
-#define LOG(...)
-#endif
+//#ifndef LOG
+//   #define LOG printf
+//#else
+//#define LOG(...)
+//#endif
 
 
 //
@@ -192,17 +202,27 @@ MOD_INIT ( vsi_py )
 
     @brief Insert a signal into the VSI system using it's domain and name.
 
-    This function will accept 3 arguments that are the domain and name of the
-    signal and the integer data value of the signal.  This information will be
-    passed to the VSI system for storage and later retrieval.
+    This function will accept a signal in several different forms for
+    insertion into the VSI data store.  The domain and signal parameters must
+    be specified but the VSSname argument is optional.  This field could be
+    used to represent the CAN_DB format of a signal for instance.
+
+    The value of a signal can be specified as either an 8 byte unsigned long
+    numeric value of as an arbitrarily log ASCII character string.  Only one
+    form can be used for a given domain/signal and if both parameters are
+    supplied, the numeric value will be used.
 
     Python usage:
 
-        status = insertSignalData ( domain, signal, name, value )
+        status = insertSignalData ( domain, signal, name, valueSize,
+                                    numericValue, strValue )
 
     @param[in] domain - The domain of the signal.
-    @param[in] name - The ASCII CAN name of the signal.
-    @param[in] value - The unsigned long integer value of the signal (if any).
+    @param[in] signal - The integer value of the signal ID (if any).
+    @param[in] VSSname - The ASCII CAN name of the signal.
+    @param[in] valueSize - The integer length of the signal value.
+    @param[in] value - The unsigned long integer value of a numeric signal (if any).
+    @param[in] strValue - The length of an ASCII signal value (if any).
 
     @return status - 0 = Success
                     ~0 = Errno
@@ -210,17 +230,20 @@ MOD_INIT ( vsi_py )
 -----------------------------------------------------------------------------*/
 static PyObject* vsi_insertSignalData ( PyObject* self, PyObject* args )
 {
-    const char*   VSSname = NULL;
-    unsigned int  domain  = 0;
-    unsigned int  signal  = 0;
-    unsigned long value   = 0;
-    int           status  = 0;
+    char*         VSSname  = NULL;
+    char*         strValue = NULL;
+    unsigned int  domain   = 1;
+    unsigned int  signal   = 0;
+    unsigned long value    = 0;
+    int           size     = 0;
+    int           status   = 0;
     vsi_result    result;
 
     //
     //  Go get the input arguments from the user's function call.
     //
-    status = PyArg_ParseTuple ( args, "IIsk", &domain, &signal, &VSSname, &value );
+    status = PyArg_ParseTuple ( args, "IIsIks", &domain, &signal, &VSSname,
+                                &size, &value, &strValue );
     if ( ! status )
     {
         return PyLong_FromLong ( status );
@@ -228,18 +251,29 @@ static PyObject* vsi_insertSignalData ( PyObject* self, PyObject* args )
     //
     //  If we are debugging, output what it is we are doing.
     //
-    LOG ( "Inserting signal [%u-%s] with value 0x%lx\n", domain, VSSname,
-          (unsigned long)value );
+    LOG ( "Inserting signal [%u-%u] with value 0x%lx[%s], length[%d]\n",
+          domain, signal, value, strValue, size );
     //
     //  Build the parameter object for the call to VSI that follows.
     //
     result.domainId   = domain;
     result.signalId   = signal;
     result.name       = (char*)VSSname;
-    result.data       = (char*)value;
-    result.dataLength = sizeof(unsigned long);
+    result.dataLength = size;
     result.status     = 0;
 
+    //
+    //  If the input size is the same as an unsigned long then interpret the
+    //  value argument as a numeric value, otherwise, it is a string.
+    //
+    if ( size == sizeof(unsigned long) )
+    {
+        result.data = (char*)value;
+    }
+    else
+    {
+        result.data = strValue;
+    }
     //
     //  Display the input parameters we received if debug is enabled.
     //
@@ -248,7 +282,14 @@ static PyObject* vsi_insertSignalData ( PyObject* self, PyObject* args )
     LOG ( "  Signal Id: %u\n",    result.signalId );
     LOG ( "       Name: [%s]\n ", result.name );
     LOG ( "   Data Len: %lu\n",   result.dataLength );
-    LOG ( "       Data: 0x%lx\n", (unsigned long)result.data );
+    if ( size == sizeof(unsigned long) )
+    {
+        LOG ( "       Data: 0x%lx\n", (unsigned long)result.data );
+    }
+    else
+    {
+        LOG ( "       Data: %s\n", result.data );
+    }
     LOG ( "     Status: %d\n",    result.status );
 
     //
@@ -295,9 +336,14 @@ static PyObject* vsi_insertSignalData ( PyObject* self, PyObject* args )
     LOG ( "  Signal Id: %u\n",    result.signalId );
     LOG ( "       Name: [%s]\n",  result.name );
     LOG ( "   Data Len: %lu\n",   result.dataLength );
-    LOG ( "       Data: 0x%lx\n", (unsigned long)result.data );
-    LOG ( "     Status: %d\n",    result.status );
-
+    if ( size == sizeof(unsigned long) )
+    {
+        LOG ( "       Data: 0x%lx\n", (unsigned long)result.data );
+    }
+    else
+    {
+        LOG ( "       Data: %s\n", result.data );
+    }
     //
     //  Return the status from the above call to the Python caller.
     //
@@ -352,6 +398,12 @@ static PyObject* vsi_insertSignalData ( PyObject* self, PyObject* args )
     there was a error (indicated by a non-zero, status), the contents of the
     "value" return item is indeterminate and should not be accessed.
 
+    WARNING: This implementation uses an ASCII string buffer of size 1024
+    which limites the size of the data stored in the VSI.  This should be
+    changed at a later date to be sized according to the data that is actually
+    stored in the VSI... Actually, it should probably just be a pointer to the
+    shared memory segment where the data is located.
+
     @param[in] domain - The domain of the desired signal.
     @param[in] name - The ASCII CAN name of the desired signal.
     @param[in] wait - Whether to wait for data or not (true = wait)
@@ -366,7 +418,7 @@ static PyObject* vsi_getSignalData ( PyObject* self, PyObject* args )
     const char*   VSSname    = NULL;
     domain_t      domain     = 0;
     signal_t      signal     = 0;
-    unsigned long data       = 0;
+    unsigned char data[1025] = { 0 };
     unsigned long dataLength = sizeof(data);
     unsigned char wait       = 0;
     unsigned char oldest     = 0;
@@ -444,19 +496,30 @@ static PyObject* vsi_getSignalData ( PyObject* self, PyObject* args )
     {
         status = sm_fetch_newest ( domain, signal, &dataLength, &data, wait );
     }
-    LOG ( "\nReturned[%d] from VSI fetch with:\n", status );
+    //
+    //  If we are debugging, output the results of our call.
+    //
+    LOG ( "\nReturned from sm_fetch with:\n" );
+    LOG ( "     Status: %d\n",    status );
+    LOG ( "  Domain Id: %u\n",    domain );
+    LOG ( "  Signal Id: %d\n",    signal );
+    LOG ( "   VSS Name: [%s]\n",  VSSname );
     if ( status == 0 )
     {
         LOG ( "   Data Len: %lu\n",   dataLength );
-        LOG ( "       Data: 0x%lx\n", data );
+        if ( dataLength == sizeof(unsigned long) )
+        {
+            LOG ( "       Data: 0x%lx\n", data );
+        }
+        else
+        {
+            LOG ( "       Data: %s\n", (char*)&data );
+        }
     }
     //
-    //  Return the status from the above call to the Python caller.
+    //  Return the list of output data from this call to the caller.
     //
-    LOG ( "vsi_getSignalData returning status: %d, dataLength: %lu, data: 0x%lx\n",
-          status, dataLength, data );
-
-    return Py_BuildValue ( "(ii)", status, data );
+    return Py_BuildValue ( "(iiis)", status, dataLength, data, (char*)&data );
 }
 
 
