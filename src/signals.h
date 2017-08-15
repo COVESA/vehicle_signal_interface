@@ -1075,6 +1075,8 @@ extern void signalTraverseFunction ( char* leader, void* dataPtr );
 extern void printSignalList        ( signal_list* signalList, int maxSignals );
 extern void printSignalData        ( signal_list* signalList, int maxSignals );
 
+extern void printResult            ( vsi_result* result, const char* text );
+
 //
 //  Declare the signal group dump function.
 //
@@ -1091,10 +1093,10 @@ int sm_insert ( domain_t domain, signal_t signal, unsigned long
 int sm_removeSignal ( signal_list* signalList );
 
 int sm_fetch ( domain_t domain, signal_t signal, unsigned long* bodySize,
-               void* body, bool wait );
+               void** body, bool wait );
 
 int sm_fetch_newest ( domain_t domain, signal_t signal, unsigned long*
-                      bodySize, void* body, bool wait );
+                      bodySize, void** body, bool wait );
 
 int sm_flush_signal ( domain_t domain, signal_t signal );
 

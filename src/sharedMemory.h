@@ -422,63 +422,6 @@ void sm_free     ( void* memoryToFree );
 void sm_free_sys ( void* memoryToFree );
 
 
-#if 0
-//
-//  Insert a record into the user data store.
-//
-//  This function will find the appropriate signal list for the given key and
-//  domain and insert the caller's data into the message list of that hash
-//  bucket.
-//
-int sm_insert ( domain_t domain, vsiKey_t key, unsigned long newMessageSize,
-                void* body );
-
-//
-//  Remove the first message from the given signal list.
-//
-//  This function will remove the signal at the beginning of the specified
-//  signal list.
-//
-//  WARNING: This function assumes that the signal list mutex has been
-//  acquired before this function is called.
-//
-int sm_removeSignal ( signalList_p signalList );
-
-
-//
-//  Fetch the oldest available record from the user data store.
-//
-//  This function will find the oldest record in the data store with the
-//  specified domain and key and return a copy of it to the caller.
-//
-//  Note that this function will remove the record that was found from the
-//  data store.
-//
-int sm_fetch ( domain_t domain, vsiKey_t key, unsigned long* messageSize,
-               void* body, bool dontWait );
-
-//
-//  Fetch the newest available record from the user data store.
-//
-//  This function will find the newest record in the data store with the
-//  specified domain and key and return a copy of it to the caller.
-//
-//  Note that this function will NOT remove the record that was found from the
-//  data store.
-//
-int sm_fetch_newest ( domain_t domain, vsiKey_t key, unsigned long* messageSize,
-                      void* body, bool dontWait );
-
-//
-//  Flush all signals in the data store with the given domain and key value.
-//
-//  This function will find all of the signals with the given domain and key
-//  vaue and remove them from the data store.
-//
-int sm_flush_signal ( domain_t domain, vsiKey_t key );
-#endif
-
-
 //
 //  Declare the dumping debugging functions.
 //

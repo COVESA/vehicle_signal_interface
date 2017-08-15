@@ -445,7 +445,7 @@ void vsi_core_insert ( domain_t domain, offset_t key, unsigned long newMessageSi
     LOG ( "   Data Len: %lu\n",   newMessageSize );
     if ( newMessageSize == sizeof(unsigned long) )
     {
-        LOG ( "       Data: 0x%lx\n", (unsigned long)body );
+        LOG ( "       Data: %lu\n", *(unsigned long*)body );
     }
     else
     {
@@ -485,38 +485,41 @@ void vsi_core_insert ( domain_t domain, offset_t key, unsigned long newMessageSi
     @param[in] handle - The base address of the shared memory segment.
     @param[in] key - The key value of the message to be removed.
     @param[in] domain - The domain value of the message to be removed.
-    @param[in/out] bodySize - The address of the body buffer size.
-    @param[out] body - The address of where to put the message data.
+    @param[out] bodySize - The address of where to store the size of the body.
+    @param[out] body - The address of where to store the address of the message data.
 
     @return 0 if successful.
     @return not 0 on error which will be an errno value.
 
 ------------------------------------------------------------------------*/
-int vsi_core_fetch_wait ( domain_t domain,
-                          offset_t key,
+int vsi_core_fetch_wait ( domain_t       domain,
+                          offset_t       key,
                           unsigned long* bodySize,
-                          void* body )
+                          void**         body )
 {
+    LOG ( "Called vsi_core_fetch_wait with domain[%u], key[%lu], bodySize[%p], "
+          "body[%p]\n", domain, key, bodySize, body );
+
     return sm_fetch ( domain, key, bodySize, body, true );
 }
 
 
-int vsi_core_fetch ( domain_t domain,
-                     offset_t key,
+int vsi_core_fetch ( domain_t       domain,
+                     offset_t       key,
                      unsigned long* bodySize,
-                     void* body )
+                     void**         body )
 {
-    LOG ( "Called vsi_core_fetch with domain[%u], key[%lu], bodySize[%p-%lu], "
-          "body[%p]\n", domain, key, bodySize, *bodySize, body );
+    LOG ( "Called vsi_core_fetch with domain[%u], key[%lu], bodySize[%p], "
+          "body[%p]\n", domain, key, bodySize, body );
 
     return sm_fetch ( domain, key, bodySize, body, false );
 }
 
 
-int vsi_core_fetch_newest ( domain_t domain,
-                            offset_t key,
+int vsi_core_fetch_newest ( domain_t       domain,
+                            offset_t       key,
                             unsigned long* bodySize,
-                            void* body )
+                            void**         body )
 {
     return sm_fetch_newest ( domain, key, bodySize, body, true );
 }

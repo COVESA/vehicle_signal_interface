@@ -158,10 +158,9 @@ int main ( int argc, char* const argv[] )
     //  Define the message that we will use to retrieve records from the
     //  shared memory segment.
     //
-    char message[32];
+    unsigned long messageSize = 0;
+    char*         message;
     unsigned long messageKey;
-
-    (void) memset ( &message, 0, sizeof(message) );
 
     //
     //  Define the performance spec variables.
@@ -219,9 +218,8 @@ int main ( int argc, char* const argv[] )
             //  Note that for these tests, all of the messsages in the message
             //  pool will be retrieved from the "CAN" domain.
             //
-            unsigned long messageSize = sizeof(message);
             status = vsi_core_fetch_wait ( DOMAIN_CAN, messageKey,
-                                           &messageSize, &message );
+                                           &messageSize, (void**)&message );
             if ( status != 0 )
             {
                 printf ( "====> ERROR: Fetching message[%lu] - Error %d\n",

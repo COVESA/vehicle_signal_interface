@@ -49,6 +49,9 @@
 #   ifndef SEM_DUMP
 #       define SEM_DUMP dumpSemaphore
 #   endif
+#   ifndef PRINT_RESULT
+#       define PRINT_RESULT printResult
+#   endif
 #else
 #   ifndef LOG
 #       define LOG(...)
@@ -58,6 +61,9 @@
 #   endif
 #   ifndef SEM_DUMP
 #       define SEM_DUMP(...)
+#   endif
+#   ifndef PRINT_RESULT
+#       define PRINT_RESULT(...)
 #   endif
 #endif
 

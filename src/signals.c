@@ -169,23 +169,10 @@ int vsi_insert_signal ( vsi_result* result )
 	//
     //  Display the input parameters for the call if debug is enabled.
     //
-    LOG ( "\nCalled vsi_insert_signal with:\n" );
-    LOG ( "  Domain Id: %u\n",    result->domainId );
-    LOG ( "  Signal Id: %u\n",    result->signalId );
-    LOG ( "       Name: [%s]\n",  result->name );
-    LOG ( "   Data Len: %lu\n",   result->dataLength );
-    if ( result->dataLength == sizeof(unsigned long) )
-    {
-        LOG ( "       Data: 0x%lx\n", (unsigned long)result->data );
-        vsi_core_insert ( result->domainId, result->signalId,
-                          result->dataLength, &result->data );
-    }
-    else
-    {
-        LOG ( "       Data: %s\n", result->data );
-        vsi_core_insert ( result->domainId, result->signalId,
-                          result->dataLength, result->data );
-    }
+    PRINT_RESULT ( result, "\nCalled vsi_insert_signal with" );
+
+    vsi_core_insert ( result->domainId, result->signalId, result->dataLength,
+                      result->data );
     return 0;
 }
 
@@ -223,9 +210,9 @@ int vsi_get_oldest_signal ( vsi_result* result )
     CHECK_AND_RETURN_IF_ERROR ( result && result->data && result->dataLength );
 
     result->status = vsi_core_fetch ( result->domainId, result->signalId,
-                                      &result->dataLength, result->data );
+                                      &result->dataLength, (void**)&result->data );
 
-    LOG ( "vsi_get_oldest_signal returning: %lu\n", *(unsigned long*)result->data );
+    PRINT_RESULT ( result, "vsi_get_oldest_signal returning" );
 
     return result->status;
 }
@@ -258,7 +245,8 @@ int vsi_get_newest_signal ( vsi_result* result )
     CHECK_AND_RETURN_IF_ERROR ( result && result->data && result->dataLength );
 
     result->status = vsi_core_fetch_newest ( result->domainId, result->signalId,
-                                             &result->dataLength, result->data );
+                                             &result->dataLength,
+                                             (void**)&result->data );
     return result->status;
 }
 
@@ -474,7 +462,7 @@ int sm_insert ( domain_t domain, signal_t signal, unsigned long newMessageSize,
     LOG ( "   Data Len: %lu\n",   newMessageSize );
     if ( newMessageSize == sizeof(unsigned long) )
     {
-        LOG ( "       Data: 0x%lx\n", (unsigned long)body );
+        LOG ( "       Data: %lu\n", *(unsigned long*)body );
     }
     else
     {
@@ -679,12 +667,10 @@ int sm_removeSignal ( signal_list* signalList )
     the caller.  This is also the oldest signal in the list since the signals
     are added at the end of the list.
 
-    When calling this function, the bodySize should be the size of the data
-    buffer supplied as the "body" argument.  When we copy the data from the
-    shared memory segment to the "body" buffer, the smaller of either the body
-    buffer size or the number of bytes of data in the signal found will be
-    copied into the body buffer.  The number of bytes actually copied will be
-    returned to the caller in the bodySize parameter.
+    The size of the data buffer that was found will be returned to the caller
+    along with a pointer to the location of the data.  It is the
+    responsibility of the caller to copy the data out of the shared memory
+    segment if he needs it to persist.
 
     Note that since this function does not alter the structure of the signal
     list we don't need to lock the signal list semaphore during the processing
@@ -694,8 +680,8 @@ int sm_removeSignal ( signal_list* signalList )
 
     @param[in]  domain - The domain value of the signal to be removed.
     @param[in]  signal - The signal ID value of the signal to be removed.
-    @param[in/out] bodySize - The address of the body buffer size.
-    @param[out] body - The address of where to put the signal data.
+    @param[out] bodySize - The address of where to store the data size.
+    @param[out] body - The address of where to store the data pointer.
     @param[in]  wait - If true, wait for data if domain/signal is not found.
 
     @return 0 if successful.
@@ -705,15 +691,13 @@ int sm_removeSignal ( signal_list* signalList )
     TODO: Can we combine this function with sm_fetch_newest?
 ------------------------------------------------------------------------*/
 int sm_fetch ( domain_t domain, signal_t signal, unsigned long* bodySize,
-               void* body, bool wait )
+               void** body, bool wait )
 {
-    signal_data* signalData;
-    int          transferSize = 0;
-    int          status = 0;
+    signal_data* signalData = NULL;
+    int          status     = 0;
 
-    LOG ( "Fetching signal domain[%d], signal[%d], bodySize[%p-%lu], "
-          "body[%p], wait[%d]\n", domain, signal, bodySize, *bodySize,
-          body, wait );
+    LOG ( "Fetching signal domain[%d], signal[%d], bodySize[%p], "
+          "body[%p], wait[%d]\n", domain, signal, bodySize, body, wait );
     //
     //  Go find the signal list control block for this domain and signal.
     //
@@ -766,32 +750,24 @@ int sm_fetch ( domain_t domain, signal_t signal, unsigned long* bodySize,
 
     //
     //  When we come back from the wait above, there should be some signal
-    //  data to read.
+    //  data to read.  If there is no data, report an error condition.
+    //
+    if ( signalList->head == END_OF_LIST_MARKER )
+    {
+        printf ( "Error: sm_fetch was released from wait but no data present." );
+        return ENODATA;
+    }
     //
     //  Get the actual memory pointer to the current signal.
-    //
-    //  TODO: Check to make sure the head is not END.
     //
     signalData = toAddress ( signalList->head );
 
     //
-    //  Copy the signal body into the caller supplied buffer.
+    //  Return the size of the data block and the pointer to that block to the
+    //  caller.
     //
-    //  Note that we will copy the SMALLER of either the signal size supplied
-    //  by the caller or the actual data size in the signal that was found.
-    //
-    transferSize = *bodySize <= signalData->messageSize
-                   ? *bodySize
-                   : signalData->messageSize;
-
-    LOG ( "    Transferring %d bytes of data to the caller.\n", transferSize );
-
-    memcpy ( body, signalData->data, transferSize );
-
-    //
-    //  Return the number of bytes that were copied to the caller.
-    //
-    *bodySize = transferSize;
+    *bodySize = signalData->messageSize;
+    *body = (void*)&signalData->data[0];
 
     //
     //  If no one else is now waiting for this signal, go remove this signal
@@ -845,8 +821,8 @@ int sm_fetch ( domain_t domain, signal_t signal, unsigned long* bodySize,
 
     @param[in]  domain - The domain value of the signal to be removed.
     @param[in]  signal - The signal value of the signal to be removed.
-    @param[in/out] bodySize - The address of the body buffer size.
-    @param[out] body - The address of where to put the signal data.
+    @param[out] bodySize - The address of where to store the body size.
+    @param[out] body - The address of where to put the address of the signal data.
     @param[in]  wait - If true, wait for data if domain/signal is not found.
 
     @return 0 if successful.
@@ -855,15 +831,14 @@ int sm_fetch ( domain_t domain, signal_t signal, unsigned long* bodySize,
 
 ------------------------------------------------------------------------*/
 int sm_fetch_newest ( domain_t domain, signal_t signal, unsigned long* bodySize,
-                      void* body, bool wait )
+                      void** body, bool wait )
 {
     //
     //  Define the local signal offset and pointer variables.
     //
-    signal_list* signalList;
-    signal_data* signalData;
-    int          transferSize = 0;
-    int          status = 0;
+    signal_list* signalList = NULL;
+    signal_data* signalData = NULL;
+    int          status     = 0;
 
     LOG ( "Fetching newest signal domain[%d], signal[%d], wait[%d]\n", domain,
           signal, wait );
@@ -919,25 +894,11 @@ int sm_fetch_newest ( domain_t domain, signal_t signal, unsigned long* bodySize,
     signalData = toAddress ( signalList->tail );
 
     //
-    //  Copy the signal body into the caller supplied buffer.
+    //  Return the size of the message data and the pointer to that data to
+    //  the caller.
     //
-    //  Note that we will copy the SMALLER of either the signal size
-    //  supplied by the caller or the actual data size in the signal
-    //  that was found.
-    //
-    //  TODO: Make sure the requested size is "reasonable".
-    //
-    transferSize = *bodySize <= signalData->messageSize
-                   ? *bodySize : signalData->messageSize;
-
-    LOG ( "    Transferring %d bytes of data to the caller.\n", transferSize );
-
-    memcpy ( body, signalData->data, transferSize );
-
-    //
-    //  Return the number of bytes that were copied to the caller.
-    //
-    *bodySize = transferSize;
+    *bodySize = signalData->messageSize;
+    *body     = signalData->data;
 
     //
     //  Return to the caller with a good completion code.
@@ -1271,7 +1232,7 @@ int vsi_delete_signal_group ( const group_t groupId )
 ------------------------------------------------------------------------*/
 vsi_signal_group* vsi_fetch_signal_group ( const group_t groupId )
 {
-    LOG ( "Fetching signal group: %u\n", groupId );
+    LOG ( "vsi_fetch_signal_group called with group: %u\n", groupId );
 
     //
     //  Get the group object that the user specified.
@@ -1283,7 +1244,7 @@ vsi_signal_group* vsi_fetch_signal_group ( const group_t groupId )
 
     signalGroup = btree_search ( &vsiContext->groupIdIndex, &requestedGroup );
 
-    LOG ( "  Returning signal group: %p\n", signalGroup );
+    LOG ( "  vsi_fetch_signal_group returning signal group: %p\n", signalGroup );
 
 #ifdef LOG
     if ( signalGroup )
@@ -1292,7 +1253,8 @@ vsi_signal_group* vsi_fetch_signal_group ( const group_t groupId )
     }
     else
     {
-        LOG ( "Warning: groupId[%u] was NOT found!\n", groupId );
+        LOG ( "Warning: groupId[%u] was NOT found! (in vsi_fetch_signal_group)\n",
+              groupId );
     }
 #endif
 
@@ -1817,9 +1779,9 @@ int vsi_get_oldest_in_group ( const group_t groupId,
 		result->domainId    = signalList->domainId;
 		result->signalId    = signalList->signalId;
 		result->name        = toAddress ( signalList->name );
-		result->data        = (char*)&result->literalData;
+		result->data        = NULL;
 		result->literalData = 0;
-        result->dataLength  = sizeof(unsigned long);
+        result->dataLength  = 0;
 
         //
         //  Go get the oldest entry in the database for this signal.
@@ -1828,6 +1790,11 @@ int vsi_get_oldest_in_group ( const group_t groupId,
         //  object that is passed in.
         //
         vsi_get_oldest_signal ( result );
+
+        //
+        //  Display the result that was found.
+        //
+        PRINT_RESULT ( result, NULL );
 
         //
         //  Get the next signal definition object in the list for this group.
@@ -1955,8 +1922,8 @@ static void* waitForSignalOnAny ( void* resultsPtr )
     //
     status = vsi_core_fetch_wait ( result->domainId,
                                    result->signalId,
-                                   (unsigned long*)result->data,
-                                   &result->dataLength );
+                                   &result->dataLength,
+                                   (void**)&result->data );
     //
     //  If the above called failed, abort this function and just quit.
     //
@@ -1964,8 +1931,8 @@ static void* waitForSignalOnAny ( void* resultsPtr )
     {
         return NULL;
     }
-    LOG ( "Thread found signal, %d, %d status[%d], with data %u\n",
-          result->domainId, result->signalId, status, result->data[0] );
+    LOG ( "Thread found signal, %d, %d status[%d], with data %p\n",
+          result->domainId, result->signalId, status, result->data );
     //
     //  If we get here it's because we were able to fetch the requested signal
     //  data.  At this point, we need to kill all the other threads that have
@@ -2057,7 +2024,9 @@ int vsi_listen_any_in_group ( const group_t groupId,
     {
         return ENOENT;
     }
-
+    //
+    //  Display the signal group that we found.
+    //
     printSignalGroup ( "", signalGroup );
 
     //
@@ -2123,16 +2092,12 @@ int vsi_listen_any_in_group ( const group_t groupId,
         //  Specify the domain and signal IDs for the current signal in the
         //  results structure that will be passed to the new thread.
         //
-        pthread_mutex_lock ( &result->lock );
-
         result->domainId    = signalList->domainId;
         result->signalId    = signalList->signalId;
         result->data        = (char*)&result->literalData;
         result->literalData = 0;
         result->dataLength  = sizeof(unsigned long);;
         result->status      = ENOENT;
-
-        pthread_mutex_unlock ( &result->lock );
 
         //
         //  Initialize all of the fields of the thread data structure.
@@ -2259,8 +2224,8 @@ static void* waitForSignalOnAll ( void* resultsPtr )
     //
     status = vsi_core_fetch_wait ( result->domainId,
                                    result->signalId,
-                                   (unsigned long*)result->data,
-                                   &result->dataLength );
+                                   &result->dataLength,
+                                   (void**)&result->data );
     //
     //  If the above called failed, abort this function and just quit.
     //
@@ -3277,6 +3242,74 @@ void printSignalGroup ( char* leader, void* data )
         //
         groupDataOffset = groupData->nextMessageOffset;
     }
+    return;
+}
+
+
+/*!----------------------------------------------------------------------------
+
+    p r i n t R e s u l t
+
+    @brief Print the contents of a vsi_result data structure.
+
+    This function will print the contents of a vsi_result data structure and
+    is provided as a convenience for debugging.
+
+    @param[in] - result - The address of the vsi_result structure to print
+    @param[in] - text - If supplied, will be used on title line "as is"
+
+    @return None
+
+-----------------------------------------------------------------------------*/
+void printResult ( vsi_result* result, const char* text )
+{
+    //
+    //  Display the result that was supplied.
+    //
+    if ( text == NULL )
+    {
+        LOG ( "\nResult found[%p]:\n", result );
+    }
+    else
+    {
+        LOG ( "\n%s[%p]:\n", text, result );
+    }
+    LOG ( "     Status: %d\n",    result->status );
+    LOG ( "  Domain Id: %u\n",    result->domainId );
+    LOG ( "  Signal Id: %u\n",    result->signalId );
+    LOG ( "       Name: [%s]\n",  result->name );
+    LOG ( "   Data Len: %lu\n",   result->dataLength );
+    //
+    //  If the data in this record in numeric...
+    //
+    if ( result->dataLength == sizeof(unsigned long) )
+    {
+        LOG ( "       Data: %lu\n", *(unsigned long*)result->data );
+    }
+    //
+    //  Otherwise, the data in this record is a string...
+    //
+    else
+    {
+        //
+        //  Make sure the string in the "data" field is null terminated by
+        //  saving the byte where the null should be, setting it to null,
+        //  printing the resulting field, and then putting the original byte
+        //  back.  This might be overkill here but it beats trying to diagnose
+        //  a very strange intermittent crash later on!
+        //
+        int size  = result->dataLength;
+        char* ptr = result->data;
+        char temp = ptr[size];
+        ptr[size] = 0;
+
+        LOG ( "       Data: %s\n", (char*)result->data );
+
+        ptr[size] = temp;
+    }
+    //
+    //  Return to the caller.
+    //
     return;
 }
 

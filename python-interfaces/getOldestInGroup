@@ -127,16 +127,22 @@ def main():
     #
     #   Print the column header for the result data.
     #
-    print ( "domain   signal   value" )
-    print ( "======   ======   =====" )
+    print ( "" )
+    print ( "domain   signal   size   value" )
+    print ( "======   ======   ====   =====" )
 
     #
     #   Print each result record found the the signals of this group.
     #
-    for data in iter(results):
-        print ( '{:6d}{:9d}{:8d}'.format(data["domain"], data["signal"], data["value"]))
-
-
+    for result in iter(results):
+        if result["valueSize"] == 8:
+            print ( '{:6d}{:9d}{:7d}{:8d}'.format(
+                    result["domain"], result["signal"], result["valueSize"],
+                    result["value"]))
+        else:
+            print ( '{:6d}{:9d}{:7d}{:s}'.format(
+                    result["domain"], result["signal"], result["valueSize"],
+                    result["value"]))
 
 #
 #   If this file is called directly, go execute the main function.

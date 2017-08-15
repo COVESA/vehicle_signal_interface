@@ -81,11 +81,11 @@ int main ( int argc, char* const argv[] )
     //
     //  Parse any command line options the user may have supplied.
     //
-    signal_t      signal = 0;
-    domain_t      domain = 1;
-    unsigned long data = 0;
-    unsigned long dataSize = sizeof(data);
-    int           status = 0;
+    signal_t      signal    = 0;
+    domain_t      domain    = 1;
+    void*         data      = NULL;
+    unsigned long dataSize  = 0;
+    int           status    = 0;
     char          ch;
     bool          getOldest = false;
 
@@ -166,14 +166,15 @@ int main ( int argc, char* const argv[] )
     if ( status == 0 )
     {
 #ifdef VSI_DEBUG
-        if ( dataSize == sizeof(data) )
+        if ( dataSize == sizeof(unsigned long) )
         {
-            HX_DUMP ( &data, dataSize, "  Returned Value: " );
-            printf ( "  Returned Value: %lu\n", data );
+            HX_DUMP ( (char*)data, dataSize, "  Returned Value: " );
+            printf ( "  Returned Value: %lu\n",
+                     *(unsigned long*)data );
         }
         else
         {
-            HX_DUMP ( data, dataSize, "  Returned Value: " );
+            HX_DUMP ( (char*)data, dataSize, "  Returned Value: " );
             asciiData = (char*)data;
             printf ( "  Returned Value: %s\n", asciiData );
         }

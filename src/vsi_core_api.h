@@ -103,8 +103,8 @@ void vsi_core_insert ( domain_t domain,
     @param[in] handle - The handle to the VSI core data store.
     @param[in] domain - The domain associated with this message.
     @param[in] key - The key value associated with this message.
-    @param[in/out] bodySize - The address of the body buffer size.
-    @param[out] body - The address of the user's message buffer.
+    @param[out] bodySize - The address of where to store the body size.
+    @param[out] body - The address of where to store the body address.
 
     @return 0      - Success
             ENOMSG - The requested domain/key does not exist.
@@ -113,7 +113,8 @@ void vsi_core_insert ( domain_t domain,
 ------------------------------------------------------------------------*/
 int vsi_core_fetch ( domain_t domain,
                      offset_t key, unsigned long* bodySize,
-                     void* body );
+                     void**   body );
+
 
 /*!-----------------------------------------------------------------------
 
@@ -140,9 +141,10 @@ int vsi_core_fetch ( domain_t domain,
               - Anything else is an error code.
 
 ------------------------------------------------------------------------*/
-int vsi_core_fetch_wait ( domain_t domain,
-                          offset_t key, unsigned long* bodySize,
-                          void* body );
+int vsi_core_fetch_wait ( domain_t       domain,
+                          offset_t       key,
+                          unsigned long* bodySize,
+                          void**         body );
 
 
 /*!-----------------------------------------------------------------------
@@ -169,7 +171,7 @@ int vsi_core_fetch_wait ( domain_t domain,
 ------------------------------------------------------------------------*/
 int vsi_core_fetch_newest ( domain_t domain,
                             offset_t key, unsigned long* bodySize,
-                            void* body );
+                            void**   body );
 
 
 /*!-----------------------------------------------------------------------

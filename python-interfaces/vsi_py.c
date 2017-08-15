@@ -48,13 +48,18 @@
 #undef VSI_DEBUG
 
 #include <vsi.h>
+#define VSI_DEBUG
 #include <vsi_core_api.h>
 #include <signals.h>
 
 //#ifndef LOG
+//   #undef LOG
 //   #define LOG printf
+//   #define PRINT_RESULT printResult
+//   extern void printResult ( vsi_result* result, const char* text );
 //#else
-//#define LOG(...)
+//   #define LOG(...)
+//   #define PRINT_RESULT(...)
 //#endif
 
 
@@ -268,7 +273,7 @@ static PyObject* vsi_insertSignalData ( PyObject* self, PyObject* args )
     //
     if ( size == sizeof(unsigned long) )
     {
-        result.data = (char*)value;
+        result.data = (char*)&value;
     }
     else
     {
@@ -277,20 +282,7 @@ static PyObject* vsi_insertSignalData ( PyObject* self, PyObject* args )
     //
     //  Display the input parameters we received if debug is enabled.
     //
-    LOG ( "Calling VSI insert with:\n" );
-    LOG ( "  Domain Id: %u\n",    result.domainId );
-    LOG ( "  Signal Id: %u\n",    result.signalId );
-    LOG ( "       Name: [%s]\n ", result.name );
-    LOG ( "   Data Len: %lu\n",   result.dataLength );
-    if ( size == sizeof(unsigned long) )
-    {
-        LOG ( "       Data: 0x%lx\n", (unsigned long)result.data );
-    }
-    else
-    {
-        LOG ( "       Data: %s\n", result.data );
-    }
-    LOG ( "     Status: %d\n",    result.status );
+    PRINT_RESULT ( &result, "Calling vsi_insert_signal with" );
 
     //
     //  If the user did not specify the domain, print an error message and
@@ -331,19 +323,8 @@ static PyObject* vsi_insertSignalData ( PyObject* self, PyObject* args )
     //
     //  Display the output parameters from the call if debug is enabled.
     //
-    LOG ( "\nReturned[%d] from VSI insert with:\n", status );
-    LOG ( "  Domain Id: %u\n",    result.domainId );
-    LOG ( "  Signal Id: %u\n",    result.signalId );
-    LOG ( "       Name: [%s]\n",  result.name );
-    LOG ( "   Data Len: %lu\n",   result.dataLength );
-    if ( size == sizeof(unsigned long) )
-    {
-        LOG ( "       Data: 0x%lx\n", (unsigned long)result.data );
-    }
-    else
-    {
-        LOG ( "       Data: %s\n", result.data );
-    }
+    PRINT_RESULT ( &result, "Returned from VSI insert with" );
+
     //
     //  Return the status from the above call to the Python caller.
     //
@@ -418,7 +399,7 @@ static PyObject* vsi_getSignalData ( PyObject* self, PyObject* args )
     const char*   VSSname    = NULL;
     domain_t      domain     = 0;
     signal_t      signal     = 0;
-    unsigned char data[1025] = { 0 };
+    void*         data       = NULL;
     unsigned long dataLength = sizeof(data);
     unsigned char wait       = 0;
     unsigned char oldest     = 0;
@@ -509,17 +490,18 @@ static PyObject* vsi_getSignalData ( PyObject* self, PyObject* args )
         LOG ( "   Data Len: %lu\n",   dataLength );
         if ( dataLength == sizeof(unsigned long) )
         {
-            LOG ( "       Data: 0x%lx\n", data );
+            LOG ( "       Data: 0x%lu\n", *(unsigned long*)data );
         }
         else
         {
-            LOG ( "       Data: %s\n", (char*)&data );
+            LOG ( "       Data: %s\n", (char*)data );
         }
     }
     //
     //  Return the list of output data from this call to the caller.
     //
-    return Py_BuildValue ( "(iiis)", status, dataLength, data, (char*)&data );
+    return Py_BuildValue ( "(iiis)", status, dataLength,
+                           *(unsigned long*)data, (char*)data );
 }
 
 
@@ -1059,6 +1041,11 @@ static PyObject* vsi_getOldestInGroup ( PyObject* self, PyObject* args )
         if ( results[i].status == 0 )
         {
             //
+            //  If we are debugging, display the results we received.
+            //
+            PRINT_RESULT ( &results[i], NULL );
+
+            //
             //  Build the results item dictionary.
             //
             PyObject* dict = PyDict_New();
@@ -1066,8 +1053,37 @@ static PyObject* vsi_getOldestInGroup ( PyObject* self, PyObject* args )
                                    PyLong_FromLong ( results[i].domainId ) );
             PyDict_SetItemString ( dict, "signal",
                                    PyLong_FromLong ( results[i].signalId ) );
-            PyDict_SetItemString ( dict, "value",
-                                   PyLong_FromLong ( *(long*)results[i].data ) );
+            PyDict_SetItemString ( dict, "valueSize",
+                                   PyLong_FromLong ( results[i].dataLength ) );
+            //
+            //  If this result has a numeric type...
+            //
+            if ( results[i].dataLength == sizeof(unsigned long) )
+            {
+                PyDict_SetItemString ( dict, "value",
+                                   PyLong_FromLong ( *(long*)(results[i].data) ) );
+            }
+            //
+            //  Any other type is a string value so treat it as such.
+            //
+            else
+            {
+				//
+                //  Make sure the string in the "data" field is null
+                //  terminated by saving the byte where the null should be,
+                //  setting it to null, printing the resulting field, and then
+                //  putting the original byte back.  This might be overkill
+                //  here but it beats trying to diagnose a very strange
+                //  intermittent crash later on!
+				//
+				int size  = results[i].dataLength;
+				char* ptr = results[i].data;
+				char temp = ptr[size];
+				ptr[size] = 0;
+                PyDict_SetItemString ( dict, "value",
+                                       PyUnicode_FromString ( results[i].data ) );
+				ptr[size] = temp;
+            }
             //
             //  Append the dictionary to the list we will return.
             //
@@ -1082,7 +1098,6 @@ static PyObject* vsi_getOldestInGroup ( PyObject* self, PyObject* args )
     //
     //  Return the list of dictionaries to the caller.
     //
-    // return (PyObject *) list;
     return list;
 }
 
