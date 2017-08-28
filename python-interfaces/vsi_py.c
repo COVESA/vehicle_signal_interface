@@ -48,7 +48,6 @@
 #undef VSI_DEBUG
 
 #include <vsi.h>
-#define VSI_DEBUG
 #include <vsi_core_api.h>
 #include <signals.h>
 

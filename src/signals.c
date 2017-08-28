@@ -767,7 +767,8 @@ int sm_fetch ( domain_t domain, signal_t signal, unsigned long* bodySize,
     //  caller.
     //
     *bodySize = signalData->messageSize;
-    *body = (void*)&signalData->data[0];
+    // TODO: *body = (void*)&signalData->data[0];
+    *body = signalData->data;
 
     //
     //  If no one else is now waiting for this signal, go remove this signal
@@ -1223,11 +1224,10 @@ int vsi_delete_signal_group ( const group_t groupId )
 
     v s i _ f e t c h _ s i g n a l _ g r o u p
 
-    @brief Delete an existing signal group.
+    @brief Find and return an existing signal group.
 
-    Delete a signal group.  This function will delete the specified signal
-    group and release any shared memory occupied by it's members.  If there
-    are any signal lists associated with the group, they will not be deleted.
+    Fetch a signal group definition structure.  This function will find and
+    return the specified signal group structure.
 
 ------------------------------------------------------------------------*/
 vsi_signal_group* vsi_fetch_signal_group ( const group_t groupId )
@@ -1246,7 +1246,6 @@ vsi_signal_group* vsi_fetch_signal_group ( const group_t groupId )
 
     LOG ( "  vsi_fetch_signal_group returning signal group: %p\n", signalGroup );
 
-#ifdef LOG
     if ( signalGroup )
     {
         printSignalGroup ( "   ", signalGroup );
@@ -1256,8 +1255,6 @@ vsi_signal_group* vsi_fetch_signal_group ( const group_t groupId )
         LOG ( "Warning: groupId[%u] was NOT found! (in vsi_fetch_signal_group)\n",
               groupId );
     }
-#endif
-
     //
     //  Return the address of the signal group structure.  Note that this will
     //  return a NULL pointer if the group could not be found.
@@ -1748,9 +1745,6 @@ int vsi_get_oldest_in_group ( const group_t groupId,
     {
         return ENOENT;
     }
-
-    // printSignalGroup ( "", signalGroup );
-
     //
     //  While we have not reached the end of the signal list...
     //
@@ -1839,8 +1833,6 @@ int vsi_get_oldest_in_group_wait ( const group_t groupId,
                                    vsi_result*   results )
 {
     int status = 0;
-    domain_t domain = 0;
-    signal_t signal = 0;
 
     LOG ( "Called vsi_get_oldest_in_group_wait with group: %u, results: %p\n",
           groupId, results );
@@ -1848,7 +1840,7 @@ int vsi_get_oldest_in_group_wait ( const group_t groupId,
     //
     //  Go wait for a signal on any of the signals in the specified group.
     //
-    status = vsi_listen_any_in_group ( groupId, 0, &domain, &signal );
+    status = vsi_listen_any_in_group ( groupId, 0, results );
 
     if ( status != 0 )
     {
@@ -1858,8 +1850,8 @@ int vsi_get_oldest_in_group_wait ( const group_t groupId,
         return status;
     }
 
-    LOG ( "  Signal seen for domain[%u], signal[%u]\n", domain, signal );
-
+    LOG ( "  Signal seen for domain[%u], signal[%u]\n", results->domain,
+          results->signal );
     //
     //  Return the oldest value in all of the signals of the group.
     //
@@ -1912,9 +1904,8 @@ static void* waitForSignalOnAny ( void* resultsPtr )
     vsi_result*   result = tData->result;
     int           status = 0;
 
-    LOG ( "New thread %lu has started - Waiting for %d, %d\n",
-          pthread_self() % 10000, result->domainId,
-          result->signalId );
+    LOG ( "New thread %'lu has started - Waiting for %d, %d\n",
+          pthread_self(), result->domainId, result->signalId );
     //
     //  Go fetch the requested signal from the core data store.  Note that
     //  this function will hang on a semaphore if there is nothing to fetch.
@@ -1925,14 +1916,19 @@ static void* waitForSignalOnAny ( void* resultsPtr )
                                    &result->dataLength,
                                    (void**)&result->data );
     //
-    //  If the above called failed, abort this function and just quit.
+    //  Save the returned status in the result structure.
+    //
+    result->status = status;
+
+    //
+    //  If the above call failed, abort this function and just quit.
     //
     if ( status != 0 )
     {
         return NULL;
     }
     LOG ( "Thread found signal, %d, %d status[%d], with data %p\n",
-          result->domainId, result->signalId, status, result->data );
+          result->domainId, result->signalId, result->status, result->data );
     //
     //  If we get here it's because we were able to fetch the requested signal
     //  data.  At this point, we need to kill all the other threads that have
@@ -1944,7 +1940,7 @@ static void* waitForSignalOnAny ( void* resultsPtr )
     {
         if ( tData->threadIds[i] != pthread_self() )
         {
-            LOG ( "  Cancelling thread %lu\n", tData->threadIds[i] % 10000 );
+            LOG ( "  Cancelling thread %'lu\n", tData->threadIds[i] );
             pthread_cancel ( tData->threadIds[i] );
         }
     }
@@ -1973,12 +1969,10 @@ static void* waitForSignalOnAny ( void* resultsPtr )
     contains data.
 
     TODO: Implement the timeout argument.
-    TODO: Shouldn't this function really take a "vsi_result" argument?
 
-    @param[out] domainId - The address of where to store the domain ID
-    @param[out] signalId - The address of where to store the signal ID
-    @param[out] groupId - The address of where to store the group ID
+    @param[in] groupId - The group ID to listen for
     @param[in] timeout - The optional timeout value in nanoseconds
+    @param[in/out] result - The address of where to store the results
 
     @return 0 if no errors occurred
               Otherwise the negative errno value will be returned.
@@ -1989,8 +1983,7 @@ static void* waitForSignalOnAny ( void* resultsPtr )
 ------------------------------------------------------------------------*/
 int vsi_listen_any_in_group ( const group_t groupId,
                               unsigned int  timeout,
-                              domain_t*     domainId,
-                              signal_t*     signalId )
+                              vsi_result*   result )
 {
     int                    groupCount  = 0;
     int                    i           = 0;
@@ -1998,9 +1991,9 @@ int vsi_listen_any_in_group ( const group_t groupId,
     vsi_signal_group*      signalGroup = 0;
 	vsi_signal_group_data* groupData   = 0;
     signal_list*           signalList  = 0;
-    vsi_result*            result      = 0;
     threadData_t*          tData       = 0;
     pthread_t*             threadIds   = 0;
+    vsi_result*            tempResult  = 0;
 
     LOG ( "Called vsi_listen_any_in_group with group: %u\n", groupId );
 
@@ -2081,28 +2074,30 @@ int vsi_listen_any_in_group ( const group_t groupId,
         //  Get a pointer to the current result structure.  This result
         //  structure will be filled in by the thread we are going to create.
         //
-        result = &results[i];
+        tempResult = &results[i];
 
         //
         //  Initialize the mutex for this result structure.
         //
-        pthread_mutex_init ( &result->lock, NULL );
+        //  TODO: I don't think this is needed any more (took out locks).
+        //
+        // pthread_mutex_init ( &tempResult->lock, NULL );
 
         //
         //  Specify the domain and signal IDs for the current signal in the
         //  results structure that will be passed to the new thread.
         //
-        result->domainId    = signalList->domainId;
-        result->signalId    = signalList->signalId;
-        result->data        = (char*)&result->literalData;
-        result->literalData = 0;
-        result->dataLength  = sizeof(unsigned long);;
-        result->status      = ENOENT;
+        tempResult->domainId    = signalList->domainId;
+        tempResult->signalId    = signalList->signalId;
+        tempResult->data        = NULL;
+        tempResult->literalData = 0;
+        tempResult->dataLength  = 0;
+        tempResult->status      = ENOENT;
 
         //
         //  Initialize all of the fields of the thread data structure.
         //
-        tData[i].result          = result;
+        tData[i].result          = tempResult;
         tData[i].threadIds       = threadIds;
         tData[i].numberOfThreads = groupCount;
 
@@ -2112,7 +2107,7 @@ int vsi_listen_any_in_group ( const group_t groupId,
         //
         status = pthread_create ( &threadIds[i], NULL, waitForSignalOnAny, &tData[i] );
 
-        LOG ( "  Created thread %lu\n", threadIds[i] % 10000 );
+        LOG ( "  Created thread %'lu\n", threadIds[i] );
 
         ++i;
 
@@ -2146,9 +2141,9 @@ int vsi_listen_any_in_group ( const group_t groupId,
 
     for ( i = 0; i < groupCount; ++i )
     {
-        LOG ( "  Waiting for thread %lu to terminate\n", threadIds[i] % 10000 );
+        LOG ( "  Waiting for thread %'lu to terminate\n", threadIds[i] );
         pthread_join ( threadIds[i], NULL );
-        LOG ( "  Thread %lu has terminated\n", threadIds[i] % 10000 );
+        LOG ( "  Thread %'lu has terminated\n", threadIds[i] );
 
         //
         //  If this is the thread that received the signal, the status field
@@ -2157,10 +2152,9 @@ int vsi_listen_any_in_group ( const group_t groupId,
         if ( results[i].status == 0 )
         {
             //
-            //  Return the domain and signal id that we received.
+            //  Return the results that were found.
             //
-            *domainId = results[i].domainId;
-            *signalId = results[i].signalId;
+            *result = results[i];
         }
     }
     //
@@ -2215,8 +2209,8 @@ static void* waitForSignalOnAll ( void* resultsPtr )
     vsi_result*   result = tData->result;
     int           status = 0;
 
-    LOG ( "New thread %lu has started - Waiting for %d, %d\n",
-          pthread_self() % 10000, result->domainId, result->signalId );
+    LOG ( "New thread %'lu has started - Waiting for %d, %d\n",
+          pthread_self(), result->domainId, result->signalId );
     //
     //  Go fetch the requested signal from the core data store.  Note that
     //  this function will hang on a semaphore if there is nothing to fetch.
@@ -2394,7 +2388,7 @@ int vsi_listen_all_in_group ( const group_t groupId,
         //
         status = pthread_create ( &threadIds[i], NULL, waitForSignalOnAll, &tData[i] );
 
-        LOG ( "  Created thread %lu\n", threadIds[i] % 10000 );
+        LOG ( "  Created thread %'lu\n", threadIds[i] );
 
         ++i;
 
@@ -2424,9 +2418,9 @@ int vsi_listen_all_in_group ( const group_t groupId,
 
     for ( i = 0; i < groupCount; ++i )
     {
-        LOG ( "  Waiting for thread %lu to terminate\n", threadIds[i] % 10000 );
+        LOG ( "  Waiting for thread %'lu to terminate\n", threadIds[i] );
         pthread_join ( threadIds[i], NULL );
-        LOG ( "  Thread %lu has terminated\n", threadIds[i] % 10000 );
+        LOG ( "  Thread %'lu has terminated\n", threadIds[i] );
     }
     //
     //  Clean up our temporary memory and return a good completion code to the
@@ -2850,7 +2844,7 @@ void dumpSignals ( void )
 	printf ( "\nThe defined signals in ID order:...\n\n" );
 	btree_traverse ( &vsiContext->signalIdIndex, signalTraverseFunction );
 
-	printf ( "\nThe defined signals in name order:...\n\n" );
+	printf ( "The defined signals in name order:...\n\n" );
 	btree_traverse ( &vsiContext->signalNameIndex, signalTraverseFunction );
 
 	printf ( "The defined signals in private ID order:...\n\n" );
@@ -3159,6 +3153,7 @@ void groupTraverseFunction ( char* leader, void* dataPtr )
 -----------------------------------------------------------------------------*/
 void printSignalGroup ( char* leader, void* data )
 {
+#ifdef VSI_DEBUG
     vsi_signal_group_data* groupData;
     signal_list*           signalList;
 
@@ -3243,6 +3238,7 @@ void printSignalGroup ( char* leader, void* data )
         groupDataOffset = groupData->nextMessageOffset;
     }
     return;
+#endif
 }
 
 
@@ -3289,7 +3285,7 @@ void printResult ( vsi_result* result, const char* text )
     //
     //  Otherwise, the data in this record is a string...
     //
-    else
+    else if ( result->dataLength > 0 )
     {
         //
         //  Make sure the string in the "data" field is null terminated by
@@ -3306,6 +3302,10 @@ void printResult ( vsi_result* result, const char* text )
         LOG ( "       Data: %s\n", (char*)result->data );
 
         ptr[size] = temp;
+    }
+    else
+    {
+        LOG ( "   ERROR: zero length data returned at: %p\n", &result->data );
     }
     //
     //  Return to the caller.

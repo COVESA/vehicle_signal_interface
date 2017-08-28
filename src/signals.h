@@ -912,8 +912,7 @@ int vsi_get_oldest_in_group_wait ( const group_t groupId,
 ------------------------------------------------------------------------*/
 int vsi_listen_any_in_group ( const group_t groupId,
                               unsigned int  timeout,
-                              domain_t*     domainId,
-                              signal_t*     signalId );
+                              vsi_result*   result );
 
 
 /*!-----------------------------------------------------------------------
@@ -938,6 +937,7 @@ int vsi_listen_any_in_group ( const group_t groupId,
 
     @param[out] resultsPtr - The address of where to store the results
     @param[in] resultsSize - The size of the results array being supplied
+                             The number of results expected.
     @param[in] timeout - The optional timeout value in nanoseconds
 
     @return 0 if no errors occurred

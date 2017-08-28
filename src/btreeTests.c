@@ -372,6 +372,8 @@ int main ( int argc, char *argv[] )
         printf ( "After inserting record %d\n", i + 1 );
         PRINT_TREE ( idTree, printFunction );
         // validatePointers ( idTree->root );
+        traverseCount = 0;
+        btree_traverse ( idTree, traverseFunction );
     }
     printf ( "When all done inserting...\n" );
     PRINT_TREE ( idTree, printFunction );
