@@ -2079,9 +2079,7 @@ int vsi_listen_any_in_group ( const group_t groupId,
         //
         //  Initialize the mutex for this result structure.
         //
-        //  TODO: I don't think this is needed any more (took out locks).
-        //
-        // pthread_mutex_init ( &tempResult->lock, NULL );
+        pthread_mutex_init ( &tempResult->lock, NULL );
 
         //
         //  Specify the domain and signal IDs for the current signal in the
