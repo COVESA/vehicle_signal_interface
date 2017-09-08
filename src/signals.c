@@ -186,10 +186,9 @@ int vsi_insert_signal ( vsi_result* result )
 ------------------------------------------------------------------------*/
 int vsi_insert_signal_by_name ( vsi_result* result )
 {
-    LOG ( "vsi_insert_signal_by_name called with domain: %d, signal: %d, "
-          "name: [%s]\n", result->domainId, result->signalId, result->name );
-
     VSI_LOOKUP_RESULT_NAME ( result );
+
+    PRINT_RESULT ( result, "vsi_insert_signal_by_name called with:" );
 
     return vsi_insert_signal ( result );
 }
@@ -1279,6 +1278,8 @@ int vsi_add_signal_to_group ( const domain_t domainId,
 {
     vsi_signal_group* signalGroup = 0;
 
+    LOG ( "vsi_add_signal_to_group called with: %d,%d group %d\n", domainId,
+          signalId, groupId );
     //
     //  Go find the group record for this groupId.
     //
@@ -1362,6 +1363,7 @@ int vsi_add_signal_to_group ( const domain_t domainId,
     //
     //  Return a good completion code to the caller.
     //
+    printSignalGroup ( "", signalGroup );
     return 0;
 }
 
@@ -1850,8 +1852,8 @@ int vsi_get_oldest_in_group_wait ( const group_t groupId,
         return status;
     }
 
-    LOG ( "  Signal seen for domain[%u], signal[%u]\n", results->domain,
-          results->signal );
+    LOG ( "  Signal seen for domain[%u], signal[%u]\n", results->domainId,
+          results->signalId );
     //
     //  Return the oldest value in all of the signals of the group.
     //
@@ -3292,14 +3294,18 @@ void printResult ( vsi_result* result, const char* text )
         //  back.  This might be overkill here but it beats trying to diagnose
         //  a very strange intermittent crash later on!
         //
-        int size  = result->dataLength;
-        char* ptr = result->data;
-        char temp = ptr[size];
-        ptr[size] = 0;
-
-        LOG ( "       Data: %s\n", (char*)result->data );
-
-        ptr[size] = temp;
+        // unsigned long size  = result->dataLength;
+        // char*          ptr  = result->data;
+        // char           temp = ptr[size];
+        // *(char*)(ptr+size)           = '\0';
+        // LOG ( "       Data: %s\n", (char*)result->data );
+        // ptr[size] = temp;
+        fputs ( "       Data: ", stdout );
+        for ( int i = 0; i < result->dataLength; ++i )
+        {
+            fputc ( result->data[i], stdout );
+        }
+        fputc ( '\n', stdout );
     }
     else
     {

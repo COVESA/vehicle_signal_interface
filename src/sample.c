@@ -49,14 +49,22 @@ static int storeSignal ( vsi_result* result, domain_t domain_id,
                          signal_t signal_id, unsigned char dataValue )
 {
     int status = 0;
+    unsigned long tempData = dataValue;
 
     printf ( "Storing domain %d, signal %d, data %u in the core data store.\n",
              domain_id, signal_id, dataValue );
 
-    result->domainId = domain_id;
-    result->signalId = signal_id;
-    result->data[0] = dataValue;
-    result->dataLength = 1;
+    memset ( result, 0, sizeof(vsi_result) );
+
+    if ( domain_id == 0 )
+    {
+        domain_id = 1;
+    }
+
+    result->domainId   = domain_id;
+    result->signalId   = signal_id;
+    result->data       = (char*)&tempData;
+    result->dataLength = 8;
 
     status = vsi_insert_signal ( result );
 
@@ -86,7 +94,7 @@ static int storeSignal ( vsi_result* result, domain_t domain_id,
 ------------------------------------------------------------------------*/
 int main()
 {
-    domain_t domain_id = 0;
+    domain_t domain_id = 1;
     signal_t signal_id = 0;
     int      status    = 0;
     long     dummyData = 0;
@@ -117,11 +125,11 @@ int main()
     //
     //  Define some signals for the test functions.
     //
-    vsi_define_signal ( 0, 1, 0, "foo" );
-    vsi_define_signal ( 0, 2, 0, "bar" );
-    vsi_define_signal ( 0, 3, 0, "baz" );
-    vsi_define_signal ( 0, 4, 0, "gen" );
-    vsi_define_signal ( 0, 5, 0, "ivi" );
+    vsi_define_signal ( 1, 1, 0, "foo" );
+    vsi_define_signal ( 1, 2, 0, "bar" );
+    vsi_define_signal ( 1, 3, 0, "baz" );
+    vsi_define_signal ( 1, 4, 0, "gen" );
+    vsi_define_signal ( 1, 5, 0, "ivi" );
 
     // btree_print ( &vsiContext->signalNameIndex, printFunction );
 
@@ -130,14 +138,14 @@ int main()
     //
     char* testSignalName = "bar";
     printf("\n(1) Firing signal \"bar\".\n");
-    status = vsi_name_string_to_id(0, testSignalName, &signal_id);
+    status = vsi_name_string_to_id(1, testSignalName, &signal_id);
     if (status)
     {
         printf("Failed to find the signal ID for the signal \"bar\"! Error "
                "code %d.\n", status);
         return status;
     }
-    storeSignal ( &result, 0, signal_id, 41 );
+    storeSignal ( &result, 1, signal_id, 41 );
     printf("Successfully inserted signal \"bar\".\n");
 
     //
@@ -146,7 +154,7 @@ int main()
     printf ( "\nStoring domain %d, signal %d, name [%s] in the core data store.\n",
              domain_id, signal_id, testSignalName );
 
-    result.domainId   = 0;
+    result.domainId   = 1;
     result.nameOffset = toOffset ( testSignalName );
     result.name       = testSignalName;
     result.data       = "insertTest";
@@ -179,6 +187,8 @@ int main()
     //
     printf ( "\n(2) Getting newest \"bar\" signal.\n" );
     result.nameOffset = toOffset ( testSignalName );
+    testSignalName = "bar";
+    result.name = testSignalName;
     status = vsi_get_newest_signal_by_name(&result);
     if (status)
     {
@@ -186,8 +196,8 @@ int main()
                "code %d.\n", status);
         return status;
     }
-    printf("Successfully read the newest \"bar\" signal and got %d.\n",
-           *(int*)result.data);
+    printf("Successfully read the newest \"bar\" signal and got %lu.\n",
+           *(unsigned long*)result.data);
     //
     //  Read the oldest update from the "bar" signal.
     //
@@ -199,8 +209,8 @@ int main()
                "code %d.\n", status);
         return status;
     }
-    printf("Successfully read the oldest \"bar\" signal and got %d.\n",
-           *(int*)result.data);
+    printf("Successfully read the oldest \"bar\" signal and got %lu.\n",
+           *(unsigned long*)result.data);
     //
     //  Read all of the "bar" signals from oldest to newest...
     //
@@ -211,7 +221,7 @@ int main()
         status = vsi_get_oldest_signal_by_name(&result);
         if ( status != 0 )
         {
-            if ( status != -ENODATA )
+            if ( status != ENODATA )
             {
                 printf("Failed to get the oldest signal data for \"bar\"! "
                        "Error code %d.\n", status);
@@ -220,10 +230,10 @@ int main()
         }
         else
         {
-            printf("Successfully read the oldest \"bar\" signal and got %d.\n",
-                   *(int*)result.data);
+            printf("Successfully read the oldest \"bar\" signal and got %lu.\n",
+                   *(unsigned long*)result.data);
         }
-    } while (status != -ENODATA);
+    } while (status != ENODATA);
     printf("Completed reading the signal.\n");
 
     //
@@ -308,16 +318,16 @@ int main()
     //
     //  Initialize the memory for the array of vsi_result structures.
     //
-    storeSignal ( &result, 0, 4, 48 );
-    storeSignal ( &result, 0, 4, 49 );
-    storeSignal ( &result, 0, 5, 50 );
-    storeSignal ( &result, 0, 5, 51 );
+    storeSignal ( &result, 1, 4, 48 );
+    storeSignal ( &result, 1, 4, 49 );
+    storeSignal ( &result, 1, 5, 50 );
+    storeSignal ( &result, 1, 5, 51 );
     memset ( results, 0, sizeof(result) * 10 );
     for ( int i = 0; i < 10; ++i )
     {
         results[i].data = malloc ( 1 );
         results[i].dataLength = 1;
-        results[i].status = -61;
+        results[i].status = 61;
     }
     //
     //  As a pit stop in this example, read the current value of the group to
@@ -355,7 +365,7 @@ int main()
     {
         results[i].data = malloc ( 1 );
         results[i].dataLength = 1;
-        results[i].status = -61;
+        results[i].status = 61;
     }
 
     status = vsi_get_oldest_in_group ( 10, results );
