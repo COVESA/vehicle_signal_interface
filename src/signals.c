@@ -26,16 +26,6 @@
 #include "signals.h"
 #include "vsi_core_api.h"
 
-// #define VSI_DEBUG
-// #undef LOG
-// #define LOG printf
-
-//
-//	Define the externally defined functions.
-//
-extern unsigned long getIntervalTime ( void );
-extern void          dumpSemaphore   ( semaphore_t* semaphore );
-
 
 /*!-----------------------------------------------------------------------
 
@@ -346,6 +336,8 @@ signal_list* findSignalList ( domain_t domain, signal_t signal )
     //
     if ( signalList == NULL )
     {
+        LOG ( "Creating a new signal list for %d,%d\n", domain, signal );
+
         //
         //  Go allocate a new signal list control block in the shared memory
         //  segment.
@@ -396,6 +388,11 @@ signal_list* findSignalList ( domain_t domain, signal_t signal )
             sm_free ( signalList );
             return 0;
         }
+        //
+        //  If debugging is enabled, to dump the semaphore we just created.
+        //
+        SEM_DUMP ( &signalList->semaphore );
+
         //
         //  Initialize the semaphore counters for this signal list control
         //  block.
@@ -554,9 +551,8 @@ int sm_insert ( domain_t domain, signal_t signal, unsigned long newMessageSize,
     //  Note that doing this post may result in a different process and/or
     //  thread running before the call comes back here.
     //
-    LOG ( "%'lu  Before Insert/semaphore post with sem: %p[%lu]\n",
-          getIntervalTime(), &signalList->semaphore,
-          toOffset ( &signalList->semaphore ) );
+    LOG ( "Before semaphore post with sem: %p[%lu]\n",
+          &signalList->semaphore, toOffset ( &signalList->semaphore ) );
 
     SEM_DUMP ( &signalList->semaphore );
 
@@ -564,7 +560,7 @@ int sm_insert ( domain_t domain, signal_t signal, unsigned long newMessageSize,
 
     semaphorePost ( &signalList->semaphore );
 
-    LOG ( "%'lu  After Insert/semaphore post:\n", getIntervalTime() );
+    LOG ( "After semaphore post:\n" );
     SEM_DUMP ( &signalList->semaphore );
 
     //
@@ -597,8 +593,7 @@ int sm_removeSignal ( signal_list* signalList )
 {
     signal_data* signalData;
 
-    LOG ( "%'lu  Removing signal with %d - %d\n", getIntervalTime(),
-          signalList->domainId, signalList->signalId );
+    LOG ( "Removing signal with %d-%d\n", signalList->domainId, signalList->signalId );
 
     //
     //  If this signal list is empty, just return without doing anything.
@@ -732,9 +727,8 @@ int sm_fetch ( domain_t domain, signal_t signal, unsigned long* bodySize,
 
     ++signalList->semaphore.waiterCount;
 
-    LOG ( "%'lu  Before Fetch/semaphore wait sem: %p[%lu]\n",
-          getIntervalTime(), &signalList->semaphore,
-          toOffset ( &signalList->semaphore ) );
+    LOG ( "Before Fetch/semaphore wait sem: %p[%lu]\n",
+          &signalList->semaphore, toOffset ( &signalList->semaphore ) );
 
     SEM_DUMP ( &signalList->semaphore );
 
@@ -744,7 +738,7 @@ int sm_fetch ( domain_t domain, signal_t signal, unsigned long* bodySize,
 
     --signalList->semaphore.waiterCount;
 
-    LOG ( "%'lu  After Fetch/semaphore wait:\n", getIntervalTime() );
+    LOG ( "After Fetch/semaphore wait:\n" );
     SEM_DUMP ( &signalList->semaphore );
 
     //
@@ -777,8 +771,7 @@ int sm_fetch ( domain_t domain, signal_t signal, unsigned long* bodySize,
     {
         status = sm_removeSignal ( signalList );
     }
-    LOG ( "%'lu  At the end of Fetch - waiterCount: %d\n", getIntervalTime(),
-          signalList->semaphore.waiterCount );
+    LOG ( "At the end of Fetch - waiterCount: %d\n", signalList->semaphore.waiterCount );
 
     SEM_DUMP ( &signalList->semaphore );
 
@@ -872,9 +865,8 @@ int sm_fetch_newest ( domain_t domain, signal_t signal, unsigned long* bodySize,
 
     ++signalList->semaphore.waiterCount;
 
-    LOG ( "%'lu  Before Fetch/semaphore wait sem: %p[%lu]\n",
-          getIntervalTime(), &signalList->semaphore,
-          toOffset ( &signalList->semaphore ) );
+    LOG ( "Before Fetch/semaphore wait sem: %p[%lu]\n",
+          &signalList->semaphore, toOffset ( &signalList->semaphore ) );
 
     SEM_DUMP ( &signalList->semaphore );
 
@@ -882,7 +874,7 @@ int sm_fetch_newest ( domain_t domain, signal_t signal, unsigned long* bodySize,
 
     --signalList->semaphore.waiterCount;
 
-    LOG ( "%'lu  After Fetch/semaphore wait:\n", getIntervalTime() );
+    LOG ( "After Fetch/semaphore wait:\n" );
     SEM_DUMP ( &signalList->semaphore );
 
     //
@@ -903,8 +895,7 @@ int sm_fetch_newest ( domain_t domain, signal_t signal, unsigned long* bodySize,
     //
     //  Return to the caller with a good completion code.
     //
-    LOG ( "%'lu  At the end of Fetch - waiterCount: %d\n", getIntervalTime(),
-          signalList->semaphore.waiterCount );
+    LOG ( "At the end of Fetch - waiterCount: %d\n", signalList->semaphore.waiterCount );
 
     SEM_DUMP ( &signalList->semaphore );
 
@@ -1276,7 +1267,8 @@ int vsi_add_signal_to_group ( const domain_t domainId,
                               const signal_t signalId,
                               const group_t  groupId )
 {
-    vsi_signal_group* signalGroup = 0;
+    vsi_signal_group*      signalGroup = 0;
+    vsi_signal_group_data* groupData   = 0;
 
     LOG ( "vsi_add_signal_to_group called with: %d,%d group %d\n", domainId,
           signalId, groupId );
@@ -1306,10 +1298,50 @@ int vsi_add_signal_to_group ( const domain_t domainId,
     {
         return ENOMEM;
     }
+	//
+    //	Make sure that the new signal data is not already in the signal list.
+	//
+    offset_t     groupDataOffset = signalGroup->head;
+    signal_list* existingSignal  = 0;
+
+    //
+    //  While we have not reached the end of the signal list...
+    //
+    while ( groupDataOffset != END_OF_LIST_MARKER )
+    {
+        //
+        //  Get an actual pointer to this signal in this list.
+        //
+        groupData = toAddress ( groupDataOffset );
+
+        //
+        //  Now get the address of the signal list structure.
+        //
+        existingSignal = toAddress ( groupData->signalList );
+
+        //
+        //  If this signal list is for the same domain and signal as the one
+        //  we are trying to add, then we have run into a duplicate signal.
+        //  In this case, just output an error message and return an error
+        //  code to the caller.
+        //
+        if ( existingSignal->domainId == domainId &&
+             existingSignal->signalId == signalId )
+        {
+            printf ( "WARNING: Attempting to add domain[%d], signal[%d] to "
+                     "group[%d] which already exists - Ignored\n",
+                     domainId, signalId, groupId );
+            return EINVAL;
+        }
+        //
+        //  Get the next signal definition object in the list for this group.
+        //
+        groupDataOffset = groupData->nextMessageOffset;
+    }
     //
     //  Go get the memory for a new signal group data record.
     //
-    vsi_signal_group_data* groupData = sm_malloc ( sizeof(vsi_signal_group_data) );
+    groupData = sm_malloc ( sizeof(vsi_signal_group_data) );
 
     //
     //  If the memory allocation failed, issue an error message and return an
@@ -1965,16 +1997,14 @@ static void* waitForSignalOnAny ( void* resultsPtr )
     this call is made will return it's value and the function will return to
     the caller.
 
-    Unlike many of the other functions which return data for a group, this
-    function does not expect (nor returns) an array of result structures.  It
-    only returns a single result for the first signal in the group that
-    contains data.
+    Upon return, the caller can check the array of result structures passed in
+    for on with a status of 0 to determine which signal was received.
 
     TODO: Implement the timeout argument.
 
     @param[in] groupId - The group ID to listen for
     @param[in] timeout - The optional timeout value in nanoseconds
-    @param[in/out] result - The address of where to store the results
+    @param[in/out] results - The array of results structures to fill in
 
     @return 0 if no errors occurred
               Otherwise the negative errno value will be returned.
@@ -1985,7 +2015,7 @@ static void* waitForSignalOnAny ( void* resultsPtr )
 ------------------------------------------------------------------------*/
 int vsi_listen_any_in_group ( const group_t groupId,
                               unsigned int  timeout,
-                              vsi_result*   result )
+                              vsi_result*   results )
 {
     int                    groupCount  = 0;
     int                    i           = 0;
@@ -2034,23 +2064,12 @@ int vsi_listen_any_in_group ( const group_t groupId,
         return ENOMEM;
     }
     //
-    //  Allocate the array of result structures, one for each thread we are
-    //  going to create.
-    //
-    vsi_result* results = malloc ( groupCount * sizeof(vsi_result) );
-    if ( ! results )
-    {
-        free ( threadIds );
-        return ENOMEM;
-    }
-    //
     //  Allocate the array of thread data structures.
     //
     tData = malloc ( groupCount * sizeof(threadData_t) );
     if ( ! tData )
     {
         free ( threadIds );
-        free ( results );
         return ENOMEM;
     }
     //
@@ -2081,8 +2100,8 @@ int vsi_listen_any_in_group ( const group_t groupId,
         //
         //  Initialize the mutex for this result structure.
         //
-        pthread_mutex_init ( &tempResult->lock, NULL );
-
+        status = pthread_mutex_init ( &tempResult->lock,
+                                      &smControl->masterMutexAttributes );
         //
         //  Specify the domain and signal IDs for the current signal in the
         //  results structure that will be passed to the new thread.
@@ -2120,7 +2139,6 @@ int vsi_listen_any_in_group ( const group_t groupId,
             printf ( "Error creating thread: %m\n" );
 
             free ( threadIds );
-            free ( results );
             free ( tData );
             return status;
         }
@@ -2144,25 +2162,12 @@ int vsi_listen_any_in_group ( const group_t groupId,
         LOG ( "  Waiting for thread %'lu to terminate\n", threadIds[i] );
         pthread_join ( threadIds[i], NULL );
         LOG ( "  Thread %'lu has terminated\n", threadIds[i] );
-
-        //
-        //  If this is the thread that received the signal, the status field
-        //  in it's result object should be zero.
-        //
-        if ( results[i].status == 0 )
-        {
-            //
-            //  Return the results that were found.
-            //
-            *result = results[i];
-        }
     }
     //
     //  Clean up our temporary memory and return a good completion code to the
     //  caller.
     //
     free ( threadIds );
-    free ( results );
     free ( tData );
 
     //
@@ -2736,23 +2741,11 @@ int vsi_define_signal ( const domain_t domainId,
     LOG ( "Defining: domainId: %d, signalId: %d, privateId: %d, name[%s]\n",
           domainId, signalId, privateId, name );
     //
-    //  Go allocate a new signal list data structure in the shared memory
-    //  area and initialize it to all zeroes.
+    //  Go find the signal list control block for this domain and signal.  Note
+    //  that if the signal list does not exist yet, a new one will be created
+    //  and initialized.
     //
-    signal_list* signalList = sm_malloc ( sizeof(signal_list) );
-    memset ( signalList, 0, sizeof(signal_list) );
-
-    //
-    //  Initialize the ID fields of the structure.
-    //
-    signalList->domainId  = domainId;
-    signalList->signalId  = signalId;
-    signalList->privateId = privateId;
-
-    //
-    //  Go insert the new signal list structure into the ID btree.
-    //
-    btree_insert ( &vsiContext->signalIdIndex, signalList );
+    signal_list* signalList = findSignalList ( domainId, signalId );
 
     //
     //  If there is a private ID for this signal, add it's definition to the

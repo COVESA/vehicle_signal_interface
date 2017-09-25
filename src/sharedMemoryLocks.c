@@ -67,8 +67,7 @@ void semaphorePost ( semaphore_p semaphore )
     //
     pthread_mutex_lock ( &semaphore->mutex );
 
-    LOG ( "%'lu Before semaphore broadcast (post) of sem: %p\n", getIntervalTime(),
-          semaphore );
+    LOG ( "Before semaphore broadcast (post) of sem: %p\n", semaphore );
     SEM_DUMP ( semaphore );
 
     status = pthread_cond_broadcast ( &semaphore->conditionVariable );
@@ -79,8 +78,7 @@ void semaphorePost ( semaphore_p semaphore )
     }
     pthread_mutex_unlock ( &semaphore->mutex );
 
-    LOG ( "%'lu After semaphore broadcast of %p:\n", getIntervalTime(),
-          semaphore );
+    LOG ( "After semaphore broadcast of %p:\n", semaphore );
     SEM_DUMP ( semaphore );
 }
 
@@ -115,15 +113,13 @@ void semaphoreWait ( semaphore_p semaphore )
     //
     pthread_mutex_lock ( &semaphore->mutex );
 
-    LOG ( "%'lu Before semaphore wait on sem: %p\n", getIntervalTime(),
-          semaphore );
+    LOG ( "Before semaphore wait on sem: %p\n", semaphore );
     SEM_DUMP ( semaphore );
 
     while ( semaphore->messageCount == 0 )
     {
-        LOG ( "%'lu In semaphore while[%p] - waiterCount: %d, messageCount: %d\n",
-              getIntervalTime(), semaphore, semaphore->waiterCount,
-              semaphore->messageCount );
+        LOG ( "In semaphore while[%p] - waiterCount: %d, messageCount: %d\n",
+              semaphore, semaphore->waiterCount, semaphore->messageCount );
         //
         //  Install the cancellation cleanup handler function.
         //
@@ -143,8 +139,7 @@ void semaphoreWait ( semaphore_p semaphore )
     }
     pthread_mutex_unlock ( &semaphore->mutex );
 
-    LOG ( "%'lu After semaphore wait on %p:\n", getIntervalTime(),
-          semaphore );
+    LOG ( "After semaphore wait on %p:\n", semaphore );
     SEM_DUMP ( semaphore );
 }
 

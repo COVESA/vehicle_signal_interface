@@ -38,15 +38,6 @@
 
 #include <Python.h>
 
-
-//
-//  Define the following symbol to get debugging output.  Note: You may get
-//  some compiler warnings about multiple definitions when you do this.  They
-//  can be safely ignored.
-//
-// #define VSI_DEBUG
-#undef VSI_DEBUG
-
 #include <vsi.h>
 #include <vsi_core_api.h>
 #include <signals.h>
@@ -192,7 +183,7 @@ MOD_INIT ( vsi_py )
     //
     //  Go initialize the VSI subsystem and handle possible errors.
     //
-    LOG ( "Initializing the VSI subsystem...\n" );
+    LOG ( "Initializing the VSI subsystem from Python...\n" );
 
     vsi_initialize ( false );
 
@@ -411,8 +402,21 @@ static PyObject* vsi_getSignalData ( PyObject* self, PyObject* args )
                                 &wait, &oldest );
     if ( ! status )
     {
+        LOG ( "WARNING: Unable to parse input parameters in "
+              "vsi_getSignalData: Status[%d]\n", status );
+
         return PyLong_FromLong ( status );
     }
+    //
+    //  If we are debugging, output what it is we are doing.
+    //
+    LOG ( "\nCalling VSI fetch with:\n" );
+    LOG ( "  Domain Id: %u\n",    domain );
+    LOG ( "  Signal Id: %d\n",    signal );
+    LOG ( "   VSS Name: [%s]\n",  VSSname );
+    LOG ( "       Wait: %d-%s\n", wait, wait ? "Wait" : "No Wait" );
+    LOG ( "     Oldest: %d-%s\n", oldest, oldest ? "Oldest" : "Newest" );
+
     //
     //  If the user did not specify the domain, print an error message and
     //  quit.
@@ -454,16 +458,6 @@ static PyObject* vsi_getSignalData ( PyObject* self, PyObject* args )
             return PyLong_FromLong ( EINVAL );
         }
     }
-    //
-    //  If we are debugging, output what it is we are doing.
-    //
-    LOG ( "\nCalling VSI fetch with:\n" );
-    LOG ( "  Domain Id: %u\n",    domain );
-    LOG ( "  Signal Id: %d\n",    signal );
-    LOG ( "   VSS Name: [%s]\n",  VSSname );
-    LOG ( "       Wait: %d-%s\n", wait, wait ? "Wait" : "No Wait" );
-    LOG ( "     Oldest: %d-%s\n", oldest, oldest ? "Oldest" : "Newest" );
-
     //
     //  Call the appropriate low level function depending on whether we are
     //  fetching the oldest or newest data value from the signal.
@@ -959,10 +953,11 @@ static PyObject* vsi_removeSignalFromGroup  ( PyObject* self, PyObject* args )
 -----------------------------------------------------------------------------*/
 static PyObject* vsi_getOldestInGroup ( PyObject* self, PyObject* args )
 {
-    vsi_signal_group* signalGroup = 0;
+    vsi_signal_group* signalGroup = NULL;
     unsigned int      group       = 0;
     unsigned int      wait        = 0;
     int               status      = 0;
+    vsi_result*       results     = NULL;
 
     //
     //  Go get the input arguments from the user's function call.
@@ -992,7 +987,7 @@ static PyObject* vsi_getOldestInGroup ( PyObject* self, PyObject* args )
     //
     //  Go allocate the memory for the results array that will be filled in.
     //
-    vsi_result* results = malloc ( sizeof(vsi_result) * signalGroup->count );
+    results = malloc ( sizeof(vsi_result) * signalGroup->count );
     memset ( results, 0, sizeof(vsi_result) * signalGroup->count );
 
     //

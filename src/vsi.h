@@ -27,10 +27,16 @@
 #define _VSI_H_
 
 //
-//  If the debugging mode has not already been defined and the debugging mode
-//  is desired, define the debug symbol.
+//  If the debugging mode is desired, define the debug symbol.
 //
-#undef VSI_DEBUG
+//  Debug levels:
+//
+//      [empty] tracing and least verbose level
+//      1       more verbose
+//      2       more verbose with semaphore dumps enabled
+//      3       high resolution timestamps enabled on semaphores
+//
+#define VSI_DEBUG 3
 
 #include "btree.h"
 
@@ -66,7 +72,6 @@
 #       define PRINT_RESULT(...)
 #   endif
 #endif
-
 
 //
 //  Define the various vehicle signal domains and their type.

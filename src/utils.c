@@ -57,24 +57,51 @@
 ------------------------------------------------------------------------*/
 void dumpSemaphore ( semaphore_p semaphore )
 {
+#if VSI_DEBUG > 1
 #ifdef SEM_DUMP
-    LOG ( "semaphore: %3p\n", (void*)((long)&semaphore->mutex % 0x1000 ) );
+#if VSI_DEBUG > 2
+    LOG ( "\n%'lu semaphore: %p[%4p]\n", getIntervalTime(), semaphore,
+          (void*)((long)&semaphore->mutex % 0x10000 ) );
+#else
+    LOG ( "\nsemaphore: %p[%4p]\n", semaphore, (void*)((long)&semaphore->mutex % 0x10000 ) );
+#endif
 
     //
     //  Display our count values.
     //
     LOG ( "   message count.........: %'d\n", semaphore->messageCount );
-    LOG ( "   waiter count..........: %'d\n", semaphore->waiterCount );
+    LOG ( "   waiter count..........: %'d\n\n", semaphore->waiterCount );
 
     //
     //  Display the semaphore data...
     //
-    LOG ( "   semaphore.mutex.lock..: %d\n", semaphore->mutex.__data.__lock );
-    LOG ( "   semaphore.mutex.count.: %d\n", semaphore->mutex.__data.__count );
-    LOG ( "   semaphore.mutex.owner.: %d\n", semaphore->mutex.__data.__owner );
-    LOG ( "   semaphore.mutex.nusers: %d\n", semaphore->mutex.__data.__nusers );
-    LOG ( "   semaphore.mutex.kind..: %d\n", semaphore->mutex.__data.__kind );
+    LOG ( "   mutex address........: %p\n", &semaphore->mutex );
+    LOG ( "   mutex.data.lock......: %d\n", semaphore->mutex.__data.__lock );
+    LOG ( "   mutex.data.count.....: %d\n", semaphore->mutex.__data.__count );
+    LOG ( "   mutex.data.owner.....: %d\n", semaphore->mutex.__data.__owner );
+    LOG ( "   mutex.data.nusers....: %d\n", semaphore->mutex.__data.__nusers );
+    LOG ( "   mutex.data.kind......: %d\n", semaphore->mutex.__data.__kind );
+    LOG ( "   mutex.data.spins.....: %d\n", semaphore->mutex.__data.__spins );
+    LOG ( "   mutex.data.elision...: %d\n", semaphore->mutex.__data.__elision );
+    LOG ( "   mutex.data.list.prev.: %p\n", semaphore->mutex.__data.__list.__prev );
+    LOG ( "   mutex.data.list.next.: %p\n", semaphore->mutex.__data.__list.__next );
+    LOG ( "   mutex.size...........: 0x%llx\n", (long long)semaphore->mutex.__size );
+    LOG ( "   mutex.align..........: %ld\n\n", semaphore->mutex.__align );
 
+    LOG ( "   conditionVariable address............: %p\n", &semaphore->conditionVariable );
+    LOG ( "   conditionVariable.data.lock..........: %d\n", semaphore->conditionVariable.__data.__lock );
+    LOG ( "   conditionVariable.data.futex.........: %d\n", semaphore->conditionVariable.__data.__futex );
+    LOG ( "   conditionVariable.data.total_seq.....: %llu\n", semaphore->conditionVariable.__data.__total_seq );
+    LOG ( "   conditionVariable.data.wakeup_seq....: %llu\n", semaphore->conditionVariable.__data.__wakeup_seq );
+    LOG ( "   conditionVariable.data.woken_seq.....: %llu\n", semaphore->conditionVariable.__data.__woken_seq );
+    LOG ( "   conditionVariable.data.mutex.........: %p\n", semaphore->conditionVariable.__data.__mutex );
+    LOG ( "   conditionVariable.data.nwaiters......: %d\n", semaphore->conditionVariable.__data.__nwaiters );
+    LOG ( "   conditionVariable.data.broadcast_seq.: %d\n", semaphore->conditionVariable.__data.__broadcast_seq );
+    LOG ( "   conditionVariable.size...............: 0x%llx\n", (long long)semaphore->conditionVariable.__size );
+    LOG ( "   conditionVariable.align..............: %llx\n", semaphore->conditionVariable.__align );
+
+    fflush ( stdout );
+#endif
 #endif
     return;
 }

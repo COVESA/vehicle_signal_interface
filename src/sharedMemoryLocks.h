@@ -43,6 +43,11 @@ void semaphorePost ( semaphore_p semaphore );
 void semaphoreWait ( semaphore_p semaphore );
 
 
+#ifdef SEM_DUMP
+    extern void dumpSemaphore ( semaphore_p semaphore );
+#endif
+
+
 #endif     // End of #ifndef SHARED_MEMORY_LOCKS_H
 
 /*! @} */
