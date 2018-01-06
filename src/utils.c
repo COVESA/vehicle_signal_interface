@@ -88,7 +88,13 @@ void dumpSemaphore ( semaphore_p semaphore )
     LOG ( "   mutex.size...........: 0x%llx\n", (long long)semaphore->mutex.__size );
     LOG ( "   mutex.align..........: %ld\n\n", semaphore->mutex.__align );
 
+
+    //
+    //  Contitional variable has been reimplemented in GLIBC 2.25.
+    //  More info: https://sourceware.org/git/?p=glibc.git;a=commit;h=ed19993b5b0d
+    //
     LOG ( "   conditionVariable address............: %p\n", &semaphore->conditionVariable );
+#if __GLIBC__ == 2 && __GLIBC_MINOR__ < 25
     LOG ( "   conditionVariable.data.lock..........: %d\n", semaphore->conditionVariable.__data.__lock );
     LOG ( "   conditionVariable.data.futex.........: %d\n", semaphore->conditionVariable.__data.__futex );
     LOG ( "   conditionVariable.data.total_seq.....: %llu\n", semaphore->conditionVariable.__data.__total_seq );
@@ -97,6 +103,18 @@ void dumpSemaphore ( semaphore_p semaphore )
     LOG ( "   conditionVariable.data.mutex.........: %p\n", semaphore->conditionVariable.__data.__mutex );
     LOG ( "   conditionVariable.data.nwaiters......: %d\n", semaphore->conditionVariable.__data.__nwaiters );
     LOG ( "   conditionVariable.data.broadcast_seq.: %d\n", semaphore->conditionVariable.__data.__broadcast_seq );
+#else
+    LOG ( "   conditionVariable.data.wseq..........: %llu\n", semaphore->conditionVariable.__data.__wseq );
+    LOG ( "   conditionVariable.data.g1_start......: %llu\n", semaphore->conditionVariable.__data.__g1_start );
+    LOG ( "   conditionVariable.data.g1_refs[0]....: %u\n", semaphore->conditionVariable.__data.__g_refs[0] );
+    LOG ( "   conditionVariable.data.g1_refs[1]....: %u\n", semaphore->conditionVariable.__data.__g_refs[1] );
+    LOG ( "   conditionVariable.data.g1_size[0]....: %u\n", semaphore->conditionVariable.__data.__g_size[0] );
+    LOG ( "   conditionVariable.data.g1_size[1]....: %u\n", semaphore->conditionVariable.__data.__g_size[1] );
+    LOG ( "   conditionVariable.data.g1_orig_size..: %u\n", semaphore->conditionVariable.__data.__g1_orig_size );
+    LOG ( "   conditionVariable.data.wrefs.........: %u\n", semaphore->conditionVariable.__data.__wrefs );
+    LOG ( "   conditionVariable.data.g_signals[0]..: %u\n", semaphore->conditionVariable.__data.__g_signals[0] );
+    LOG ( "   conditionVariable.data.g_signals[1]..: %u\n", semaphore->conditionVariable.__data.__g_signals[1] );
+#endif
     LOG ( "   conditionVariable.size...............: 0x%llx\n", (long long)semaphore->conditionVariable.__size );
     LOG ( "   conditionVariable.align..............: %llx\n", semaphore->conditionVariable.__align );
 
