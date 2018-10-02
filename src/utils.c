@@ -66,6 +66,7 @@ void dumpSemaphore ( semaphore_p semaphore )
     LOG ( "\nsemaphore: %p[%4p]\n", semaphore, (void*)((long)&semaphore->mutex % 0x10000 ) );
 #endif
 
+#if VSI_DEBUG > 3
     //
     //  Display our count values.
     //
@@ -119,6 +120,7 @@ void dumpSemaphore ( semaphore_p semaphore )
     LOG ( "   conditionVariable.align..............: %llx\n", semaphore->conditionVariable.__align );
 
     fflush ( stdout );
+#endif
 #endif
 #endif
     return;
