@@ -1,0 +1,10 @@
+prefix=/usr/local
+exec_prefix=${prefix}
+includedir=${prefix}/include
+libdir=${exec_prefix}/lib
+
+Name: libvsi
+Description: Access library for distributing vehicle signals from low-level signal providers to client software components
+Version: 2.0.0
+Cflags: -I${includedir}/
+Libs: -L${libdir} -lvsi
