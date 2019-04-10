@@ -8,6 +8,12 @@ option(BUILD_CAN "Build SocketCAN bindings" ON)
 
 include_directories(${CMAKE_SOURCE_DIR}/src)
 
+include(FindPkgConfig QUIET)
+if(PKG_CONFIG_FOUND)
+    install(FILES       "libvsi.pc"
+            DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/pkgconfig")
+endif()
+
 find_package(Threads REQUIRED)
 add_definitions(-Wall -std=c99 -D_GNU_SOURCE)
 
